@@ -1,4 +1,4 @@
+black . --check
 ruff format .
 ruff check .
 pyright .
-sourcery review .

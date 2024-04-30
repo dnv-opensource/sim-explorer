@@ -1,0 +1,24 @@
+{
+  "initial-values": [
+    {
+      "instance": "bb",
+      "parameters": [
+        {
+          "name": "e",
+          "value": 0.1
+        }
+      ]
+    }
+  ],
+  "search-spaces": [
+    {
+      "instance": "bb",
+      "parameters": [
+        {
+          "name": "e",
+          "range": [0.5, 1.0]
+        }
+      ]
+    }
+  ]
+}
