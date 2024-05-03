@@ -2,16 +2,11 @@
 import os
 import re
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Union
+from typing import TypeAlias
 
-# from typing import TypeAlias, Union, Dict, List
-# Json5: TypeAlias = Union[Dict[str, Union[ str, float, int, bool, Dict[str, "Json5"], List["Json5"]]]]
-# Json5List = List["Json5"]
-
-PyVal = Union[str, float, int, bool]  # simple python types
-Json5 = dict[str, Union[PyVal, dict[str, "Json5"], list["Json5"]]]
-#    dict[ str, str | float | int | bool | dict[str, "Json5"] | list["Json5"]]  # defines the python representation of Json5 files
-Json5List = list["Json5"]
+PyVal: TypeAlias = str | float | int | bool  # simple python types / Json5 atom
+Json5: TypeAlias = dict[str, PyVal | "Json5" | "Json5List"]  # Json5 object
+Json5List: TypeAlias = list[Json5 | PyVal]  # Json5 list
 
 
 class Json5Error(Exception):
@@ -34,15 +29,25 @@ class Json5Reader:
           Double-quote ml comments are also supported per default
     """
 
+    __slots__ = (
+        "comments",
+        "comments_eol",
+        "comments_ml",
+        "js5",
+        "js_py",
+        "lines",
+        "pos",
+    )
+
     def __init__(
         self,
-        js5: Union[str, os.PathLike[str]],
-        auto: Union[bool, int] = True,
-        comments_eol: Tuple[str, str] = (
+        js5: str | os.PathLike[str],
+        auto: bool | int = True,
+        comments_eol: tuple[str, ...] = (
             "//",
             "#",
         ),
-        comments_ml: Tuple[str, str] = ("/*", "'" * 3, '"' * 3),
+        comments_ml: tuple[str, ...] = ("/*", "'" * 3, '"' * 3),
         keys_unique: bool = True,
     ):
         self.pos = 0
@@ -63,9 +68,9 @@ class Json5Reader:
         self.js5, self.lines = self._newline()  # replace unnecessary LFs and return start position per line
         self.js_py = {}  # is replaced by the python json5 dict when to_py() is run
         if auto:
-            self.to_py()
+            self.js_py = self.to_py()
 
-    def _msg(self, pre: str, num: int = 50, pos: Optional[int] = None) -> str:
+    def _msg(self, pre: str, num: int = 50, pos: int | None = None) -> str:
         """Construct an error message from pre and a citation from the raw json5 code.
 
         The citation is from 'pos' with 'num' characters.
@@ -76,9 +81,8 @@ class Json5Reader:
         try:
             line, p = self._get_line_number(pos)
             return f"Json5 read error at {line}({p}): {pre}: {self.js5[pos : pos+num]}"
-        except: # can happen when self.lines does not yet exist
-            return f"Json5 read error at {pos}: {pre}: {self.js5[pos : pos+num]}"
-            
+        except Json5Error as err:  # can happen when self.lines does not yet exist
+            return f"Json5 read error at {pos}: {pre}: {self.js5[pos : pos+num]}: {err}"
 
     def _newline(self):
         """Replace unnecessary line feeds with spaces and return list of start position per line."""
@@ -91,7 +95,8 @@ class Json5Reader:
         while True:
             s = c.search(self.js5[pos:])
             if s is None:
-                if qt1 + qt2 != 0: self._msg( "Non-matching quotes detected")
+                if qt1 + qt2 != 0:
+                    self._msg("Non-matching quotes detected")
                 return (js + self.js5[pos:], lines)
 
             js += self.js5[pos : pos + s.start()]
@@ -112,7 +117,7 @@ class Json5Reader:
                     js += s.group()
             pos += s.end()
 
-    def _get_line_number(self, pos: int) -> Tuple[int, int]:
+    def _get_line_number(self, pos: int) -> tuple[int, int]:
         """Get the line number relative to position 'pos'.
         Returns both the row and column of 'pos' (1-based).
         """
@@ -138,7 +143,7 @@ class Json5Reader:
         else:
             return ""
 
-    def _comments(self, js5: Optional[str] = None) -> Tuple[str, Dict[int, str]]:
+    def _comments(self, js5: str = "") -> tuple[str, dict[int, str]]:
         """Take the raw json5 text 'js5' (default: self.js5) as input and replace comments with whitespace.
 
         Both comments_eol and comment_ml are taken into account as initialized.
@@ -149,7 +154,7 @@ class Json5Reader:
         def _re(txt: str):
             return "".join("\\" + ch if ch in ("*",) else ch for ch in txt)
 
-        _js5 = self.js5 if js5 is None else js5
+        _js5 = self.js5 if js5 == "" else js5
         comments = {}
         cq = re.compile(r"'([^']*)'")
         cq2 = re.compile(r'"([^"]*)"')
@@ -200,13 +205,13 @@ class Json5Reader:
         return _js5, comments
 
     def to_py(self) -> Json5:
-        """Translate json5 code 'self.js5' to a python dict and return it."""
+        """Translate json5 code 'self.js5' to a python dict and store as self.js_py."""
         self.pos = 0
-        self.js_py = self._object()
+        return self._object()
 
     def _strip(self, txt: str) -> str:
         """Strip white space from txt."""
-        if txt is None:
+        if txt == "":
             return txt
         len0 = len(txt)
         while True:
@@ -221,21 +226,25 @@ class Json5Reader:
         #        print(f"OBJECT({self.pos}): {self.js5[self.pos:]}")
         assert self.js5[self.pos] == "{", self._msg("object start '{' expected")
         self.pos += 1
-        dct = {}
+        dct = None  # {}: dict[str,Json5] = {}
         while True:
             r0, c0 = self._get_line_number(self.pos)
             k = self._key()  # read until ':'
             v = self._value()  # read until ',' or '}'
             # print(f"KEY:VALUE {k}:{v}. {r0}({c0}): '{self.js5[self.lines[r0-1]+c0 : self.lines[r0-1]+c0+50]+'...'}'")
-            if k is None and v is None and self.js5[self.pos] == "}":
+            if k == "" and v == "" and self.js5[self.pos] == "}":
                 self.pos += 1
+                assert dct is not None, f"Cannot extract js5 object from {self.js5}"
                 return dct
             else:
-                assert k is not None and v is not None, self._msg(f"No proper key:value: {k}:{v} within object.")
-                assert k not in dct, self._msg(
-                    f"Duplicate key '{k}' within object starting at line {r0}({c0}). Not allowed/possible within this Json5 dialect"
+                assert k != "" and v != "", self._msg(f"No proper key:value: {k}:{v} within object.")
+                assert dct is None or k not in dct, self._msg(
+                    f"Duplicate key '{k}' within object starting at line {r0}({c0}). Not allowed."
                 )
-                dct.update({k: v})
+                if dct is None:
+                    dct = {k: v}
+                else:
+                    dct.update({k: v})
 
     def _list(self) -> Json5List:
         """Read and return a list object at the current position."""
@@ -246,15 +255,15 @@ class Json5Reader:
         while True:
             v = self._value()
             #            print("LIST_VALUE", v, self.js5[self.pos])
-            if v is not None:
+            if v != "":
                 lst.append(v)
-            if v is None or self.js5[self.pos] == "]":
+            elif self.js5[self.pos] == "]":
                 break
         assert self.js5[self.pos] == "]", self._msg("List end ']' expected")
         self.pos += 1
         return lst
 
-    def _quoted(self, pos: Optional[int] = None) -> Tuple[int, int]:
+    def _quoted(self, pos: int | None = None) -> tuple[int, int]:
         """Search for a string between quotes after pos ('...' or "...") with no other text before the first quote.
 
         Return the absolute position of the quote pair as tuple,
@@ -273,7 +282,7 @@ class Json5Reader:
             return (-1, -1)
         return (pos + m.start(), pos + m.end() + m2.end())
 
-    def _key(self) -> Optional[str]:
+    def _key(self) -> str:
         """Read and return a key at the current position, i.e. expect '<string>:'.
 
         Due to the fact that trailing ',' are allowed,
@@ -283,24 +292,24 @@ class Json5Reader:
         if q1 >= 0:  # found a quoted string
             self.pos = q2
             k = self.js5[q1 + 1 : q2 - 1]
-            #            print("KEY", k, self.js5[self.pos :])
+            # print("KEY", k, self.js5[self.pos :])
             m = re.search(r":", self.js5[self.pos :])
             assert m is not None, self._msg(f"Quoted key {k} found, but no ':'")
             assert not len(self.js5[self.pos : self.pos + m.start()].strip()), self._msg(
-                f"Additional text '{self.js5[self.pos : self.pos+m.start()].strip()}' between key '{k}' and ':'"
+                f"Additional text '{self.js5[self.pos : self.pos+m.start()].strip()}' after key '{k}'"
             )
         else:
             m = re.search(r"[:\}]", self.js5[self.pos :])
-            #            print("KEY", self.pos, self.js5[self.pos : self.pos+50], m)
+            # print("KEY", self.pos, self.js5[self.pos : self.pos+50], m)
             assert m is not None, self._msg("key expected")
             if m.group() == "}":  # end of object, e.g. due to trailing ','
-                return None
+                return ""
             else:
                 k = self.js5[self.pos : self.pos + m.start()]
         self.pos += m.end()
         return str(self._strip(k))
 
-    def _value(self) -> Optional[Union[PyVal, Json5, Json5List]]:
+    def _value(self) -> PyVal | Json5List | Json5:
         """Read and return a value at the current position, i.e. expect ,'...', "...",}."""
         q1, q2 = self._quoted()
         if q2 < 0:  # no quotation found. Include also [ and { in search
@@ -329,10 +338,10 @@ class Json5Reader:
         #        print(f"VALUE '{v}' @ {self.pos}:'{self.js5[self.pos:self.pos+50]}'")
         if isinstance(v, str):
             v = v.strip().strip("'").strip('"').strip()
-        if not len(v):  # might be empty due to trailing ','
-            return None
         if isinstance(v, (dict, list)):
             return v
+        elif isinstance(v, str) and not len(v):  # might be empty due to trailing ','
+            return ""
 
         try:
             return int(v)
@@ -340,64 +349,77 @@ class Json5Reader:
             try:
                 return float(v)
             except ValueError:
-                if v.upper() == "FALSE":
-                    return False
-                if v.upper() == "TRUE":
-                    return True
-                if v.upper() == "INFINITY":
-                    return float("inf")
-                if v.upper() == "-INFINITY":
-                    return float("-inf")
-                return str(v)
+                if isinstance(v, str):
+                    if v.upper() == "FALSE":
+                        return False
+                    if v.upper() == "TRUE":
+                        return True
+                    if v.upper() == "INFINITY":
+                        return float("inf")
+                    if v.upper() == "-INFINITY":
+                        return float("-inf")
+                    return str(v)
+                else:
+                    raise Json5Error(f"This should not happen. v:{v}") from None
 
-def json5_write( js5:Json5, file:Optional[ Union[str, os.PathLike[str]]]=None, pretty_print:bool=True):
-    """ Write a Json(5) tree to string or file.
+
+def json5_write(
+    js5: dict[str, PyVal | Json5List | Json5], file: str | os.PathLike[str] | None = None, pretty_print: bool = True
+):
+    """Write a Json(5) tree to string or file.
 
     Args:
         js5 (Json5): The Json(5) dict which shall be written to file or string
         file (str, Path)=None: The file name (as string or Path object) or None. If None, a string is returned.
         pretty_print (bool)=True: Denote whether the string/file should be pretty printed (LF,indents).
-        
+
     Returns: The serialized Json(5) object as string. This string is optionally written to file.
     """
-    def remove_comma( txt):
-        for i in range( len(txt)-1,-1,-1):
-            if txt[i]==',':
-                return( txt[:i])
-        
-    def print_js5(sub:Json5, level: int = 0, pretty:bool=True) -> str:
-        """The inner (recursive) loop of the printing process. Return the formated string."""        
-        if isinstance( sub, dict):
+
+    def remove_comma(txt: str) -> str:
+        for i in range(len(txt) - 1, -1, -1):
+            if txt[i] == ",":
+                return txt[:i]
+        return ""
+
+    def print_js5(sub: PyVal | Json5List | Json5, level: int = 0, pretty: bool = True) -> str:
+        """Print the Json5 object recursively. Return the formated string.
+
+        Args:
+            sub (Json5): the Json5 object to print
+            level (int)=0: level in recursive printing. Used for indentation.
+            pretty (bool)=True: Pretty print (LF and indentation).
+        """
+        if isinstance(sub, dict):
             res = "{"
             for k, v in sub.items():  # print the keys and values of dicts
-                res +="\n" +"   " * level if pretty else ""
+                res += "\n" + "   " * level if pretty else ""
                 res += "   " * level if pretty else ""
                 res += str(k)
                 res += " : " if pretty else ":"
-                res += print_js5( v, level+1, pretty)
+                res += print_js5(v, level + 1, pretty)
             res += "\n" + "   " * level if pretty else ""
             res = remove_comma(res)
-            res += "}," if level>0 else "}"
+            res += "}," if level > 0 else "}"
             res += "\n" if pretty else ""
             return res
         elif isinstance(sub, list):
             res = "["
             for v in sub:
-                res += print_js5( v, level=level, pretty=pretty)
+                res += print_js5(v, level=level, pretty=pretty)
             res = remove_comma(res)
             res += "],"
             res += "\n" if pretty else ""
-            return  res
-        elif sub is None:
-            return "'None',"
+            return res
+        elif sub == "":
+            return ","
         elif isinstance(sub, str):
-            return "'" + str(sub) + "'," 
+            return "'" + str(sub) + "',"
         elif isinstance(sub, (int, float, bool)):
             return str(sub) + ","
-    
-    txt = print_js5( js5, level=0, pretty=pretty_print)
+
+    txt = print_js5(js5, level=0, pretty=pretty_print)
     if file:
-        with open( file, 'w') as fp:
-            fp.write( txt)
-    return( txt)
-    
+        with open(file, "w") as fp:
+            fp.write(txt)
+    return txt

@@ -1,62 +1,37 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "case_study"
-version = "0.0.1"
-description = "Experimentation tools on top of OSP simulation models."
-readme = "README.rst"
-requires-python = ">= 3.10.10"
-keywords = ["simulation","model","FMI","OSP"]
-license = {file = "LICENSE"}
-authors = [
-    {name = "Siegfried Eisinger", email = "Siegfried.Eisinger@DNV.com"},
-]
-maintainers = [
-    {name = "Siegfried Eisinger", email = "Siegfried.Eisinger@DNV.com"},
-]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    # "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Operating System :: Microsoft :: Windows",
-    "Operating System :: POSIX :: Linux",
-    "Operating System :: MacOS",
-    "Environment :: Console",
-    "Intended Audience :: Industry",
-    "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research",
-    "Topic :: Scientific/Engineering",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-]
-dependencies = [
-    "numpy>=1.24.2",
-    "libcosimpy",
-    "fmpy",
-    # "some_project_in_my_local_dev @ file:../some_project_in_my_local_dev",
-    # "some_project_on_github @ git+https://github.com/user/project.git@version_or_tag_or_branch_name#egg=project_name",
-]
+    name = "case_study"
+    version = "0.0.1"
+    description = "Experimentation tools on top of OSP simulation models."
+    authors = [
+        {name = "Siegfried Eisinger", email = "Siegfried.Eisinger@DNV.com"},
+    ]
+    readme = "README.rst"
+    requires-python = ">= 3.10.10"
+    keywords = ["simulation","model","FMI","OSP"]
+    license = {file = "BSD-3-Clause"}
+    classifiers = [
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ]
+    dependencies = [
+        "numpy>=1.24.2",
+        "libcosimpy>=0.0.1",
+    ]
+    #dynamic = ["version"]
 
-[project.urls]
-Homepage = "https://github.com/dnv-innersource/case_study"
-Documentation = "https://dnv-innersource.github.io/case_study/README.html"
-Repository = "https://github.com/dnv-innersource/m.git"
-Issues = "https://github.com/dnv-innersource/case_study/issues"
-Changelog = "https://github.com/dnv-innersource/case_study/blob/main/CHANGELOG.md"
+    [project.optional-dependencies]
+        modelTest = ["FMPy>=3.9", "matplotlib>=3.7.1"]
+        rest = ["docutils>=0.3", "pack ==1.1, ==1.3"]
+        editor = ["thonny>=4.0.2"]
 
-[project.scripts]
-case_study = "case_study.cli.case:main"
-
-[tool.setuptools.packages.find]
-where = ["src"]
-exclude = ["test*"]
-
-src = ["src"]
-line-length = 120
-target-version = "py310"
+[tool.black]
+    line-length = 120
+    target-version = ["py310"]
 
 [tool.ruff]
     exclude = [
@@ -66,10 +41,9 @@ target-version = "py310"
         "build",
         "dist",
         "__pycache__",
-        "./docs/source/conf.py",
-#        "./src/folder_to_be_ignored",
+        "./doc/source/conf.py",
     ]
-
+    src = ["case_study"]
     lint.ignore = [
         "E501",  # Line length too long
         "D100",  # Missing docstring in public module
@@ -85,11 +59,13 @@ target-version = "py310"
         "D212",  # Multi-line docstring summary should start at the first line
         "D213",  # Multi-line docstring summary should start at the second line
         # "N802",  # Function name should be lowercase  (uncomment if you want to allow Uppercase function names)
-        # "N803",  # Argument name should be lowercase  (uncomment if you want to allow Uppercase argument names)
+        "N803",  # Argument name should be lowercase  (uncommented. Lower-camelCase is accepted for variables related to XML and FMI standard)
         "N806",  # Variable in function should be lowercase  (uncomment if you want to allow Uppercase variable names in functions)
         # "N815",  # Variable in class scope should not be mixedCase  (uncomment if you want to allow mixedCase variable names in class scope)
         # "N816",  # Variable in global scope should not be mixedCase  (uncomment if you want to allow mixedCase variable names in global scope)
         ]
+
+    line-length = 120
     lint.select = [
         "E",
         "D",
@@ -99,6 +75,7 @@ target-version = "py310"
         "I",
         "B",
     ]
+    target-version = "py310"
 
     [tool.ruff.lint.pep8-naming]
     ignore-names = [
@@ -114,52 +91,13 @@ target-version = "py310"
     "__init__.py" = ["I001"]
     "./tests/*" = ["D"]
 
-    [tool.ruff.format]
-    docstring-code-format = true
-
 [tool.pyright]
-exclude = [
-    ".git",
-    ".venv",
-    ".tox",
-    "build",
-    "dist",
-    "**/__pycache__",
-    "./docs/source/conf.py",
-#    "./src/folder_to_be_ignored",
-]
-
-extraPaths = ["./src"]
-typeCheckingMode = "basic"
-useLibraryCodeForTypes = true
-reportMissingParameterType = "error"
-reportUnknownParameterType = "warning"
-reportUnknownMemberType = "warning"
-reportMissingTypeArgument = "error"
-reportPropertyTypeMismatch = "error"
-reportFunctionMemberAccess = "warning"
-reportPrivateUsage = "warning"
-reportTypeCommentUsage = "warning"
-reportIncompatibleMethodOverride = "warning"
-reportIncompatibleVariableOverride = "error"
-reportInconsistentConstructor = "error"
-reportOverlappingOverload = "warning"
-reportUninitializedInstanceVariable = "warning"
-reportCallInDefaultInitializer = "warning"
-reportUnnecessaryIsInstance = "information"
-reportUnnecessaryCast = "warning"
-reportUnnecessaryComparison = "warning"
-reportUnnecessaryContains = "warning"
-reportUnusedCallResult = "warning"
-reportUnusedExpression = "warning"
-reportMatchNotExhaustive = "warning"
-reportShadowedImports = "warning"
-reportUntypedFunctionDecorator = "warning"
-reportUntypedBaseClass = "error"
-reportUntypedNamedTuple = "warning"
-# Activate the following rules only locally and temporary, i.e. for a QA session.
-# (For server side CI they are considered too strict.)
-# reportConstantRedefinition = "warning"
-# reportUnnecessaryTypeIgnoreComment = "information"
-# reportImportCycles = "warning"
-# reportImplicitStringConcatenation = "warning"
+    exclude = [
+        ".git",
+        ".venv",
+        ".tox",
+        "build",
+        "dist",
+        "**/__pycache__",
+        "./doc/source/conf.py",
+    ]
