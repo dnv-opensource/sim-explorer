@@ -1,12 +1,15 @@
-# pyright: reportGeneralTypeIssues=false
+from __future__ import annotations
+
 import os
 import re
 from pathlib import Path
 from typing import TypeAlias
 
+# type definitions
 PyVal: TypeAlias = str | float | int | bool  # simple python types / Json5 atom
-Json5: TypeAlias = dict[str, PyVal | "Json5" | "Json5List"]  # Json5 object
-Json5List: TypeAlias = list[Json5 | PyVal]  # Json5 list
+Json5: TypeAlias = dict[str, "Json5Val"]  # Json5 object
+Json5List: TypeAlias = list["Json5Val"]  # Json5 list
+Json5Val: TypeAlias = PyVal | Json5 | Json5List  # Json5 values
 
 
 class Json5Error(Exception):

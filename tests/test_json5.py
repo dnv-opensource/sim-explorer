@@ -1,7 +1,8 @@
 from pathlib import Path
 
-from case_study.json5 import Json5Reader, json5_write
 import pytest
+from case_study.json5 import Json5Reader, json5_write
+
 
 def test_json5_syntax():
     assert Json5Reader("Hello World", False).js5 == "{ Hello World }", "Automatic addition of '{}' did not work"

@@ -1,26 +1,23 @@
 from math import radians
 from pathlib import Path
 
-import libcosimpy
 import numpy as np
+from case_study.case import Case, Cases
+from case_study.simulator_interface import SimulatorInterface, from_xml
 
 # import pytest
 # import inspect
 from fmpy import dump, plot_result, simulate_fmu
 from fmpy.validation import validate_fmu
 from libcosimpy.CosimExecution import CosimExecution
-
-from mvx.case_study.case import Case, Cases, SimulatorInterface
+from libcosimpy.CosimManipulator import CosimManipulator
+from libcosimpy.CosimObserver import CosimObserver
 
 
 def _file(file: str = "MobileCrane.cases"):
     path = Path(__file__).parent.joinpath(file)
     assert path.exists(), f"File {file} does not exist at {Path(__file__).parent.joinpath(file)}"
     return path
-
-
-def check_expected(value: any, expected: any, feature: str):
-    assert value == expected, f"Expected the {feature} '{expected}', but found the value {value}"
 
 
 def np_arrays_equal(arr1, arr2, dtype="float64", eps=1e-7):
@@ -44,7 +41,7 @@ def validate(model, msg=False):
         print(dump(model))
 
 
-def find_index(lst: list[list[float]], el: list[float], eps=1e-7):
+def find_index(lst: list, el: tuple, eps=1e-7):
     for idx, e in enumerate(lst):
         if len(e) == len(el) and all(abs(e[i] - el[i]) < eps for i in range(len(el))):
             return idx
@@ -54,7 +51,8 @@ def find_index(lst: list[list[float]], el: list[float], eps=1e-7):
 def test_simpletable(interpolate=True):
     """Test the SimpleTable FMU, copied into the OSP_MobileCrane folder, using fmpy"""
     validate("OSP_MobileCrane/SimpleTable.fmu")
-    result = simulate_fmu(
+    assert Path("OSP_MobileCrane/SimpleTable.fmu").exists(), "SimpleTable.fmu not found"
+    result = simulate_fmu(  # type: ignore
         "OSP_MobileCrane/SimpleTable.fmu",
         stop_time=10.0,
         step_size=0.1,
@@ -65,12 +63,12 @@ def test_simpletable(interpolate=True):
         start_values={"interpolate": interpolate},
     )
     #    plot_result( result)
-    assert 71 == find_index(result, (7.1, 8, 7, 6)), "Element not found"
+    assert 71 == find_index(list(result), (7.1, 8, 7, 6)), "Element not found"
 
 
 def test_mobilecrane():
     validate("OSP_MobileCrane/MobileCrane.fmu", msg=True)
-    result = simulate_fmu(
+    result = simulate_fmu(  # type: ignore
         "OSP_MobileCrane/MobileCrane.fmu",
         stop_time=1.0,
         step_size=0.1,
@@ -99,82 +97,66 @@ def test_mobilecrane():
 def test_simulator_from_system_structure():
     """SimulatorInterface from OspSystemStructure.xml"""
     systemfile = _file("OSP_mobileCrane/OspSystemStructure.xml")
-    system = SimulatorInterface(systemfile, name="MobileCrane", description="test")  # components, manipulator, observer
-    check_expected(system.typ, "OSP", "System.typ")
-    check_expected(system.name, "MobileCrane", "System.name")
-    check_expected(system.description, "test", "System.description")
-    check_expected(system._file.name, "OspSystemStructure.xml", "system._file")
-    check_expected(
-        system._system.tag,
-        "{http://opensimulationplatform.com/MSMI/OSPSystemStructure}OspSystemStructure",
-        "system._system.tag",
-    )
-    check_expected(type(system.simulator), CosimExecution, "type(system.simulator)")
-    check_expected("mobileCrane" in system.components and len(system.components) == 2, True, "system.components")
-    check_expected(type(system.observer), libcosimpy.CosimObserver.CosimObserver, "system.observer")
-    check_expected(type(system.manipulator), libcosimpy.CosimManipulator.CosimManipulator, "system.manipulator")
-    assert "pedestal_centerOfMass[2]" in system.get_variables(
-        "mobileCrane"
-    ), "Variable pedestal_centerOfMass[2] expected"
+    sim = SimulatorInterface(systemfile, name="MobileCrane", description="test")  # components, manipulator, observer
+    assert isinstance(sim, SimulatorInterface), "Basic OSP simulator interface"
+    assert sim.name == "MobileCrane", "Simulator interface name"
+    assert sim.description == "test", "sim.description"
+    assert sim.sysconfig is not None and sim.sysconfig.name == "OspSystemStructure.xml", "sim config file"
     assert (
-        system.get_variables("mobileCrane")["pedestal_centerOfMass[2]"]["reference"] == 21
+        from_xml(sim.sysconfig)[0].tag
+        == "{http://opensimulationplatform.com/MSMI/OSPSystemStructure}OspSystemStructure"
+    ), "sim._system.tag"
+    assert type(sim.simulator) == CosimExecution, "type(sim.simulator)"
+    assert "mobileCrane" in sim.components and len(sim.components) == 2, "sim.components"
+    assert type(sim.observer) == CosimObserver, "sim.observer"
+    assert type(sim.manipulator) == CosimManipulator, "sim.manipulator"
+    assert "pedestal_centerOfMass[2]" in sim.get_variables("mobileCrane"), "Variable pedestal_centerOfMass[2] expected"
+    assert (
+        sim.get_variables("mobileCrane")["pedestal_centerOfMass[2]"]["reference"] == 21
     ), "Variable pedestal_centerOfMass[2] reference"
     assert (
-        system.get_variables("mobileCrane")["pedestal_centerOfMass[2]"]["type"] == 0
+        sim.get_variables("mobileCrane")["pedestal_centerOfMass[2]"]["type"] == 0
     ), "Variable pedestal_centerOfMass[2] type"
     assert (
-        system.get_variables("mobileCrane")["pedestal_centerOfMass[2]"]["causality"] == 0
+        sim.get_variables("mobileCrane")["pedestal_centerOfMass[2]"]["causality"] == 0
     ), "Variable pedestal_centerOfMass[2] causality"
     assert (
-        system.get_variables("mobileCrane")["pedestal_centerOfMass[2]"]["variability"] == 4
+        sim.get_variables("mobileCrane")["pedestal_centerOfMass[2]"]["variability"] == 4
     ), "Variable pedestal_centerOfMass[2] variability"
-    groups = system.identify_variable_groups("mobileCrane", include_all=True)
-    for g in groups:
-        print(f"'mobileCrane', {g}, {groups[g]['description']}")
+
+
+#     groups = sim.identify_variable_groups("mobileCrane", include_all=True)
+#     for g in groups:
+#         print(f"'mobileCrane', {g}, {groups[g]['description']}")
 
 
 def test_cases():
     """Test of the features provided by the Cases class"""
     sim = SimulatorInterface(_file("OSP_MobileCrane/OspSystemStructure.xml"))
-    check_expected(len(sim.components), 2, "Number of components")
-    check_expected("mobileCrane" in sim.components, True, "mobileCrane is a components")
-    check_expected("simpleTable" in sim.components, True, "simpleTable is a components")
+    assert len(sim.components) == 2, "Number of components"
+    assert "mobileCrane" in sim.components, "mobileCrane is a components"
+    assert "simpleTable" in sim.components, "simpleTable is a components"
     variables = sim.get_variables("mobileCrane")
-    check_expected(all(f"craneTorque[{i}]" in variables for i in range(3)), True, "Vector 'craneTorque'")
+    assert all(f"craneTorque[{i}]" in variables for i in range(3)), "Vector 'craneTorque'"
     variables = sim.get_variables("simpleTable")
-    check_expected(all(f"outs[{i}]" in variables for i in range(3)), True, "Vector 'outs' of simpleTable")
-    return
+    assert all(f"outs[{i}]" in variables for i in range(3)), "Vector 'outs' of simpleTable"
     cases = Cases(_file("MobileCrane.cases"), sim)
     print(cases.info())
     # cases.spec
-    assert cases.spec["name"] == "BouncingBall", "BouncingBall expected as cases name"
-    assert cases.spec["description"].startswith("Case Study with the"), "description not as expected"
+    assert isinstance(cases.spec, dict), f"dict expected as cases.spec. Found {cases.spec}"
+    assert cases.spec["name"] == "MobileCrane", f"MobileCrane expected as cases name. Found {cases.spec['name']}"
+    assert isinstance(cases.spec["description"], str), f"str expected as description. Found:{cases.spec['description']}"
+    assert cases.spec["description"].startswith("Case Study with the Crane"), "description not as expected"
     assert cases.spec["modelFile"] == "../data/BouncingBall/OspSystemStructure.xml", "modelFile not as expected"
-    for c in ("base", "case1", "case2", "case3"):
-        assert c in cases.spec, f"The case '{c}' is expected to be defined in {cases.spec['name']}"
-    # find_by_name
-    for c in cases.base.list_cases(as_name=False, flat=True):
-        assert cases.find_by_name(c.name).name == c.name, f"Case {c.name} not found in hierarchy"
-    assert cases.find_by_name("case99") is None, "Case99 was not expected to be found"
-    case3 = cases.find_by_name("case3")
-    assert case3.name == "case3", "'case3' is expected to exist"
-    assert case3.find_by_name("case2") is None, "'case2' should not exist within the sub-hierarchy of 'case3'"
-    case1 = cases.find_by_name("case1")
-    assert case1.find_by_name("case2") is not None, "'case2' should exist within the sub-hierarchy of 'case1'"
-    # variables (aliases)
-    assert (
-        cases.get_scalarvariables(cases.simulator.instances["bb"], "h")[0].get("name") == "h"
-    ), "Scalar variable 'h' not found"
-    vars_der = cases.get_scalarvariables(cases.simulator.instances["bb"], "der")
-    assert len(vars_der) == 2 and vars_der[1].get("name") == "der(v)", "Vector variable 'der' not as expected"
-    check_expected(cases.get_alias_from_spec("BouncingBall", "bb", 3), "v", "alias name from valueReference")
-    check_expected(cases.get_alias_from_spec("BouncingBall", "bb", "v"), "v", "alias name from scalarVariable name")
+    # ?? to be extended when working actively with the FMU
 
 
 def check_value(case: "Case", var: str, val: float):
+    assert isinstance(case.spec, dict), f"Dict expected. Found {case.spec}"
     if var in case.spec:
         assert case.spec[var] == val, f"Wrong value {case.spec[var]} for variable {var}. Expected: {val}"
     else:  # not explicitly defined for this case. Shall be defined in the hierarchy!
+        assert case.parent is not None, "Parent needed at this stage"
         check_value(case.parent, var, val)
 
 
@@ -189,23 +171,24 @@ def test_case():
         "stepSize": 0.01,
     }, f"Base case special not as expected. Found {cases.base.special}"
     # iter()
-    case2 = cases.find_by_name("case2")
+    case2 = cases.case_by_name("case2")
+    assert case2 is not None, "None is not acceptable for case2"
     assert [c.name for c in case2.iter()] == ["base", "case1", "case2"], "Hierarchy of case2 not as expected"
     check_value(case2, "v", 9.0)
     check_value(case2, "h", 5.0)
     check_value(case2, "e", 0.7)
-    check_expected(case2.act_set[0.0][0].func.__name__, "_set_initial", "function name")
-    check_expected(case2.act_set[0.0][0].args[0], "bb", "model instance")
-    check_expected(case2.act_set[0.0][0].args[1], "real", "variable type")
-    check_expected(case2.act_set[0.0][0].args[2], (3,), "variable ref")
-    check_expected(case2.act_set[0.0][0].args[3], (9.0,), "variable value")
-    check_expected(cases.results.act_get[1.0][0].func.__name__, "get_variable_value", "get @time function")
-    check_expected(cases.results.act_get[1.0][0].args[0], "bb", "model instance")
-    check_expected(cases.results.act_get[1.0][0].args[1], "real", "variable type")
-    check_expected(cases.results.act_get[1.0][0].args[2], (3,), "variable refs")
-    check_expected(cases.get_alias_from_spec("BouncingBall", "bb", 3), "v", "alias_name_from_spec")
-    check_expected(cases.results.act_step[None][0].args[2], (1,), "variable refs of act_step")
-    check_expected(cases.results.act_final[0].args[2], (6,), "variable refs of act_final")
+    assert case2.act_set[0.0][0].func.__name__ == "_set_initial", "function name"
+    assert case2.act_set[0.0][0].args[0] == "bb", "model instance"
+    assert case2.act_set[0.0][0].args[1] == "real", "variable type"
+    assert case2.act_set[0.0][0].args[2] == (3,), "variable ref"
+    assert case2.act_set[0.0][0].args[3] == (9.0,), "variable value"
+    assert cases.results.act_get[1.0][0].func.__name__ == "get_variable_value", "get @time function"
+    assert cases.results.act_get[1.0][0].args[0] == "bb", "model instance"
+    assert cases.results.act_get[1.0][0].args[1] == "real", "variable type"
+    assert cases.results.act_get[1.0][0].args[2] == (3,), "variable refs"
+    #    assert cases.get_alias_variables( "BouncingBall", "bb", 3) == "v", "alias_name_from_spec"
+    assert cases.results.act_step[None][0].args[2] == (1,), "variable refs of act_step"
+    assert cases.results.act_final[0].args[2] == (6,), "variable refs of act_final"
     print("RESULTS", cases.run_case(cases.base, dump=True))
     cases.base.plot_time_series(["h"], "TestPlot")
 

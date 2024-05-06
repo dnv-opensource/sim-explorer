@@ -16,8 +16,9 @@ from libcosimpy.CosimObserver import CosimObserver
 
 # type definitions
 PyVal: TypeAlias = str | float | int | bool  # simple python types / Json5 atom
-Json5: TypeAlias = dict[str, PyVal | "Json5" | "Json5List"]  # Json5 object
-Json5List: TypeAlias = list[Json5 | PyVal]  # Json5 list
+Json5: TypeAlias = dict[str, "Json5Val"]  # Json5 object
+Json5List: TypeAlias = list["Json5Val"]  # Json5 list
+Json5Val: TypeAlias = PyVal | Json5 | Json5List  # Json5 values
 
 
 """
@@ -352,11 +353,11 @@ class SimulatorInterface:
     #                     )
     #         return groups
 
-    def set_initial(self, instance: int, typ: int, var_refs: tuple[int, ...], var_vals: tuple[str, ...]):
+    def set_initial(self, instance: int, typ: int, var_refs: tuple[int, ...], var_vals: tuple[PyVal, ...]):
         """Set initial values of variables, based on tuples of var_refs and var_vals (OSP only allows simple variables).
         The signature is the same as the manipulator functions slave_real_values()..., only that variables are set individuallythe type is added as argument.
         """
-        print(f"SET initial refs:{var_refs}, vals:{var_vals}")
+        print(f"SET initial refs:{var_refs}, type {typ}, vals:{var_vals}")
         assert len(var_refs) == len(var_vals), f"Got #refs:{len(var_refs)} != #vals:{len(var_vals)}"
         _instance = self.simulator.slave_index_from_instance_name(instance)
         res = []
@@ -372,10 +373,12 @@ class SimulatorInterface:
         elif typ == CosimVariableType.BOOLEAN.value:
             for i in range(len(var_refs)):
                 res.append(self.simulator.boolean_initial_value(_instance, var_refs[i], var_vals[i]))
-        assert all(x for x in res), f"Initial setting of ref:{var_refs} to val:{var_vals} failed. Status: {res}"
+        assert all(
+            x for x in res
+        ), f"Initial setting of ref:{var_refs}, type {typ} to val:{var_vals} failed. Status: {res}"
 
     def set_variable_value(
-        self, instance: str, typ: int, var_refs: tuple[int, ...], var_vals: tuple[str | float | int | bool, ...]
+        self, instance: str, typ: int, var_refs: tuple[int, ...], var_vals: tuple[PyVal, ...]
     ) -> callable:
         """Provide a manipulator function which sets the 'variable' (of the given 'instance' model) to 'value'.
 

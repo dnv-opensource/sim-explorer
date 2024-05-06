@@ -1,8 +1,7 @@
 from pathlib import Path
 
+from case_study.simulator_interface import SimulatorInterface
 from fmpy import plot_result, simulate_fmu
-
-from mvx.case_study.case import SimulatorInterface
 
 """ Test and validate the basic BouncingBall using fmpy and not using OSP or case_study."""
 
@@ -11,7 +10,7 @@ def test_run_fmpy():
     path = Path(__file__).parent.parent.joinpath("data/BouncingBall/BouncingBall.fmu")
     assert path.exists(), f"File {path} does not exist"
 
-    result = simulate_fmu(
+    result = simulate_fmu(  # type: ignore
         path,
         start_time=0.0,
         stop_time=10.0,
@@ -30,17 +29,10 @@ def test_run_fmpy():
 
 
 def test_run_osp():
-    path = Path(__file__).parent.parent.joinpath("data/BouncingBall/OspSystemStructure.xml")
+    path = Path(__file__).parent.joinpath("data/BouncingBall/OspSystemStructure.xml")
     assert path.exists(), f"File {path} does not exist"
     sim = SimulatorInterface(path)
-    sim.set_initial(
-        "bb",
-        0,
-        [
-            1,
-        ],
-        [0.0],
-    )
+    sim.set_initial(0, 0, (1,), (0.0,))
     sim.simulator.simulate_until(10.0)
 
 

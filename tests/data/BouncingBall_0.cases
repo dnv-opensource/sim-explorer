@@ -1,0 +1,45 @@
+{name        : 'BouncingBall',
+description : 'Simple Case Study with the basic BouncingBall FMU (ball dropped from h=1m',
+modelFile : "../data/BouncingBall/OspSystemStructure.xml",
+timeUnit  : "second",
+variables : {
+   g : ['bb', 'g', "Gravity acting on the ball"],
+   e : ['bb', 'e', "Coefficient of restitution"],
+   v_min : ['bb', 'v_min', "Velocity below which the ball stops bouncing"],
+   h : ['bb', 'h', "Position (z) of the ball"],
+   v_z : ['bb', 'der(h)', "Derivative of h (speed in z-direction"],
+   v : ['bb', 'v', "Velocity of ball"],
+   a_z : ['bb', 'der(v)', "Derivative of v (acceleration in z-direction)"],
+   },
+base : {
+   description : "Variable settings for the base case. All other cases are based on that",
+   spec: {
+      stepSize : 0.1,
+      stopTime : '3',
+      g : -9.81,
+      e : 0.71,
+   }},
+case1 : {
+   description : "Smaller coefficient of restitution e",
+   spec: {
+      e : 0.35,
+   }},
+case2 : {
+   description : "Based case1 (e change), change also the gravity g",
+   parent : 'case1',
+   spec : {
+      g : 1.5
+   }},
+case3 : {
+   description : "Related directly to base case, larger e",
+   spec : {
+      e : 1.4
+   }},
+results : {
+   spec : [
+      h@step,
+      v@1.0,
+      e,
+      g,
+   ]}
+}
