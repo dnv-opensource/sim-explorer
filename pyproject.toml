@@ -26,7 +26,7 @@ build-backend = "setuptools.build_meta"
 
     [project.optional-dependencies]
         modelTest = ["FMPy>=0.3.20", "matplotlib>=3.7.1"]
-        rest = ["docutils>=0.3", "pack ==1.1, ==1.3"]
+        rest = ["docutils>=0.20.1"]
         editor = ["thonny>=4.0.2"]
 
 [tool.black]
