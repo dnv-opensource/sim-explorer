@@ -1,13 +1,6 @@
 numpy>=1.24.2
 libcosimpy>=0.0.1
-
-[editor]
-thonny>=4.0.2
-
-[modelTest]
 FMPy>=3.9
 matplotlib>=3.7.1
-
-[rest]
 docutils>=0.3
 pack==1.1,==1.3
