@@ -6,10 +6,10 @@ from pathlib import Path
 from typing import TypeAlias
 from zipfile import BadZipFile, ZipFile, is_zipfile
 
-from libcosimpy.CosimEnums import CosimVariableCausality, CosimVariableType, CosimVariableVariability
-from libcosimpy.CosimExecution import CosimExecution
-from libcosimpy.CosimManipulator import CosimManipulator
-from libcosimpy.CosimObserver import CosimObserver
+from libcosimpy.CosimEnums import CosimVariableCausality, CosimVariableType, CosimVariableVariability  # type: ignore
+from libcosimpy.CosimExecution import CosimExecution  # type: ignore
+from libcosimpy.CosimManipulator import CosimManipulator  # type: ignore
+from libcosimpy.CosimObserver import CosimObserver  # type: ignore
 
 # from component_model.model import Model, model_from_fmu
 # from component_model.variable import Variable
@@ -373,9 +373,8 @@ class SimulatorInterface:
         elif typ == CosimVariableType.BOOLEAN.value:
             for i in range(len(var_refs)):
                 res.append(self.simulator.boolean_initial_value(_instance, var_refs[i], var_vals[i]))
-        assert all(
-            x for x in res
-        ), f"Initial setting of ref:{var_refs}, type {typ} to val:{var_vals} failed. Status: {res}"
+        msg = f"Initial setting of ref:{var_refs}, type {typ} to val:{var_vals} failed. Status: {res}"
+        assert all(x for x in res), msg
 
     def set_variable_value(
         self, instance: str, typ: int, var_refs: tuple[int, ...], var_vals: tuple[PyVal, ...]

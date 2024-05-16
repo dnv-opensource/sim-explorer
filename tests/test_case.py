@@ -11,7 +11,7 @@ def _file(file: str = "BouncingBall.cases"):
     return path
 
 
-@pytest.mark.parameterize(
+@pytest.mark.parametrize(
     "txt, case, value, expected",
     [
         ("x@step", "results", "", ("x", "step", None)),
@@ -34,7 +34,7 @@ def test_case_at_time(txt, case, value, expected):
         assert Case._disect_at_time(txt, case, value) == expected
 
 
-@pytest.mark.parameterize(
+@pytest.mark.parametrize(
     "txt, case, value, expected",
     [
         ("x", "results", "", ("x", "")),
@@ -93,7 +93,7 @@ def test_case_set_get():
     assert cases.results.act_get[1.0][0].args[2] == (3,), "variable refs"
     assert cases.results.act_step[None][0].args[2] == (1,), "variable refs of act_step"
     assert cases.results.act_final[0].args[2] == (6,), "variable refs of act_final"
-    print("RESULTS", cases.run_case(cases.base, dump=True))
+    # print("RESULTS", cases.run_case(cases.base, dump=True))
 
 
 #    cases.base.plot_time_series( ['h'], 'TestPlot')

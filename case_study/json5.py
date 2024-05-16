@@ -347,11 +347,11 @@ class Json5Reader:
             return ""
 
         try:
-            return int(v)
-        except ValueError:
+            return int(v)  # type: ignore
+        except Exception:
             try:
-                return float(v)
-            except ValueError:
+                return float(v)  # type: ignore
+            except Exception:
                 if isinstance(v, str):
                     if v.upper() == "FALSE":
                         return False

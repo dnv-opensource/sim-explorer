@@ -1,13 +1,12 @@
 from pathlib import Path
 
-from case_study.simulator_interface import SimulatorInterface
 from fmpy import plot_result, simulate_fmu
 
 """ Test and validate the basic BouncingBall using fmpy and not using OSP or case_study."""
 
 
 def test_run_fmpy():
-    path = Path(__file__).parent.parent.joinpath("data/BouncingBall/BouncingBall.fmu")
+    path = Path(__file__).parent.joinpath("data/BouncingBall/BouncingBall.fmu")
     assert path.exists(), f"File {path} does not exist"
 
     result = simulate_fmu(  # type: ignore
@@ -28,14 +27,6 @@ def test_run_fmpy():
     plot_result(result)
 
 
-def test_run_osp():
-    path = Path(__file__).parent.joinpath("data/BouncingBall/OspSystemStructure.xml")
-    assert path.exists(), f"File {path} does not exist"
-    sim = SimulatorInterface(path)
-    sim.set_initial(0, 0, (1,), (0.0,))
-    sim.simulator.simulate_until(10.0)
-
-
 # def test_dll():
 #     bb = WinDLL(os.path.abspath(os.path.curdir) + "\\BouncingBall.dll")
 #     bb.fmi2GetTypesPlatform.restype = c_char_p
@@ -44,6 +35,4 @@ def test_run_osp():
 #     print(bb.fmi2GetVersion(None))
 
 if __name__ == "__main__":
-    #    test_run_fmpy()
-    test_run_osp()
-#    test_dll()
+    test_run_fmpy()
