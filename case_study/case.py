@@ -73,15 +73,11 @@ class Case:
         self.parent = parent
         self.subs = []
         self.spec = {} if spec is None else spec
-        self.special = (
-            {}
-        )  # dict of special variable : value, like stopTime. @start of run this is sent to the Simulator to deal with it
+        self.special = {}  # dict of special variable : value, like stopTime. @start of run this is sent to the Simulator to deal with it
         self.act_set = {}  # dict of manipulator actions for specific times and this case. Updated by read_spec_item
         self.act_get = {}  # dict of observer actions for specific times and this case. Updated by read_spec_item
         self.act_final = []  # observer actions at end of simulation
-        self.act_step = (
-            {}
-        )  # observer actions at intervals: {dt1:[actions...],...} where dt=None denotes all macro time steps
+        self.act_step = {}  # observer actions at intervals: {dt1:[actions...],...} where dt=None denotes all macro time steps
         self.results = {}  # Json5 dict added by cases.run_case() when run
         if self.name == "results":
             assert isinstance(self.spec, list), f"A list is expected as spec. Found {self.spec}"
