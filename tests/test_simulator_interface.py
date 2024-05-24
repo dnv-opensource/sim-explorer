@@ -5,12 +5,6 @@ from case_study.simulator_interface import SimulatorInterface, match_with_wildca
 from libcosimpy.CosimExecution import CosimExecution
 
 
-def _file(file: str = "BouncingBall.cases"):
-    path = Path(__file__).parent.joinpath(file)
-    assert path.exists(), f"File {file} does not exist at {Path(__file__).parent}"
-    return path
-
-
 def test_match_with_wildcard():
     assert match_with_wildcard("Hello World", "Hello World"), "Match expected"
     assert not match_with_wildcard("Hello World", "Helo World"), "No match expected"
@@ -35,10 +29,42 @@ def test_pytype():
     assert SimulatorInterface.pytype(1, 2.3) == 2
 
 
+def test_component_variable_name():
+    path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
+    system = SimulatorInterface(str(path), name="BouncingBall")
+    assert "bb" == system.component_name_from_idx(0)
+    assert system.variable_name_from_ref("bb", 0) == "time"
+    assert system.variable_name_from_ref("bb", 1) == "h"
+    assert system.variable_name_from_ref("bb", 2) == "der(h)"
+    assert system.variable_name_from_ref("bb", 3) == "v"
+    assert system.variable_name_from_ref("bb", 4) == "der(v)"
+    assert system.variable_name_from_ref("bb", 5) == "g"
+    assert system.variable_name_from_ref("bb", 6) == "e"
+    assert system.variable_name_from_ref("bb", 7) == "v_min"
+    assert system.variable_name_from_ref("bb", 8) == ""
+
+
+def test_default_initial():
+    assert SimulatorInterface._default_initial(0, 0) == 3, f"Found {SimulatorInterface._default_initial( 0, 0)}"
+    assert SimulatorInterface._default_initial(1, 0) == 3, f"Found {SimulatorInterface._default_initial( 1, 0)}"
+    assert SimulatorInterface._default_initial(2, 0) == 0, f"Found {SimulatorInterface._default_initial( 2, 0)}"
+    assert SimulatorInterface._default_initial(3, 0) == 3, f"Found {SimulatorInterface._default_initial( 3, 0)}"
+    assert SimulatorInterface._default_initial(4, 0) == 0, f"Found {SimulatorInterface._default_initial( 4, 0)}"
+    assert SimulatorInterface._default_initial(5, 0) == 3, f"Found {SimulatorInterface._default_initial( 5, 0)}"
+    assert SimulatorInterface._default_initial(1, 1) == 0, f"Found {SimulatorInterface._default_initial( 1, 1)}"
+    assert SimulatorInterface._default_initial(1, 2) == 0, f"Found {SimulatorInterface._default_initial( 1, 1)}"
+    assert SimulatorInterface._default_initial(1, 3) == 3, f"Found {SimulatorInterface._default_initial( 1, 1)}"
+    assert SimulatorInterface._default_initial(1, 4) == 3, f"Found {SimulatorInterface._default_initial( 1, 1)}"
+    assert SimulatorInterface._default_initial(2, 0) == 0, f"Found {SimulatorInterface._default_initial( 2, 0)}"
+    assert SimulatorInterface._default_initial(5, 4) == 3, f"Found {SimulatorInterface._default_initial( 5, 4)}"
+    assert SimulatorInterface._default_initial(3, 2) == 2, f"Found {SimulatorInterface._default_initial( 3, 2)}"
+    assert SimulatorInterface._default_initial(4, 2) == 2, f"Found {SimulatorInterface._default_initial( 4, 2)}"
+
+
 def test_simulator_from_system_structure():
     """SimulatorInterface from OspSystemStructure.xml"""
-    systemfile = _file("data/BouncingBall/OspSystemStructure.xml")
-    system = SimulatorInterface(systemfile, name="BouncingBall")
+    path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
+    system = SimulatorInterface(str(path), name="BouncingBall")
     assert system.name == "BouncingBall", f"System.name should be BouncingBall. Found {system.name}"
     assert "bb" in system.components, f"Instance name 'bb' expected. Found instances {system.components}"
     assert system.get_models()[0] == 0, f"Component model {system.get_models()[0]}"
@@ -47,11 +73,11 @@ def test_simulator_from_system_structure():
 
 def test_simulator_instantiated():
     """Start with an instantiated simulator."""
-    systemfile = _file("data/BouncingBall/OspSystemStructure.xml")
-    path = systemfile.parent
+    path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
     sim = CosimExecution.from_osp_config_file(str(path))
+    # print("STATUS", sim.status())
     simulator = SimulatorInterface(
-        system=systemfile,
+        system=str(path),
         name="BouncingBall System",
         description="Testing info retrieval from simulator (without OspSystemStructure)",
         simulator=sim,
@@ -61,6 +87,21 @@ def test_simulator_instantiated():
     assert simulator.components["bb"] == 0, f"... given a unique identifier {simulator.components['bb']}"
     variables = simulator.get_variables("bb")
     assert variables["g"] == {"reference": 5, "type": 0, "causality": 1, "variability": 1}
+    assert simulator.allowed_action("set", "bb", "g", 0)
+    assert not simulator.allowed_action("set", "bb", "g", 100)
+    assert simulator.message.startswith("Variable g, causality PARAMETER,")
+    assert simulator.allowed_action("set", "bb", "e", 100), simulator.message
+    assert simulator.allowed_action("set", "bb", "h", 0), simulator.message
+    assert not simulator.allowed_action("set", "bb", "h", 100), simulator.message
+    assert simulator.allowed_action("set", "bb", "der(h)", 0), simulator.message
+    assert not simulator.allowed_action("set", "bb", "der(h)", 100), simulator.message
+    assert simulator.allowed_action("set", "bb", "v", 0), simulator.message
+    assert not simulator.allowed_action("set", "bb", "v", 100), simulator.message
+    assert simulator.allowed_action("set", "bb", "der(v)", 0), simulator.message
+    assert not simulator.allowed_action("set", "bb", "der(v)", 100), simulator.message
+    assert not simulator.allowed_action("set", "bb", "v_min", 0), simulator.message
+    assert simulator.allowed_action("set", "bb", (1, 3), 0), simulator.message  # combination of h,v
+    assert not simulator.allowed_action("set", "bb", (1, 3), 100), simulator.message  # combination of h,v
     assert simulator.get_variables(0) == simulator.get_variables("bb"), "Two ways of accessing variables"
     assert simulator.get_variables(0, "h"), {"h": {"reference": 1, "type": 0, "causality": 2, "variability": 4}}
     assert simulator.get_variables(0, 1), {"h": {"reference": 1, "type": 0, "causality": 2, "variability": 4}}
@@ -69,5 +110,7 @@ def test_simulator_instantiated():
 if __name__ == "__main__":
     test_match_with_wildcard()
     test_pytype()
+    test_component_variable_name()
+    test_default_initial()
     test_simulator_from_system_structure()
     test_simulator_instantiated()

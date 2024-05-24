@@ -409,7 +409,8 @@ def json5_write(
         elif isinstance(sub, list):
             res = "["
             for v in sub:
-                res += print_js5(v, level=level, pretty=pretty)
+                sub_res = print_js5(v, level=level, pretty=pretty)
+                res += "" if sub_res is None else sub_res
             res = remove_comma(res)
             res += "],"
             res += "\n" if pretty else ""

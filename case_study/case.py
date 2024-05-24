@@ -1,13 +1,15 @@
 # pyright: reportMissingImports=false, reportGeneralTypeIssues=false
 from __future__ import annotations
 
+import math
 import os
 import time
 from functools import partial
 from pathlib import Path
-from typing import TypeAlias
+from typing import Any, Callable, TypeAlias
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 from .json5 import Json5Reader, json5_write
 from .simulator_interface import SimulatorInterface, from_xml
@@ -65,20 +67,38 @@ class Case:
         name: str,
         description: str = "",
         parent: "Case" | None = None,
-        spec: Json5 | Json5List | None = None,
+        spec: dict | list | None = None,  # Json5 | Json5List | None = None,
+        special: dict | None = None,
     ):
         self.cases = cases
         self.name = name
         self.description = description
         self.parent = parent
-        self.subs = []
-        self.spec = {} if spec is None else spec
-        self.special = {}  # dict of special variable : value, like stopTime. @start of run this is sent to the Simulator to deal with it
-        self.act_set = {}  # dict of manipulator actions for specific times and this case. Updated by read_spec_item
-        self.act_get = {}  # dict of observer actions for specific times and this case. Updated by read_spec_item
-        self.act_final = []  # observer actions at end of simulation
-        self.act_step = {}  # observer actions at intervals: {dt1:[actions...],...} where dt=None denotes all macro time steps
-        self.results = {}  # Json5 dict added by cases.run_case() when run
+        if self.parent is not None:
+            self.parent.append(self)
+        self.subs: list = []  # own subcases
+        assert isinstance(spec, (dict, list)), f"The spec for case {self.name} was not found"
+        self.spec = spec
+        # dict of special variable : value, like stopTime. @start of run this is sent to the Simulator to deal with it
+        # the self.act_get/set objects are sorted dicts { time : [list of set actions]},
+        #   including 'final' actions at stopTime
+        #   including step actions as get actions at given intervals
+        #   including step actions as get actions at all communication points as time=None
+        if self.name == "results":
+            assert special is not None, "startTime and stopTime settings needed for 'results'"
+            self.special = special
+            self.act_get: dict = {}
+        elif self.name == "base":  # take over the results info and activities
+            assert special is not None, "startTime and stopTime settings needed for 'base'"
+            self.special = special
+            self.act_get = self.cases.results.act_get
+            self.act_set: dict = {}  # no set actions during results collection
+        else:
+            assert isinstance(self.parent, Case), f"Parent case expected for case {self.name}"
+            self.special = dict(self.parent.special)
+            self.act_get = Case._actions_copy(self.parent.act_get)
+            self.act_set = Case._actions_copy(self.parent.act_set)
+        self.results: dict = {}  # Json5 dict of results, added by cases.run_case() when run
         if self.name == "results":
             assert isinstance(self.spec, list), f"A list is expected as spec. Found {self.spec}"
             for k in self.spec:  # only keys, no values
@@ -87,13 +107,18 @@ class Case:
         else:
             assert isinstance(self.spec, dict), f"A dict is expected as spec. Found {self.spec}"
             for k, v in self.spec.items():
-                if isinstance(v, PyVal) or (isinstance(v, list) and all(isinstance(x, PyVal) for x in v)):
+                if isinstance(v, (str, float, int, bool)) or (
+                    isinstance(v, list) and all(isinstance(x, (str, float, int, bool)) for x in v)
+                ):
                     self.read_spec_item(k, v)  # type: ignore
                 else:
                     raise AssertionError(f"Unhandled spec value {v}") from None
 
         if self.name == "base":
             self.special = self._ensure_specials(self.special)  # must specify for base case
+        self.act_get = dict(sorted(self.act_get.items()))
+        if self.name != "results":
+            self.act_set = dict(sorted(self.act_set.items()))
 
     def iter(self):
         """Construct an iterator, allowing iteration from base case to this case through the hierarchy."""
@@ -128,7 +153,7 @@ class Case:
         """Append a case as sub-case to this case."""
         self.subs.append(case)
 
-    def add_action(self, typ: str, action: callable, args: tuple[any, ...], at_time: float | None = None):
+    def add_action(self, typ: str, action: Callable, args: tuple, at_time: float | None = None):
         """Add an action to one of the properties act_set, act_get, act_final, act_step - used for results.
         We use functools.partial to return the functions with fully filled in arguments.
         Compared to lambda... this allows for still accessible (testable) argument lists.
@@ -137,71 +162,76 @@ class Case:
             typ (str): the action type 'final', 'single' or 'step'
             action (Callable): the relevant action (manipulator/observer) function to perform
             args (tuple): action arguments as tuple (instance:str, type:int, valueReferences:list[int][, values])
-            at_time (float): optional time argument
+            at_time (float): optional time argument (not needed for all actions)
         """
-        if typ == "final":
-            assert at_time is None, f"Spurious argument {at_time} for final results action"
-            self.act_final.append(partial(action, *args))
-        elif typ in ("set", "get"):
-            assert at_time is not None, "For single time results actions, the time argument is mandatory"
-            if typ == "set":
-                try:
-                    self.act_set[at_time].append(partial(action, *args))
-                except Exception:  # new time
-                    self.act_set.update({at_time: [partial(action, *args)]})
-            elif typ == "get":
-                try:
-                    self.act_get[at_time].append(partial(action, *args))
-                except Exception:  # new time
-                    self.act_get.update({at_time: [partial(action, *args)]})
-        elif typ == "step":
-            if at_time in self.act_step:
-                self.act_step[at_time].append(partial(action, *args))
-            else:  # new interval argument
-                self.act_step.update({at_time: [partial(action, *args)]})
+        if typ == "get":
+            dct = self.act_get
+        elif typ == "set":
+            dct = self.act_set
+        else:
+            raise AssertionError(f"Unknown typ {typ} in add_action")
+        assert at_time is not None or typ == "get", "Set actions require a defined time"
+        if at_time in dct:
+            for i, act in enumerate(dct[at_time]):
+                if all(act.args[i] == args[i] for i in range(3)):
+                    dct[at_time][i] = partial(action, *args)
+                    return
+            dct[at_time].append(partial(action, *args))
+
+        else:  # no action for this time yet
+            dct.update({at_time: [partial(action, *args)]})
 
     @staticmethod
-    def _num_elements(obj: any) -> int:
+    def _num_elements(obj) -> int:
         if obj is None:
             return 0
-        elif isinstance(obj, (tuple, list)):
+        elif isinstance(obj, (tuple, list, np.ndarray)):
             return len(obj)
         elif isinstance(obj, str):
             return int(len(obj) > 0)
         else:
             return 1
 
-    @staticmethod
-    def _disect_at_time(txt: str, case: str, value: PyVal | list[PyVal] | None = None) -> tuple[str, str, float | None]:
-        """Disect the @txt argument into 'at_time_type' and 'at_time_arg'."""
+    def _disect_at_time(self, txt: str, value: PyVal | list[PyVal] | None = None) -> tuple[str, str, float]:
+        """Disect the @txt argument into 'at_time_type' and 'at_time_arg'.
+
+        Args:
+            txt (str): The key text after '@' and before ':'
+            value (PyVal, list(PyVal)): the value argument
+
+        Returns
+        -------
+            tuple of pre, type, arg, where
+            pre is the text before '@',
+            type is the type of action (get, set, step),
+            arg is the time argument, or -1
+        """
         pre, _, at = txt.partition("@")
         assert len(pre), f"'{txt}' is not allowed as basis for _disect_at_time"
         if not len(at):  # no @time spec
-            if case == "results":
-                return (pre, "final", None)
+            if self.name == "results" or value is None:
+                return (pre, "get", self.special["stopTime"])
             else:
-                assert Case._num_elements(
-                    value
-                ), f"Value required for 'set' in _disect_at_time('{txt}','{case}','{value}')"
+                msg = f"Value required for 'set' in _disect_at_time('{txt}','{self.name}','{value}')"
+                assert Case._num_elements(value), msg
                 return (pre, "set", 0)  # set at startTime
         else:  # time spec provided
             try:
-                arg = float(at)
+                arg_float = float(at)
             except Exception:
-                arg = at
-            if isinstance(arg, str):
+                arg_float = float("nan")
+            if math.isnan(arg_float):
                 if at.startswith("step"):
                     try:
-                        return (pre, "step", float(arg[4:]))
+                        return (pre, "step", float(at[4:]))
                     except Exception:
-                        return (pre, "step", None)  # this means 'all macro steps'
+                        return (pre, "step", -1)  # this means 'all macro steps'
                 else:
-                    raise AssertionError(f"Unknown @time instruction {txt}. Case:{case}, value:'{value}'")
+                    raise AssertionError(f"Unknown @time instruction {txt}. Case:{self.name}, value:'{value}'")
             else:
-                return (pre, "set" if Case._num_elements(value) else "get", arg)
+                return (pre, "set" if Case._num_elements(value) else "get", arg_float)
 
-    @staticmethod
-    def _disect_range(txt: str, case: str, value: PyVal | list[PyVal] | None) -> tuple[str, str]:
+    def _disect_range(self, txt: str, value: PyVal | list[PyVal] | None) -> tuple[str, str]:
         """Extract the explicit variable range, if relevant
         (multi-valued variables where only some all elements are addressed).
         Note: it is not explicitly checked whether 'value' containsexacly the number of values required for the range.
@@ -209,9 +239,8 @@ class Case:
         pre, _, rng = txt.partition("[")
         if len(rng):  # range among several variables as python slice or comma-separated list
             rng = rng.rstrip("]").strip()
-            assert (
-                case == "results" or rng == "0" or isinstance(value, list)
-            ), f"More than one value required to handle multi-valued setting [{rng}]"
+            msg = f"More than one value required to handle multi-valued setting [{rng}]"
+            assert self.name == "results" or rng == "0" or isinstance(value, list), msg
         elif isinstance(value, list):  # all values (without explicit range)
             rng = ":"
         else:  # no range (single variable)
@@ -237,8 +266,8 @@ class Case:
         if key in ("startTime", "stopTime", "stepSize"):
             self.special.update({key: value})  # just keep these as a dictionary so far
         else:  # expect a  variable-alias : value(s) specificator
-            key, at_time_type, at_time_arg = Case._disect_at_time(key, self.name, value)
-            key, rng = Case._disect_range(key, self.name, value)
+            key, at_time_type, at_time_arg = self._disect_at_time(key, value)
+            key, rng = self._disect_range(key, value)
             key = key.strip()
             try:
                 var_alias = self.cases.variables[key]
@@ -246,28 +275,41 @@ class Case:
                 raise CaseInitError(f"Variable {key} was not found in list of defined variable aliases") from err
             var_refs = []
             var_vals = []
-            #            print(f"READ_SPEC, {key}@{at_time_arg}({at_time_type}):{value}[{rng}], alias={var_alias}")
-            if self.name == "results":  # observer actions
+            # print(f"READ_SPEC, {key}@{at_time_arg}({at_time_type}):{value}[{rng}], alias={var_alias}")
+            if at_time_type in ("get", "step"):  # get actions
                 if rng == "":  # a single variable
                     var_refs.append(int(var_alias["variables"][0]))
                 else:  # multiple variables
                     for [k, _] in tuple2_iter(var_alias["variables"], var_alias["variables"], rng):
                         var_refs.append(k)
-                assert at_time_type in ("final", "get", "step"), f"Unknown @time type '{at_time_type}' for 'results'"
                 for inst in var_alias["instances"]:  # ask simulator to provide function to set variables:
-                    self.add_action(
-                        at_time_type,
-                        self.cases.simulator.get_variable_value,
-                        (inst, var_alias["type"], tuple(var_refs)),
-                        at_time_arg,
-                    )
+                    _inst = self.cases.simulator.simulator.slave_index_from_instance_name(inst)
+                    if not self.cases.simulator.allowed_action("get", _inst, tuple(var_refs), 0):
+                        raise AssertionError(self.cases.simulator.message) from None
+                    elif at_time_type == "get" or at_time_arg == -1:
+                        self.add_action(
+                            "get",
+                            self.cases.simulator.get_variable_value,
+                            (_inst, var_alias["type"], tuple(var_refs)),
+                            at_time_arg if at_time_arg <= 0 else at_time_arg * self.cases.timefac,
+                        )
+                    else:  # step actions
+                        for time in np.arange(start=at_time_arg, stop=self.special["stopTime"], step=at_time_arg):
+                            self.add_action(
+                                time,
+                                self.cases.simulator.get_variable_value,
+                                (_inst, var_alias["type"], tuple(var_refs)),
+                                at_time_arg * self.cases.timefac,
+                            )
 
-            else:  # manipulator actions
+            else:  # set actions
                 assert value is not None, f"Value needed for manipulator actions. Found {value}"
                 if rng == "":  # a single variable
                     var_refs.append(var_alias["variables"][0])
                     var_vals.append(
-                        SimulatorInterface.pytype(var_alias["type"], value if isinstance(value, PyVal) else value[0])
+                        SimulatorInterface.pytype(
+                            var_alias["type"], value if isinstance(value, (str, float, int, bool)) else value[0]
+                        )
                     )
                 elif isinstance(value, list):  # multiple variables
                     for [k, v] in tuple2_iter(var_alias["variables"], tuple(value), rng):
@@ -275,21 +317,27 @@ class Case:
                         var_vals.append(SimulatorInterface.pytype(var_alias["type"], v))
 
                 assert at_time_type in ("set"), f"Unknown @time type {at_time_type} for case '{self.name}'"
-                if at_time_arg == 0.0:  # initial settings use set_initial
+                if at_time_arg <= self.special["startTime"]:  # initial settings use set_initial
                     for inst in var_alias["instances"]:  # ask simulator to provide function to set variables:
+                        _inst = self.cases.simulator.simulator.slave_index_from_instance_name(inst)
+                        if not self.cases.simulator.allowed_action("set", _inst, tuple(var_refs), 0):
+                            raise AssertionError(self.cases.simulator.message) from None
                         self.add_action(
                             at_time_type,
                             self.cases.simulator.set_initial,
-                            (inst, var_alias["type"], tuple(var_refs), tuple(var_vals)),
-                            at_time_arg,
+                            (_inst, var_alias["type"], tuple(var_refs), tuple(var_vals)),
+                            at_time_arg * self.cases.timefac,
                         )
                 else:
                     for inst in var_alias["instances"]:  # ask simulator to provide function to set variables:
+                        _inst = self.cases.simulator.simulator.slave_index_from_instance_name(inst)
+                        if not self.cases.simulator.allowed_action("set", _inst, tuple(var_refs), at_time_arg):
+                            raise AssertionError(self.cases.simulator.message) from None
                         self.add_action(
                             at_time_type,
                             self.cases.simulator.set_variable_value,
-                            (inst, var_alias["type"], tuple(var_refs), tuple(var_vals)),
-                            at_time_arg,
+                            (_inst, var_alias["type"], tuple(var_refs), tuple(var_vals)),
+                            at_time_arg * self.cases.timefac,
                         )
 
     def list_cases(self, as_name=True, flat=False) -> list:
@@ -302,7 +350,7 @@ class Case:
                 lst.append(s.list_cases(as_name, flat))
         return lst
 
-    def _ensure_specials(self, special: dict[str, any]) -> dict[str, any]:
+    def _ensure_specials(self, special: dict[str, Any]) -> dict[str, Any]:
         """Ensure that mandatory special variables are defined.
         The base case shall specify some special variables, needed by the simulator.
         These can be overridden by the hierarchy of a given case.
@@ -314,11 +362,11 @@ class Case:
                 info = from_xml(self.cases.simulator.sysconfig, sub=None, xpath=".//{*}" + element)
                 if not len(info):
                     return default
-                info = info[0].text
-                if info is None:
+                txt = info[0].text
+                if txt is None:
                     return default
                 try:
-                    return float(info)
+                    return float(txt)
                 except Exception:
                     return default
 
@@ -343,10 +391,10 @@ class Case:
         if not jsfile:
             return
         if not isinstance(jsfile, str):
-            jsfile = self.name + ".json"
-        elif not jsfile.endswith(".json"):
-            jsfile += ".json"
-        json5_write(results, jsfile)
+            jsfile = self.name + ".js5"
+        elif not jsfile.endswith(".js5"):
+            jsfile += ".js5"
+        json5_write(results, Path( self.cases.file.parent, jsfile))
 
     def plot_time_series(self, aliases: list[str], title=""):
         """Use self.results to extract the provided alias variables and plot the data found in the same plot."""
@@ -369,6 +417,28 @@ class Case:
         plt.legend()
         plt.show()
 
+    @staticmethod
+    def _actions_copy(actions: dict) -> dict:
+        """Copy the dict of actions to a new dict,
+        which can be changed without changing the original dict.
+        Note: deepcopy cannot be used here since actions contain pointer objects.
+        """
+        res = {}
+        for t, t_actions in actions.items():
+            action_list = []
+            for action in t_actions:
+                action_list.append(partial(action.func, *action.args))
+            res.update({t: action_list})
+        return res
+
+    @staticmethod
+    def str_act(action: Callable):
+        """Prepare a human readable view of the action."""
+        txt = f"{action.func.__name__}(inst={action.args[0]}, type={action.args[1]}, ref={action.args[2]}"  # type: ignore
+        if len(action.args) > 3:  # type: ignore
+            txt += f", val={action.args[3]}"  # type: ignore
+        return txt
+
 
 class Cases:
     """Global book-keeping of all cases defined for a system model.
@@ -387,12 +457,13 @@ class Cases:
     __slots__ = ("file", "spec", "simulator", "timefac", "variables", "base", "results")
 
     def __init__(self, spec: str | Path, simulator: SimulatorInterface | None = None):
-        self.file = spec
+        self.file = Path(spec)  # everything relative to the folder of this file!
+        assert self.file.exists(), f"Cases spec file {spec} not found"
         self.spec = Json5Reader(spec).js_py
         if simulator is None:
-            #            if isinstance( self.spec.get('modelFile', None), ( Path, str)):
+            path = Path(self.file.parent, self.spec.get("modelFile", "OspSystemStructure.xml"))  # type: ignore
+            assert path.exists(), f"OSP system structure file {path} not found"
             try:
-                path = Path(str(self.spec["modelFile"])).resolve()
                 self.simulator = SimulatorInterface(
                     system=path, name=str(self.spec.get("name", "")), description=str(self.spec.get("description", ""))
                 )
@@ -407,20 +478,7 @@ class Cases:
         self.timefac = self._get_time_unit() * 1e9  # internally OSP uses pico-seconds as integer!
         # read the 'variables' section and generate dict { alias : { (instances), (variables)}}:
         self.variables = self.get_alias_variables()
-        for k, v in self.spec.items():  # all case definitions are top-level objects in self.spec
-            if k in ("name", "description", "modelFile", "variables", "timeUnit"):  # ignore 'header'
-                pass
-            else:
-                assert isinstance(v, dict), f"dict expected as value {v} in read_case"
-                parent, case = self.read_case(k, v)  # type: ignore
-
-                if k in ("base", "results"):  # should always be included. Define properties.
-                    setattr(self, k, case)
-                    if k == "base":
-                        print(self.base)
-                else:
-                    assert isinstance(parent, Case), f"Parent case needed for case {case.name}"
-                    parent.append(case)
+        self.read_cases()  # sets self.base and self.results
 
     def get_alias_variables(self) -> dict[str, dict]:
         """Read the 'variables' main key, which defines self.variables (aliases) as a dictionary:
@@ -428,28 +486,23 @@ class Cases:
           'type':CosimVariableType, 'causality':CosimVariableCausality, 'variability': CosimVariableVariability}.
         Optionally a description of the alias variable may be provided (and added to the dictionary).
         """
-        assert (
-            "variables" in self.spec
-        ), "Expecting the key 'variables' in the case study specification, defining the model variables in terms of component model instances and variable names"
-        assert isinstance(
-            self.spec["variables"], dict
-        ), "Expecting the 'variables' section of the spec to be a dictionary of variable alias : [component(s), variable(s), [description]]"
+        msg = "Expecting the key 'variables' in the case study specification, defining the model variables in terms of component model instances and variable names"
+        assert "variables" in self.spec, msg
+        msg = "Expecting the 'variables' section of the spec to be a dictionary of variable alias : [component(s), variable(s), [description]]"
+        assert isinstance(self.spec["variables"], dict), msg
         variables = {}
         for k, v in self.spec["variables"].items():
             assert isinstance(v, list), f"List of 'component(s)' and 'variable(s)' expected. Found {v}"
-            assert len(v) in (
-                2,
-                3,
-            ), f"2 or 3 elements expected as variable spec: [instances, variables[, description]]. Found {len(v)}."
-            assert isinstance(
-                v[0], (str | tuple)
-            ), f"Component name(s) expected as first argument of variable spec. Found {v[0]}"
+            msg = f"2 or 3 elements expected as variable spec: [instances, variables[, description]]. Found {len(v)}."
+            assert len(v) in (2, 3), msg
+            msg = f"Component name(s) expected as first argument of variable spec. Found {v[0]}"
+            assert isinstance(v[0], (str | tuple)), msg
             model, comp = self.simulator.match_components(v[0])
             assert len(comp), f"No component model instances '{v[0]}' found for alias variable '{k}'"
-
-            assert isinstance(v[1], str), f"Variable name(s) expected as second argument in variable spec. Found {v[1]}"
-            _vars = self.simulator.match_variables(comp[0], v[1])
-            var = {
+            msg = f"Variable name(s) expected as second argument in variable spec. Found {v[1]}"
+            assert isinstance(v[1], str), msg
+            _vars = self.simulator.match_variables(comp[0], v[1])  # tuple of matching var refs
+            var: dict = {
                 "model": model,
                 "instances": comp,
                 "variables": _vars,  # variables from same model!
@@ -460,13 +513,13 @@ class Cases:
             # We add also the more detailed variable info from the simulator (the FMU)
             # The type, causality and variability shall be equal for all variables.
             # The 'reference' element is the same as 'variables'.
-            var0 = next(iter(self.simulator.get_variables(model, var["variables"][0]).values()))
+            # next( iter( ...)) is used to get the first dict value
+            var0 = next(iter(self.simulator.get_variables(model, _vars[0]).values()))  # prototype
             for i in range(1, len(var["variables"])):
-                var_i = self.simulator.get_variables(model, var["variables"][i])
+                var_i = next(iter(self.simulator.get_variables(model, _vars[i]).values()))
                 for test in ["type", "causality", "variability"]:
-                    assert (
-                        var_i[test] == var0[test]
-                    ), f"Variable with ref {var['variables'][i]} not same {test} as {var0} in model {model}"
+                    msg = f"Variable with ref {var['variables'][i]} not same {test} as {var0} in model {model}"
+                    assert var_i[test] == var0[test], msg
             var.update({"type": var0["type"], "causality": var0["causality"], "variability": var0["variability"]})
             variables.update({k: var})
         return variables
@@ -503,21 +556,66 @@ class Cases:
             return 1.0 / 1000000
         return 1.0
 
-    def read_case(self, name: str, spec: Json5) -> tuple[Case | None, Case]:
-        """Define the case 'name'Based on the cases specification 'spec' as json5 python dict, register case 'name
-        Generate case objects and store as 'self.base' or in list 'self.subs' of sub-cases.
+    def read_cases(self):
+        """Instantiate all cases defined in the spec.
+        'results' and 'base' are defined firsts, since the others build on these
+        Return the results and base case objects.
+        The others are linked as sub-cases in their parent cases.
         """
-        if name in ("base", "results"):  # these two are top level objects, linking to Cases
-            parent_name, parent_case = ("", None)
+        if (
+            isinstance(self.spec, dict)
+            and "base" in self.spec
+            and isinstance(self.spec["base"], dict)
+            and "spec" in self.spec["base"]
+            and isinstance(self.spec["base"]["spec"], dict)
+            and "results" in self.spec
+            and isinstance(self.spec["results"], dict)
+            and "spec" in self.spec["results"]
+            and isinstance(self.spec["results"]["spec"], list)
+        ):
+            # we need to peek into the base case where startTime and stopTime should be defined
+            special: dict[str, float] = {
+                "startTime": self.spec["base"]["spec"].get("startTime", 0.0),  # type: ignore
+                "stopTime": self.spec["base"]["spec"].get("stopTime", -1),     # type: ignore
+            }  # type: ignore
+            assert special["stopTime"] > 0, "No stopTime defined in base case"  # type: ignore        # all case definitions are top-level objects in self.spec. 'base' and 'results' are mandatory
+            self.results = Case(
+                self,
+                "results",
+                description=str(self.spec.get("description", "")),
+                parent=None,
+                spec=self.spec["results"].get("spec", None),
+                special=special,
+            )  # type: ignore
+            self.base = Case(
+                self,
+                "base",
+                description=str(self.spec.get("description", "")),
+                parent=None,
+                spec=self.spec["base"].get("spec", None),
+                special=special,
+            )  # type: ignore
+            for k, v in self.spec.items():
+                if k not in (
+                    "name",
+                    "description",
+                    "modelFile",
+                    "variables",
+                    "timeUnit",  # ignore 'header'
+                    "base",
+                    "results",
+                ):
+                    assert isinstance(v, dict), f"dict expected as value {v} in read_case"
+                    parent_name: str = v.get("parent", "base")  # type: ignore
+                    parent_case = self.case_by_name(parent_name)
+                    assert isinstance(parent_case, Case), f"Parent case needed for case {k}"
+                    msg = f"Case spec expected. Found {v.get('spec')}"
+                    assert "spec" in v and isinstance(v["spec"], dict), msg
+                    _ = Case(self, k, description=str(v.get("description", "")), parent=parent_case, spec=v["spec"])
         else:
-            parent_name = spec.get("parent", "base")
-            parent_case = self.case_by_name(str(parent_name))
-            assert parent_case is not None, f"For case {name} with parent {parent_name} the parent case was not found"
-        assert "spec" in spec and isinstance(
-            spec["spec"], (dict, list)
-        ), f"Case spec expected. Found {spec.get('spec')}"
-        case = Case(self, name, description=str(spec.get("description", "")), parent=parent_case, spec=spec["spec"])
-        return (parent_case, case)
+            raise CaseInitError(
+                "Both the sections 'base' and 'results' shall be defined as js5 objects in *.cases"
+            ) from None
 
     def case_by_name(self, name: str) -> Case | None:
         """Find the case 'name' amoung all defined cases. Return None if not found.
@@ -553,71 +651,6 @@ class Cases:
             raise ValueError(f"The argument 'case' shall be a Case object or None. Type {type(case)} found.")
         return txt
 
-    def collect_settings(self, case: Case, tfac: float = 1.0) -> dict[str, dict]:
-        """Iterate through the case hierarchy of this case, collecting 'special' settings and time-based actions.
-
-        Args:
-            case (Case): The case object for which to collect the settings
-            tfac (float)=1.0: A time scaling factor. Time becomes an integer (in OSP)
-
-        Returns
-        -------
-            A dict[str, dict|list] containing the named special variables and the named actions.
-            special : startTime, stopTime, stepSize
-            actions_set : dict of manipulator actions for specific times and this case.
-            actions_get : dict of observer actions for specific times and this case.
-              Includes also final actions at stopTime, step actions in periodic intervals
-              and step actions without time argument (each step) as time=None.
-        """
-
-        def add_action(dct: dict, time: float, action_list: list):
-            try:
-                dct[time].extend(action_list)
-            except Exception:
-                dct.update({time: action_list})
-
-        special = {}
-        # 1. Get the 'special' settings, which also contain 'startTime', 'stepSize' and 'stopTime'
-        for c in case.iter():
-            special.update(c.special)  # update the special variables through the hierarchy, keeping the last value
-        tstart = special["startTime"]
-        tstop = special["stopTime"]
-        settings = {"special": special}
-
-        actions_set = {}  # dict of absolute times and list of manipulator actions issued at these times
-
-        # 2. Do another iteration to collect actions_set
-        for c in case.iter():
-            for t, alist in c.act_set.items():
-                add_action(actions_set, int(t * tfac) if t < tstart else int(tstart * tfac), alist)
-
-        # 3. Collect actions_get
-        actions_get = {}  # dict of absolute times and list of observer actions issued at these times
-        for t, alist in self.results.act_get.items():
-            add_action(actions_get, int(t * tfac) if t < tstart else int(tstart * tfac), alist)
-
-        for dt, alist in self.results.act_step.items():  # step actions. Time value represents an interval time!
-            if dt is None:  # do this at all macro steps (which may be unknown at this point, i.e. variable)
-                print("ACTION NONE", dt, alist, actions_get)
-                if None in actions_get:
-                    actions_get[None].extend(alist)
-                else:
-                    actions_get.update({None: alist})
-            else:  # a step interval explicitly provided. We add the (known) times to the actions dict.
-                t = int(tstart * tfac)
-                dt = int(dt * tfac)
-                while t <= int(tstop * tfac):
-                    add_action(actions_get, t, alist)
-                    t += dt
-        # 4. Final get actions
-        if len(self.results.act_final):  # add these at stopTime
-            for c in case.iter():
-                add_action(actions_get, int(tstop * tfac), c.act_final)
-
-        settings.update({"actions_set": actions_set, "actions_get": actions_get})
-
-        return settings
-
     def _make_results_header(self, case: Case):
         """Make a standard header for the results of 'case'.
         The data is added in run_case().
@@ -642,70 +675,71 @@ class Cases:
         Args:
             name (str,Case): case name as str or case object. The case to be run
             dump (str): Optionally save the results as json file.
-              False: results only as string, True: json file with automatic file name, str: explicit filename.json
+              False:  only as string, True: json file with automatic file name, str: explicit filename.json
         """
 
-        def action_iter(dct):
-            for t, lst in dct.items():
-                if t is not None:  # None means at each step!
-                    yield t, lst
-
         def results_add(time, instance, alias, rng, values):
+
             try:
-                results[time].update({alias: [instance, rng, values]})
+                [time].update({alias: [instance, rng, values]})
             except Exception:  # first set for this time
                 results.update({time: {alias: [instance, rng, values]}})
 
-        if isinstance(name, Case):
+        if isinstance(name, str):
+            case = self.case_by_name(name)
+            assert isinstance(case, Case), f"Could not find the case represented by {name}"
+        elif isinstance(name, Case):
             case = name
         else:
-            case = self.case_by_name(name)
-        assert isinstance(case, Case), f"Could not find the case represented by {name}"
-
-        settings = self.collect_settings(case, self.timefac)
+            raise CaseUseError(f"Case {name} was not found") from None
         # Note: final actions are included as _get at end time
-        #        print("ACTIONS_SET", settings['actions_set')
-        #        print("ACTIONS_GET", settings['actions_get')
-        #        print("ACTIONS_STEP", settings['actions_step')
-        time = int(settings["special"]["startTime"] * self.timefac)
-        tstop = int(settings["special"]["stopTime"] * self.timefac)
-        tstep = int(settings["special"]["stepSize"] * self.timefac)
+        # print("ACTIONS_SET", settings['actions_set')
+        # print("ACTIONS_GET", settings['actions_get')
+        # print("ACTIONS_STEP", settings['actions_step')
+        act_step = case.act_get.get(-1, None)
+        time = int(case.special["startTime"] * self.timefac)
+        tstop = int(case.special["stopTime"] * self.timefac)
+        tstep = int(case.special["stepSize"] * self.timefac)
 
-        next_set = action_iter(settings["actions_set"])
+        set_iter = case.act_set.items().__iter__()  # iterator over set actions => time, action_list
         try:
-            t_set, a_set = next(next_set)
+            t_set, a_set = next(set_iter)
         except StopIteration:
             t_set, a_set = (float("inf"), [])  # satisfy linter
-        next_get = action_iter(settings["actions_get"])
+        get_iter = case.act_get.items().__iter__()  # iterator over get actions => time, action_list
         try:
-            t_get, a_get = next(next_get)
+            t_get, a_get = next(get_iter)
         except StopIteration:
             t_get, a_get = (tstop + 1, [])
         results = self._make_results_header(case)
+        print(f"BEFORE LOOP: {time}:{t_set}, act:{a_set}")
         while time < tstop:
-            if time >= t_set:  # issue the set actions
+            while time >= t_set:  # issue the set actions
+                print(f"@{time}. Set actions {a_set}")
                 for a in a_set:
                     a()
                 try:
-                    t_set, a_set = next(next_set)
+                    t_set, a_set = next(set_iter)
                 except StopIteration:
-                    pass
+                    t_set, a_set = float("inf"), []
+            #            print(f"(Re-)Start simulator at {time} with step {tstep}")
+            time += tstep
+            self.simulator.simulator.simulate_until(time)
 
-            self.simulator.simulator.simulate_until(tstep)
-
-            if time >= t_get:  # issue the current get actions
+            while time >= t_get:  # issue the current get actions
                 #                print("GET", time, t_get, a_get)
                 for a in a_get:
-                    print("GET args", time, a.args)
-                    results_add(time, a.args[0], a.args[1], a.args[2], a())
-                t_get, a_get = next(next_get)
-            if None in settings["actions_get"]:  # there are step-always actions
-                for a in settings["actions_get"][None]:  # observed at every step
-                    #                print("STEP args", a.args)
-                    results_add(time, a.args[0], a.args[1], a.args[2], a())
+                    #                    print("GET args", time, a.args)
+                    results_add(time / self.timefac, a.args[0], a.args[1], a.args[2], a())
+                try:
+                    t_get, a_get = next(get_iter)
+                except StopIteration:
+                    t_get, a_get = float("inf"), []
 
-            time += tstep
-        #            print("TIME ", time)
+            if act_step is not None:  # there are step-always actions
+                for a in act_step:
+                    #                    print("STEP args", a.args)
+                    results_add(time / self.timefac, a.args[0], a.args[1], a.args[2], a())
 
         if dump:
             case.save_results(results, dump)

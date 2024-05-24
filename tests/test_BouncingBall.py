@@ -6,13 +6,13 @@ from fmpy import plot_result, simulate_fmu
 
 
 def test_run_fmpy():
-    path = Path(__file__).parent.joinpath("data/BouncingBall/BouncingBall.fmu")
+    path = Path(Path(__file__).parent, "data/BouncingBall0/BouncingBall.fmu")
     assert path.exists(), f"File {path} does not exist"
 
     result = simulate_fmu(  # type: ignore
         path,
         start_time=0.0,
-        stop_time=10.0,
+        stop_time=3.0,
         step_size=0.1,
         validate=True,
         solver="Euler",
@@ -20,7 +20,7 @@ def test_run_fmpy():
         visible=True,
         logger=print,  # fmi_call_logger=print,
         start_values={
-            "e": 0.9,
+            "e": 0.71,
             "g": -9.82,
         },
     )

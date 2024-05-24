@@ -3,7 +3,7 @@ import re
 import xml.etree.ElementTree as ET  # noqa: N817
 from enum import Enum
 from pathlib import Path
-from typing import TypeAlias
+from typing import Callable, TypeAlias
 from zipfile import BadZipFile, ZipFile, is_zipfile
 
 from libcosimpy.CosimEnums import CosimVariableCausality, CosimVariableType, CosimVariableVariability  # type: ignore
@@ -46,15 +46,6 @@ class CaseUseError(Exception):
     pass
 
 
-def warn(test: bool, msg: str) -> bool:
-    """Warn the user. Same as 'assert' statement, only that it is a function and that it does not throw an error."""
-    if __debug__:
-        if not test:
-            raise Warning(msg)
-            return True
-    return False
-
-
 class SimulatorInterface:
     """Class providing the interface to the simulator itself.
     This is designed for OSP and needs to be overridden for other types of simulator.
@@ -88,12 +79,12 @@ class SimulatorInterface:
     ):
         self.name = name  # overwrite if the system includes that
         self.description = description  # overwrite if the system includes that
+        self.sysconfig: Path | None = None
         if simulator is None:  # instantiate the simulator through the system config file
             self.sysconfig = Path(system)
             assert self.sysconfig.exists(), f"File {self.sysconfig.name} not found"
             self.simulator = self._simulator_from_config(self.sysconfig)
         else:
-            self.sysconfig = None
             self.simulator = simulator
         self.components = self.get_components()  # dict of {component name : modelId}
         # Instantiate a suitable manipulator for changing variables.
@@ -103,6 +94,7 @@ class SimulatorInterface:
         # Instantiate a suitable observer for collecting results.
         self.observer = CosimObserver.create_last_value()
         self.simulator.add_observer(observer=self.observer)
+        self.message = ""  # possibility to save additional message for (optional) retrieval by client
 
     @property
     def path(self):
@@ -137,7 +129,7 @@ class SimulatorInterface:
         comp_infos = list(self.simulator.slave_infos())
         comps = {}
 
-        all_variables = []
+        all_variables: list = []
         for comp in comp_infos:
             name = comp.name.decode()
             variables = self.get_variables(name)
@@ -245,7 +237,7 @@ class SimulatorInterface:
             component (str, int): The component name or its index within the model
             single (int,str): Optional possibility to return a single variable.
               If int: by valueReference, else by name.
-            as_numbers (bool): Return the enumerations as integer numbers (if True) or as names (if False
+            as_numbers (bool): Return the enumerations as integer numbers (if True) or as names (if False)
 
         Returns
         -------
@@ -302,9 +294,8 @@ class SimulatorInterface:
     #
     #         assert component in self.components, f"Component {component} was not found in the system model"
     #
-    #         if warn(
-    #             isinstance(self.components[component], Path),
-    #             f"The fmu of of {component} does not seem to be accessible. {component} is registered as {self.components[component]}",
+    #         if not isinstance(self.components[component], Path):
+    #             print(f"The fmu of of {component} does not seem to be accessible. {component} is registered as {self.components[component]}",
     #         ):
     #             return {}
     #         variables = from_xml(self.components[component], "modelDescription.xml").findall(".//ScalarVariable")
@@ -355,80 +346,73 @@ class SimulatorInterface:
 
     def set_initial(self, instance: int, typ: int, var_refs: tuple[int, ...], var_vals: tuple[PyVal, ...]):
         """Set initial values of variables, based on tuples of var_refs and var_vals (OSP only allows simple variables).
-        The signature is the same as the manipulator functions slave_real_values()..., only that variables are set individuallythe type is added as argument.
+        The signature is the same as the manipulator functions slave_real_values()...,
+        only that variables are set individually and the type is added as argument.
         """
-        print(f"SET initial refs:{var_refs}, type {typ}, vals:{var_vals}")
+        # print(f"SET initial refs:{var_refs}, type {typ}, vals:{var_vals}")
         assert len(var_refs) == len(var_vals), f"Got #refs:{len(var_refs)} != #vals:{len(var_vals)}"
-        _instance = self.simulator.slave_index_from_instance_name(instance)
         res = []
         if typ == CosimVariableType.REAL.value:
             for i in range(len(var_refs)):
-                res.append(self.simulator.real_initial_value(_instance, var_refs[i], var_vals[i]))
+                res.append(self.simulator.real_initial_value(instance, var_refs[i], var_vals[i]))
         elif typ == CosimVariableType.INTEGER.value:
             for i in range(len(var_refs)):
-                res.append(self.simulator.integer_initial_value(_instance, var_refs[i], var_vals[i]))
+                res.append(self.simulator.integer_initial_value(instance, var_refs[i], var_vals[i]))
         elif typ == CosimVariableType.STRING.value:
             for i in range(len(var_refs)):
-                res.append(self.simulator.string_initial_value(_instance, var_refs[i], var_vals[i]))
+                res.append(self.simulator.string_initial_value(instance, var_refs[i], var_vals[i]))
         elif typ == CosimVariableType.BOOLEAN.value:
             for i in range(len(var_refs)):
-                res.append(self.simulator.boolean_initial_value(_instance, var_refs[i], var_vals[i]))
+                res.append(self.simulator.boolean_initial_value(instance, var_refs[i], var_vals[i]))
         msg = f"Initial setting of ref:{var_refs}, type {typ} to val:{var_vals} failed. Status: {res}"
         assert all(x for x in res), msg
 
     def set_variable_value(
-        self, instance: str, typ: int, var_refs: tuple[int, ...], var_vals: tuple[PyVal, ...]
-    ) -> callable:
+        self, instance: int, typ: int, var_refs: tuple[int, ...], var_vals: tuple[PyVal, ...]
+    ) -> Callable:
         """Provide a manipulator function which sets the 'variable' (of the given 'instance' model) to 'value'.
 
         Args:
-            instance (str): identifier of the instance model for which the variable is to be set
+            instance (int): identifier of the instance model for which the variable is to be set
             var_refs (tuple): Tuple of variable references for which the values shall be set
             var_vals (tuple): Tuple of values (of the correct type), used to set model variables
         """
-        print(f"SET refs:{var_refs}, vals:{var_vals}")
-        _instance = self.simulator.slave_index_from_instance_name(instance)
-        assert (
-            _instance is not None
-        ), f"Model instance name {instance} was not found within the system model {self.name}"
         if typ == CosimVariableType.REAL.value:
-            return self.manipulator.slave_real_values(_instance, var_refs, var_vals)
-        if typ == CosimVariableType.INTEGER.value:
-            return self.manipulator.slave_integer_values(_instance, var_refs, var_vals)
-        if typ == CosimVariableType.BOOLEAN.value:
-            return self.manipulator.slave_boolean_values(_instance, var_refs, var_vals)
-        if typ == CosimVariableType.STRING.value:
-            return self.manipulator.slave_string_values(_instance, var_refs, var_vals)
+            return self.manipulator.slave_real_values(instance, var_refs, var_vals)
+        elif typ == CosimVariableType.INTEGER.value:
+            return self.manipulator.slave_integer_values(instance, var_refs, var_vals)
+        elif typ == CosimVariableType.BOOLEAN.value:
+            return self.manipulator.slave_boolean_values(instance, var_refs, var_vals)
+        elif typ == CosimVariableType.STRING.value:
+            return self.manipulator.slave_string_values(instance, var_refs, var_vals)
+        else:
+            raise CaseUseError(f"Unknown type {typ}") from None
 
-    def get_variable_value(self, instance: str, typ: int, var_refs: tuple[int, ...]) -> callable:
+    def get_variable_value(self, instance: int, typ: int, var_refs: tuple[int, ...]) -> Callable:
         """Provide an observer function which gets the 'variable' value (of the given 'instance' model) at the time when called.
 
         Args:
-            instance (str): identifier of the instance model for which the variable is to be set
+            instance (int): identifier of the instance model for which the variable is to be set
             var_refs (tuple): Tuple of variable references for which the values shall be retrieved
         """
-        print(f"GET refs:{var_refs}")
-        _instance = self.simulator.slave_index_from_instance_name(instance)
-        assert (
-            _instance is not None
-        ), f"Model instance name {instance} was not found within the system model {self.name}"
         if typ == CosimVariableType.REAL.value:
-            return self.observer.last_real_values(_instance, var_refs)
-        if typ == CosimVariableType.INTEGER.value:
-            return self.observer.last_integer_values(_instance, var_refs)
-        if typ == CosimVariableType.BOOLEAN.value:
-            return self.observer.last_boolean_values(_instance, var_refs)
-        if typ == CosimVariableType.STRING.value:
-            return self.observer.last_string_values(_instance, var_refs)
+            return self.observer.last_real_values(instance, var_refs)
+        elif typ == CosimVariableType.INTEGER.value:
+            return self.observer.last_integer_values(instance, var_refs)
+        elif typ == CosimVariableType.BOOLEAN.value:
+            return self.observer.last_boolean_values(instance, var_refs)
+        elif typ == CosimVariableType.STRING.value:
+            return self.observer.last_string_values(instance, var_refs)
+        else:
+            raise CaseUseError(f"Unknown type {typ}") from None
 
     @staticmethod
     def pytype(fmu_type: str | int, val: PyVal | None = None):
         """Return the python type of the FMU type provided as string or int (CosimEnums).
         If val is None, the python type object is returned. Else if boolean, true or false is returned.
         """
-        if isinstance(fmu_type, int):
-            fmu_type = CosimVariableType(fmu_type).name
-        typ = {"real": float, "integer": int, "boolean": bool, "string": str, "enumeration": Enum}[fmu_type.lower()]
+        fmu_type_str = CosimVariableType(fmu_type).name if isinstance(fmu_type, int) else fmu_type
+        typ = {"real": float, "integer": int, "boolean": bool, "string": str, "enumeration": Enum}[fmu_type_str.lower()]
 
         if val is None:
             return typ
@@ -441,6 +425,116 @@ class SimulatorInterface:
                 raise CaseInitError(f"The value {val} could not be converted to boolean")
         else:
             return typ(val)
+
+    @staticmethod
+    def _default_initial(causality: int, variability: int, max_possible: bool = False) -> int:
+        """Return default initial setting as int, as initial setting is not explicitly available in OSP. See p.50 FMI2.
+        maxPossible = True chooses the the initial setting with maximum allowance.
+
+        * Causality: input=0, parameter=1, output=2, calc.par.=3, local=4, independent=5 (within OSP)
+        * Initial:   exact=0, approx=1, calculated=2, none=3.
+        """
+        code = ((3, 3, 0, 3, 0, 3), (3, 0, 3, 1, 1, 3), (3, 0, 3, 1, 1, 3), (3, 3, 2, 3, 2, 3), (3, 3, 2, 3, 2, 3))[
+            variability
+        ][causality]
+        if max_possible:
+            return (0, 1, 0, 3)[code]  # first 'possible value' in table
+        else:
+            return (0, 2, 2, 3)[code]  # default value in table
+
+    def allowed_action(self, action: str, comp: int | str, var: int | str | tuple, time: float):
+        """Check whether the action would be allowed according to FMI2 rules, see FMI2.01, p.49.
+
+        * Unfortunately, the OSP interface does not explicitly provide the 'initial' setting,
+          such that we need to assume the default value as listed on p.50.
+        * OSP does not provide explicit access to 'before initialization' and 'during initialization'.
+          The rules for these two stages are therefore not distinguished
+        * if a tuple of variables is provided, the variables shall have equal properties
+          in addition to the normal allowed rules.
+
+        Args:
+            action (str): Action type, 'set', 'get', including init actions (set at time 0)
+            comp (int,str): The instantiated component within the system (as index or name)
+            var (int,str,tuple): The variable(s) (of component) as reference or name
+            time (float): The time at which the action will be performed
+        """
+
+        def _description(name: str, info: dict, initial: int) -> str:
+            descr = f"Variable {name}, causality {CosimVariableCausality(info['causality']).name}"
+            descr += f", variability {CosimVariableVariability(var_info['variability']).name}"
+            descr += f", initial {('exact','approx','calculated','none')[initial]}"
+            return descr
+
+        def _check(cond, msg):
+            if cond:
+                self.message = msg
+                return True
+            return False
+
+        _type, _causality, _variability = (-1, -1, -1)  # unknown
+        if isinstance(var, (int, str)):
+            var = (var,)
+        for v in var:
+            variables = self.get_variables(comp, v)
+            if _check(len(variables) != 1, f"Variable {v} of component {comp} was not found"):
+                return False
+            name, var_info = next(variables.items().__iter__())
+            if _type < 0 or _causality < 0 or _variability < 0:  # define the properties and check whether allowed
+                _type = var_info["type"]
+                _causality = var_info["causality"]
+                _variability = var_info["variability"]
+
+                if action == "get":  # no restrictions on get
+                    pass
+                elif action == "set":
+                    if _check(_variability == 0, f"Variable {name} is defined as 'constant' and cannot be set"):
+                        return False
+                    if _check(_variability == 0, f"Variable {name} is defined as 'constant' and cannot be set"):
+                        return False
+
+                    initial = SimulatorInterface._default_initial(_causality, _variability, True)
+                    if time == 0:  # initialization
+                        if _check(
+                            not (
+                                initial in (0, 1) or _causality == 0  # initial settings 'exact', 'approx'
+                            ),  # causality 'input'
+                            _description(name, var_info, initial) + " cannot be set before or during initialization.",
+                        ):
+                            return False
+                    else:  # at communication points
+                        if _check(
+                            not (
+                                (_causality == 1 and _variability == 2) or _causality == 0  # 'parameter', 'tunable'
+                            ),  # 'input'
+                            _description(name, var_info, initial) + " cannot be set at communication points.",
+                        ):
+                            return False
+            else:  # check whether the properties are equal
+                if _check(_type != var_info["type"], _description(name, var_info, initial) + f" != type {_type}"):
+                    return False
+                if _check(
+                    _causality != var_info["causality"],
+                    _description(name, var_info, initial) + f" != causality { _causality}",
+                ):
+                    return False
+                if _check(
+                    _variability != var_info["variability"],
+                    _description(name, var_info, initial) + f" != variability {_variability}",
+                ):
+                    return False
+        return True
+
+    def component_name_from_idx(self, idx: int) -> str:
+        for name, index in self.components.items():
+            if index == idx:
+                return name
+        return ""
+
+    def variable_name_from_ref(self, comp: int | str, ref: int) -> str:
+        for name, info in self.get_variables(comp).items():
+            if info["reference"] == ref:
+                return name
+        return ""
 
 
 def match_with_wildcard(findtxt: str, matchtxt: str) -> bool:

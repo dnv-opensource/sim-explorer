@@ -1,6 +1,6 @@
 {name        : 'BouncingBall',
 description : 'Simple Case Study with the basic BouncingBall FMU (ball dropped from h=1m',
-modelFile : "../data/BouncingBall/OspSystemStructure.xml",
+modelFile : "OspSystemStructure.xml",
 timeUnit  : "second",
 variables : {
    g : ['bb', 'g', "Gravity acting on the ball"],
@@ -28,7 +28,7 @@ case2 : {
    description : "Based case1 (e change), change also the gravity g",
    parent : 'case1',
    spec : {
-      g : 1.5
+      g : -1.5
    }},
 case3 : {
    description : "Related directly to base case, larger e",

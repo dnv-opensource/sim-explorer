@@ -32,8 +32,8 @@ def test_tuple_iter():
 
 def test_cases():
     """Test of the features provided by the Cases class"""
-    sim = SimulatorInterface(_file("data/BouncingBall/OspSystemStructure.xml"))
-    cases = Cases(_file("data/Bouncingball_0.cases"), sim)
+    sim = SimulatorInterface(_file("data/BouncingBall0/OspSystemStructure.xml"))
+    cases = Cases(_file("data/Bouncingball0/BouncingBall.cases"), sim)
 
     print(cases.info())
     # cases.spec
@@ -41,7 +41,7 @@ def test_cases():
     msg = f"Description: {cases.spec['description']}"
     descr = cases.spec["description"]
     assert isinstance(descr, str) and descr.startswith("Simple Case Study with the"), msg
-    assert cases.spec.get("modelFile", "") == "../data/BouncingBall/OspSystemStructure.xml", "modelFile not as expected"
+    assert cases.spec.get("modelFile", "") == "OspSystemStructure.xml", "modelFile not as expected"
     for c in ("base", "case1", "case2", "case3"):
         assert c in cases.spec, f"The case '{c}' is expected to be defined in {cases.spec['name']}"
     # find_by_name

@@ -75,7 +75,7 @@ def test_json5_write():
 
 
 def test_read_cases():
-    bb_cases = Path(__file__).parent.joinpath("data/BouncingBall/BouncingBall.cases")
+    bb_cases = Path(__file__).parent.joinpath("data/BouncingBall0/BouncingBall.cases")
     js = Json5Reader(bb_cases)
     assert js.js_py["name"] == "BouncingBall"
 
