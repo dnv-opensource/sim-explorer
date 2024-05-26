@@ -483,7 +483,7 @@ class Cases:
     def get_alias_variables(self) -> dict[str, dict]:
         """Read the 'variables' main key, which defines self.variables (aliases) as a dictionary:
         { alias : {'model':model ID, 'instances': tuple of instance names, 'variables': tuple of ValueReference,
-          'type':CosimVariableType, 'causality':CosimVariableCausality, 'variability': CosimVariableVariability}.
+        'type':CosimVariableType, 'causality':CosimVariableCausality, 'variability': CosimVariableVariability}.
         Optionally a description of the alias variable may be provided (and added to the dictionary).
         """
         msg = "Expecting the key 'variables' in the case study specification, defining the model variables in terms of component model instances and variable names"

@@ -12,18 +12,20 @@
 #
 import os
 import sys
+import shutil
 
-sys.path.insert(0, os.path.abspath("../../src"))
+sys.path.insert(0, os.path.abspath("../.."))
+shutil.copyfile("../../README.rst", "readme.rst")
 
 
 # -- Project information -----------------------------------------------------
 
-project = "my-package"
-copyright = "2024, DNV AS. All rights reserved."
-author = "Author One, Author Two, Author Three"
+project = "case_study"
+copyright = "2024, DNV AS. Released as OpenSource."
+author = "Siegfried Eisinger, DNV Simulation Technology Team, SEACo project team"
 
 # The full version, including alpha/beta/rc tags
-release = "0.1.6"
+release = "0.1"
 
 # -- General configuration ---------------------------------------------------
 
@@ -58,7 +60,7 @@ exclude_patterns = []
 # a list of builtin themes.
 #
 html_theme = "furo"
-html_logo = "_static/my_package.svg"
+#html_logo = "_static/my_package.svg"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

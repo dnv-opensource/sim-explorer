@@ -5,7 +5,7 @@ from libcosimpy.CosimExecution import CosimExecution  # type: ignore
 
 
 def test_system_structure():
-    path = Path(Path(__file__).parent, "data", "BouncingBall", "OspSystemStructure.xml")
+    path = Path(Path(__file__).parent, "data", "BouncingBall0", "OspSystemStructure.xml")
     assert path.exists(), "OspSystemStructure.xml not found"
     sim = CosimExecution.from_osp_config_file(str(path))
     assert sim.execution_status.current_time == 0
