@@ -1,0 +1,28 @@
+{
+name : 'Testing',
+description : 'Simple Case Study for testing purposes',
+timeUnit : 'second',
+variables : {
+      x : ['tab','outs','Outputs (3-dim)'],
+      i : ['tab','interpolate','Interpolation setting']},
+
+base : {
+      description : 'Mandatory base settings. No interpolation',
+      spec : {
+            stepSize : 0.1,
+            stopTime : 1,
+            i : False}},
+
+case1 : {
+      description : 'Interpolation ON',
+      spec : {
+            i : True}},
+
+caseX : {
+      description : 'Based case1 longer simulation',
+      parent : 'case1',
+      spec : {
+            stopTime : 10}},
+
+results : {
+      spec : ['x@step','x[0]@1.0','i']}}
