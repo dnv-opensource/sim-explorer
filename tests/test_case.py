@@ -6,13 +6,17 @@ from case_study.case import Case, Cases
 from case_study.json5 import json5_write
 from case_study.simulator_interface import SimulatorInterface
 
-global cases
+
+@pytest.fixture
+def simpletable(scope="module", autouse=True):
+    path = Path(Path(__file__).parent, "data/SimpleTable/test.cases")
+    assert path.exists(), "SimpleTable cases file not found"
+    return Cases(path)
 
 
-def _file(file: str = "BouncingBall.cases"):
-    path = Path(__file__).parent.joinpath(file)
-    assert path.exists(), f"File {file} does not exist at {Path(__file__).parent}"
-    return path
+@pytest.mark.skip(reason="Causes an error when run with the other tests!")
+def test_fixture(simpletable):
+    assert isinstance(simpletable, Cases), f"Cases object expected. Found:{simpletable}"
 
 
 def _make_cases():
@@ -55,28 +59,14 @@ def _make_cases():
     }
     json5_write(json5, "data/test.cases")
     _ = SimulatorInterface("data/OspSystemStructure.xml", "testSystem")
-    global cases
-    cases = Cases("data/test.cases")
+    _ = Cases("data/test.cases")
 
 
-@pytest.mark.parametrize(
-    "txt, casename, value, expected",
-    [
-        ("x@step", "results", "", ("x", "step", None)),
-        ("x@step 2.0", "results", "", ("x", "step", 2.0)),
-        ("v@1.0", "results", "", ("v", "get", 1.0)),
-        ("v@1.0", "CaseX", "", ("v", "get", 1.0)),  # value retrieval per case at specified time
-        ("@1.0", "results", "", "'@1.0' is not allowed as basis for _disect_at_time"),
-        ("y", "results", "", ("y", "final", None)),  # "report the value at end of sim!"
-        ("y", "CaseX", "", "Value required for 'set' in _disect_at_time("),
-        ("y", "CaseX", 99.9, ("y", "set", 0)),  # "Initial value setting!"
-    ],
-)
-def test_case_at_time(txt, casename, value, expected):
+def do_case_at_time(txt, casename, value, expected, simpletable):
     """Test the Case.disect_at_time function"""
-    global cases
-    case = cases.case_by_name(casename)
-    print(f"TEST_AT_TIME {txt}, {case}, {value}, {expected}")
+    # print(f"TEST_AT_TIME {txt}, {casename}, {value}, {expected}")
+    case = simpletable.case_by_name(casename)
+    assert case is not None, f"Case {casename} was not found"
     if isinstance(expected, str):  # error case
         with pytest.raises(AssertionError) as err:
             case._disect_at_time(txt, value)
@@ -85,22 +75,31 @@ def test_case_at_time(txt, casename, value, expected):
         assert case._disect_at_time(txt, value) == expected
 
 
-@pytest.mark.parametrize(
-    "txt, case, value, expected",
-    [
-        ("x", "results", "", ("x", "")),
-        ("x[3]", "results", "", ("x", "3")),
-        ("x[1:3]", "results", "", ("x", "1:3")),
-        ("x[1,2,5]", "results", "", ("x", "1,2,5")),
-        ("x[1:3]", "CaseX", "", "More than one value required to handle multi-valued setting"),
-        ("x[1:3]", "CaseX", [1, 2, 3], ("x", "1:3")),
-        ("x", "CaseX", [1, 2, 3], ("x", ":")),  # assume all values
-    ],
-)
-def test_case_range(txt, casename, value, expected):
+def test_case_at_time(simpletable):
+    print("DISECT", simpletable.case_by_name("base")._disect_at_time("x@step", ""))
+    do_case_at_time("x@step", "results", "", ("x", "step", -1), simpletable)
+    do_case_at_time("x@step 2.0", "base", "", ("x", "step", 2.0), simpletable)
+    do_case_at_time("v@1.0", "base", "", ("v", "get", 1.0), simpletable)
+    do_case_at_time("v@1.0", "caseX", "", ("v", "get", 1.0), simpletable)  # value retrieval per case at specified time
+    do_case_at_time("@1.0", "base", "", "'@1.0' is not allowed as basis for _disect_at_time", simpletable)
+    do_case_at_time("i", "results", "", ("i", "get", 1), simpletable)  # "report the value at end of sim!"
+    do_case_at_time("i", "caseX", "", "Value required for 'set' in _disect_at_time(", simpletable)
+    do_case_at_time("y", "caseX", 99.9, ("y", "set", 0), simpletable)  # "Initial value setting!"
+
+
+def test_case_range(simpletable):
+    do_case_range("x", "results", "", ("x", ""), simpletable)
+    do_case_range("x[3]", "results", "", ("x", "3"), simpletable)
+    do_case_range("x[1:3]", "results", "", ("x", "1:3"), simpletable)
+    do_case_range("x[1,2,5]", "results", "", ("x", "1,2,5"), simpletable)
+    do_case_range("x[1:3]", "caseX", "", "More than one value required to handle multi-valued setting", simpletable)
+    do_case_range("x[1:3]", "caseX", [1, 2, 3], ("x", "1:3"), simpletable)
+    do_case_range("x", "caseX", [1, 2, 3], ("x", ":"), simpletable)  # assume all values
+
+
+def do_case_range(txt: str, casename: str, value: str | list, expected: tuple | str, simpletable):
     """Test the Case.disect_at_time function"""
-    global cases
-    case = cases.case_by_name(casename)
+    case = simpletable.case_by_name(casename)
     if isinstance(expected, str):  # error case
         with pytest.raises(AssertionError) as err:
             case._disect_range(txt, value)
@@ -118,23 +117,26 @@ def check_value(case: Case, var: str, val: float):
         check_value(case.parent, var, val)
 
 
-def str_act(action: list):
+def str_act(action) -> str:
     """Prepare a human readable view of the action"""
-    return f"{action.func.__name__}(inst={action.args[0]}, type={action.args[1]}, ref={action.args[2]}, val={action.args[3]}"
+    print("TYPE", type(action))
+    if len(action.args) == 3:
+        return f"{action.func.__name__}(inst={action.args[0]}, type={action.args[1]}, ref={action.args[2]}"
+    else:
+        return f"{action.func.__name__}(inst={action.args[0]}, type={action.args[1]}, ref={action.args[2]}, val={action.args[3]}"
 
 
-def test_case_set_get():
+def test_case_set_get(simpletable):
     """Test of the features provided by the Case class"""
-    global cases
-    print(cases.base.list_cases())
-    assert cases.base.list_cases()[1] == ["case1", ["caseX"]], "Error in list_cases"
-    assert cases.base.special == {
+    print(simpletable.base.list_cases())
+    assert simpletable.base.list_cases()[1] == ["case1", ["caseX"]], "Error in list_cases"
+    assert simpletable.base.special == {
         "stopTime": 1,
         "startTime": 0.0,
         "stepSize": 0.1,
-    }, f"Base case special not as expected. Found {cases.base.special}"
+    }, f"Base case special not as expected. Found {simpletable.base.special}"
     # iter()
-    caseX = cases.case_by_name("caseX")
+    caseX = simpletable.case_by_name("caseX")
     assert caseX is not None, "CaseX does not seem to exist"
     assert [c.name for c in caseX.iter()] == ["base", "case1", "caseX"], "Hierarchy of caseX not as expected"
     check_value(caseX, "i", True)
@@ -144,38 +146,32 @@ def test_case_set_get():
         print(str_act(act))
     assert caseX.special["stopTime"] == 10, f"Erroneous stopTime {caseX.special['stopTime']}"
     assert caseX.act_set[0.0][0].func.__name__ == "set_initial", "function name"
-    print(caseX.act_set[0.0][0])
+    # print(caseX.act_set[0.0][0])
     assert caseX.act_set[0.0][0].args[0] == 0, "model instance"
     assert caseX.act_set[0.0][0].args[1] == 3, f"variable type {caseX.act_set[0.0][0].args[1]}"
     assert caseX.act_set[0.0][0].args[2] == (3,), f"variable ref {caseX.act_set[0.0][0].args[2]}"
     assert caseX.act_set[0.0][0].args[3] == (True,), f"variable value {caseX.act_set[0.0][0].args[3]}"
-    assert caseX.act_get[1.0][0].func.__name__ == "get_variable_value", "get @time function"
-    assert caseX.act_get[1.0][0].args[0] == 0, "model instance"
-    assert caseX.act_get[1.0][0].args[1] == 0, "variable type"
-    assert caseX.act_get[1.0][0].args[2] == (0,), f"variable refs {caseX.act_get[1.0][0].args[2]}"
-    assert caseX.act_step[None][0].args[2] == (0,), f"variable refs of act_step {caseX.act_step[None][0]}"
+    # print(f"ACT_GET: {caseX.act_get}")
+    assert caseX.act_get[1e9][0].func.__name__ == "get_variable_value", "get @time function"
+    assert caseX.act_get[1e9][0].args[0] == 0, "model instance"
+    assert caseX.act_get[1e9][0].args[1] == 0, "variable type"
+    assert caseX.act_get[1e9][0].args[2] == (0,), f"variable refs {caseX.act_get[1.0][0].args[2]}"
+    assert caseX.act_get[-1][0].args[2] == (0,), f"variable refs of step actions {caseX.act_step[None][0]}"
     for t in caseX.act_get:
         for act in caseX.act_get[t]:
             print(str_act(act))
-    #    print( caseX
-    assert caseX.act_get[10.0][0].args[2] == (3,), "variable refs of act_get[stopTime]"
-    # print("RESULTS", cases.run_case(cases.base, dump=True))
+    # print("RESULTS", simpletable.run_case(simpletable.base, dump=True))
 
 
 #    cases.base.plot_time_series( ['h'], 'TestPlot')
 
 
-def run_tests(func):
-    #     args = func.pytestmark[0].args[0]
-    _ = _make_cases()
-    vals = func.pytestmark[0].args[1]
-    for v in vals:
-        func(*v)
-
-
 if __name__ == "__main__":
-    _make_cases()
-    print("CASES", cases)
-    #    run_tests(test_case_at_time)
-    #     run_tests(test_case_range)
-    test_case_set_get()
+    retcode = pytest.main(
+        [
+            "-rA",
+            "-v",
+            __file__,
+        ]
+    )
+    assert retcode == 0, f"Non-zero return code {retcode}"

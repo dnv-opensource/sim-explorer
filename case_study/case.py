@@ -197,7 +197,7 @@ class Case:
 
         Args:
             txt (str): The key text after '@' and before ':'
-            value (PyVal, list(PyVal)): the value argument
+            value (PyVal, list(PyVal)): the value argument. Needed to distinguish the action type
 
         Returns
         -------
@@ -209,7 +209,7 @@ class Case:
         pre, _, at = txt.partition("@")
         assert len(pre), f"'{txt}' is not allowed as basis for _disect_at_time"
         if not len(at):  # no @time spec
-            if self.name == "results" or value is None:
+            if self.name == "results" or (isinstance(value, str) and value.lower() == "novalue"):
                 return (pre, "get", self.special["stopTime"])
             else:
                 msg = f"Value required for 'set' in _disect_at_time('{txt}','{self.name}','{value}')"
@@ -394,7 +394,7 @@ class Case:
             jsfile = self.name + ".js5"
         elif not jsfile.endswith(".js5"):
             jsfile += ".js5"
-        json5_write(results, Path( self.cases.file.parent, jsfile))
+        json5_write(results, Path(self.cases.file.parent, jsfile))
 
     def plot_time_series(self, aliases: list[str], title=""):
         """Use self.results to extract the provided alias variables and plot the data found in the same plot."""
@@ -576,7 +576,7 @@ class Cases:
             # we need to peek into the base case where startTime and stopTime should be defined
             special: dict[str, float] = {
                 "startTime": self.spec["base"]["spec"].get("startTime", 0.0),  # type: ignore
-                "stopTime": self.spec["base"]["spec"].get("stopTime", -1),     # type: ignore
+                "stopTime": self.spec["base"]["spec"].get("stopTime", -1),  # type: ignore
             }  # type: ignore
             assert special["stopTime"] > 0, "No stopTime defined in base case"  # type: ignore        # all case definitions are top-level objects in self.spec. 'base' and 'results' are mandatory
             self.results = Case(
@@ -627,6 +627,8 @@ class Cases:
         """
         if self.base.name == name:
             return self.base
+        elif self.results.name == name:
+            return self.results
         else:
             found = self.base.case_by_name(name)
             if found is not None:

@@ -108,9 +108,11 @@ def test_simulator_instantiated():
 
 
 if __name__ == "__main__":
-    test_match_with_wildcard()
-    test_pytype()
-    test_component_variable_name()
-    test_default_initial()
-    test_simulator_from_system_structure()
-    test_simulator_instantiated()
+    retcode = pytest.main(
+        [
+            "-rA",
+            "-v",
+            __file__,
+        ]
+    )
+    assert retcode == 0, f"Non-zero return code {retcode}"

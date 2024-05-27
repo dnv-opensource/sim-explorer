@@ -1,19 +1,24 @@
 from pathlib import Path
 
-import numpy as np
-from case_study.case import Case, Cases
-from case_study.simulator_interface import SimulatorInterface
+import pytest
+from case_study.case import Cases
 
 
 def test_run_casex():
     path = Path(Path(__file__).parent, "data/SimpleTable/test.cases")
     assert path.exists(), "SimpleTable cases file not found"
     cases = Cases(path)
-    base = cases.case_by_name("base")
-    case1 = cases.case_by_name("case1")
-    casex = cases.case_by_name("caseX")
+    _ = cases.case_by_name("base")
+    _ = cases.case_by_name("case1")
+    _ = cases.case_by_name("caseX")
     print("RESULTS", cases.run_case("caseX", "results"))
 
 
 if __name__ == "__main__":
-    test_run_casex()
+    retcode = pytest.main(
+        [
+            __file__,
+        ]
+    )
+    assert retcode == 0, f"Return code {retcode}"
+    # test_run_casex()

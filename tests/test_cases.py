@@ -1,10 +1,9 @@
 from pathlib import Path
 from typing import Generator
 
+import pytest
 from case_study.case import Cases, tuple2_iter
 from case_study.simulator_interface import SimulatorInterface
-
-# , SimulatorInterface, match_with_wildcard
 
 
 def _file(file: str = "BouncingBall.cases"):
@@ -69,14 +68,12 @@ def test_cases():
 
 #    cases.base.plot_time_series( ['h'], 'TestPlot')
 
-
-def run_tests(func):
-    #     args = func.pytestmark[0].args[0]
-    vals = func.pytestmark[0].args[1]
-    for v in vals:
-        func(*v)
-
-
 if __name__ == "__main__":
-    test_tuple_iter()
-    test_cases()
+    retcode = pytest.main(
+        [
+            "-rA",
+            "-v",
+            __file__,
+        ]
+    )
+    assert retcode == 0, f"Non-zero return code {retcode}"

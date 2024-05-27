@@ -90,8 +90,12 @@ def test_read_cases():
 #             len(vars_der) == 2 and vars_der[1].get("name") == "der(v)"
 #         )  # example of a 'vector' of both derivatives
 
-
 if __name__ == "__main__":
-    test_json5_syntax()
-    test_json5_write()
-    test_read_cases()
+    retcode = pytest.main(
+        [
+            "-rA",
+            "-v",
+            __file__,
+        ]
+    )
+    assert retcode == 0, f"Non-zero return code {retcode}"
