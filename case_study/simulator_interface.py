@@ -203,7 +203,7 @@ class SimulatorInterface:
             return False
 
         var = []
-        assert len(self.components), "Need the dictionary of components befor maching variables"
+        assert len(self.components), "Need the dictionary of components before maching variables"
 
         accepted = None
         variables = self.get_variables(component)
@@ -483,6 +483,7 @@ class SimulatorInterface:
                 _type = var_info["type"]
                 _causality = var_info["causality"]
                 _variability = var_info["variability"]
+                initial = SimulatorInterface._default_initial(_causality, _variability, True)
 
                 if action == "get":  # no restrictions on get
                     pass
@@ -492,20 +493,17 @@ class SimulatorInterface:
                     if _check(_variability == 0, f"Variable {name} is defined as 'constant' and cannot be set"):
                         return False
 
-                    initial = SimulatorInterface._default_initial(_causality, _variability, True)
                     if time == 0:  # initialization
+                        # initial settings 'exact', 'approx' or 'input'
                         if _check(
-                            not (
-                                initial in (0, 1) or _causality == 0  # initial settings 'exact', 'approx'
-                            ),  # causality 'input'
+                            not (initial in (0, 1) or _causality == 0),
                             _description(name, var_info, initial) + " cannot be set before or during initialization.",
                         ):
                             return False
                     else:  # at communication points
+                        # 'parameter', 'tunable' or 'input
                         if _check(
-                            not (
-                                (_causality == 1 and _variability == 2) or _causality == 0  # 'parameter', 'tunable'
-                            ),  # 'input'
+                            not ((_causality == 1 and _variability == 2) or _causality == 0),
                             _description(name, var_info, initial) + " cannot be set at communication points.",
                         ):
                             return False

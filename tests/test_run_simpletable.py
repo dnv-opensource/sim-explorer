@@ -15,10 +15,6 @@ def test_run_casex():
 
 
 if __name__ == "__main__":
-    retcode = pytest.main(
-        [
-            __file__,
-        ]
-    )
+    retcode = pytest.main(["-rA", "-v", __file__])
     assert retcode == 0, f"Return code {retcode}"
     # test_run_casex()

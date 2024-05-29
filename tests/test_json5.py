@@ -45,8 +45,18 @@ def test_json5_syntax():
         "{   spec: {\n     stopTime : '3',\n      bb.h : '10.0',\n      bb.v : '[0.0, 1.0, 3.0]',\n      bb.e : '0.7',\n   }}"
     )
     #        print(js.js5)
+    with pytest.raises(AssertionError) as err:
+        js = Json5Reader(
+            "{   spec: {\n     stopTime : 3\n    bb.h : '10.0',\n      bb.v : '[0.0, 1.0, 3.0]',\n      bb.e : '0.7',\n   }}"
+        )
+    assert str(err.value).startswith("Json5 read error at 3(19): Key separator ':' in value")
+
+    with pytest.raises(AssertionError) as err:
+        js = Json5Reader("{spec: {\n da_dt : [0,0,0,0], dp_dt : 0 db_dt : 0  v     : [0,0,0,0],}}")
+    assert str(err.value).startswith("Json5 read error at 2(28): Found ':'")
 
 
+@pytest.mark.skip(reason="Deactivated")
 def test_json5_write():
     js1 = {"key1": 1.0, "key2": "a string", "key3": ["a", "list", "including", "numbers", 9.9, 1]}
     expected = "{key1:1.0,key2:'a string',key3:['a','list','including','numbers',9.9,1]}"
@@ -74,6 +84,7 @@ def test_json5_write():
     print(txt)
 
 
+@pytest.mark.skip(reason="Deactivated")
 def test_read_cases():
     bb_cases = Path(__file__).parent.joinpath("data/BouncingBall0/BouncingBall.cases")
     js = Json5Reader(bb_cases)

@@ -47,6 +47,22 @@ class CaseUseError(Exception):
     pass
 
 
+def _assert(condition: bool, msg: str, crit: int = 4, typ=CaseInitError):
+    """Check condition and raise error is relevant with respect to condition and crit."""
+    if crit == 1:
+        print(f"DEBUG ({condition}): {msg}")
+    elif crit == 2:
+        print("INFO ({condition}): {msg}")
+    else:
+        if condition:
+            return
+        else:
+            if crit == 3:
+                print("WARNING:", msg)
+            else:
+                raise typ(msg) from None
+
+
 class Case:
     """Instantiation of a Case object.
     Sub-cases are strored ins list 'self.subs'.
@@ -231,33 +247,87 @@ class Case:
             else:
                 return (pre, "set" if Case._num_elements(value) else "get", arg_float)
 
-    def _disect_range(self, txt: str, value: PyVal | list[PyVal] | None) -> tuple[str, str]:
+    def _disect_range(self, txt: str) -> tuple[str, str]:
         """Extract the explicit variable range, if relevant
-        (multi-valued variables where only some all elements are addressed).
-        Note: it is not explicitly checked whether 'value' containsexacly the number of values required for the range.
+        (multi-valued variables, where only some all elements are addressed).
+        Note: since values are not specified for get actions, the validity of the provided range cannot further be checked here.
         """
         pre, _, rng = txt.partition("[")
-        if len(rng):  # range among several variables as python slice or comma-separated list
+        if len(rng):  # range among several variables
             rng = rng.rstrip("]").strip()
-            msg = f"More than one value required to handle multi-valued setting [{rng}]"
-            assert self.name == "results" or rng == "0" or isinstance(value, list), msg
-        elif isinstance(value, list):  # all values (without explicit range)
-            rng = ":"
         else:  # no range (single variable)
             rng = ""
         return (pre, rng)
 
+    def _check_adapt_range(self, key: str, case_var: dict, rng: str, value: PyVal | list[PyVal] | None = None) -> str:
+        """Check the range consistency with respect to the case_var definition and the provided values.
+
+        ToDo: handle multi-dimensional arrays (tables, ...)
+        """
+        dim = len(case_var["variables"])  # number of elements of the case variable
+        num_vals = Case._num_elements(value)
+        _assert(
+            dim >= num_vals, f"RangeError: Values supplied {value} exceed the dimension {dim} of variable {case_var}"
+        )
+        if rng == "":
+            if dim > 1:
+                return ":"  # all elements
+            else:
+                return ""  # sole element
+        else:
+            parts_comma = rng.split(",")
+            max_idx = -1
+            for i, p in enumerate(parts_comma):
+                parts_ellipses = p.split("...")
+                if len(parts_ellipses) == 1:  # should be an index
+                    try:
+                        idx = int(p)
+                        max_idx = max(max_idx, idx)
+                    except ValueError as err:
+                        raise CaseInitError(f"RangeError: Unhandled index {i}({p}) for variable {case_var}") from err
+                else:
+                    _assert(len(parts_ellipses) == 2, f"RangeError: Exactly two indices expected in {p}")
+                    for part in parts_ellipses:
+                        try:
+                            idx = int(part)
+                            max_idx = max(max_idx, idx)
+                        except ValueError as err:
+                            raise CaseInitError(
+                                f"RangeError: Unhandled ellipses '{part}' for variable {case_var}"
+                            ) from err
+                    rng = parts_ellipses[0] + ":" + parts_ellipses[1]
+        assert max_idx < dim, f"RangeError: Index {max_idx} does not exist in variable {case_var}"
+        return rng
+
     def read_spec_item(self, key: str, value: PyVal | list[PyVal] | None = None):
-        """Use the alias variable information (key) and the value to construct an action function which is run when this variable is set/read.
-        Optionally, for multi-valued variables (vectors) a range 'rng' may be provided, setting only part of the vector.
+        """Use the alias variable information (key) and the value to construct an action function,
+        which is run when this variable is set/read.
 
-        rng (str): Possibility to set only part of a vector variable:
-               '': set a single-valued variable, ':' set all variables of a vector, slice (without []) or comma-separated indexes to set part of vector
-               The function tuple2_iter() is designed to iterate over the variable/values with respect to rng.
+        In the simplest case, the key is a cases variable name. Optionally two elements can be added:
 
-        Note: Observer actions are normally specified within 'results' and are the same for all cases.
-          The possibility to observe specific variables in given cases is added through the syntax var@time : '',
-          i.e. empty variable value specification, which says: keep the value but record the variable.
+        #. a range, denoted by `[range-spec]` : choosing elements of a multi-valued variable.
+          Note: when disecting the key, the actual length of the case variable is unknown, such that checks are limited.
+          Rules:
+
+           * no '[]': addresses always the whole variable - scalar or multi-valued. rng = ''
+           * '[int]': addresses a single element of a multi-valued variable. rng = 'int'
+           * '[int,int, ...]': addresses several elements of a multi-valued variable. rng = 'int,int,...'
+           * '[int...int]': addresses a range of elements of a multi-valued variable. rng = 'int:int', i.e. a slice
+
+        #. a time specification, denoted by `@time-spec` : action performed at specified time.
+          Rules:
+
+           * no '@': set actions are performed initially. get actions are performed at end of simulation (record final value)
+           * @float: set/get action perfomred at specified time
+           * @step optional-time-spec: Not allowed for set actions.
+             Get actions performed at every communication point (no time-spec),
+             or at time-spec time intervals
+
+        The function tuple2_iter() is designed to iterate over the variable/values with respect to rng.
+
+        Note: 'Get' actions are normally specified within 'results' and are the same for all cases.
+          The possibility to observe specific variables in given cases is added through the syntax var@time : 'NoValue',
+          which says: keep the value but record the variable.
 
         Args:
             key (str): the key of the spec item
@@ -267,12 +337,13 @@ class Case:
             self.special.update({key: value})  # just keep these as a dictionary so far
         else:  # expect a  variable-alias : value(s) specificator
             key, at_time_type, at_time_arg = self._disect_at_time(key, value)
-            key, rng = self._disect_range(key, value)
+            key, rng = self._disect_range(key)
             key = key.strip()
             try:
                 var_alias = self.cases.variables[key]
             except KeyError as err:
                 raise CaseInitError(f"Variable {key} was not found in list of defined variable aliases") from err
+            rng = self._check_adapt_range(key, var_alias, rng, value)  # check consistency and detail rng
             var_refs = []
             var_vals = []
             # print(f"READ_SPEC, {key}@{at_time_arg}({at_time_type}):{value}[{rng}], alias={var_alias}")
@@ -280,6 +351,7 @@ class Case:
                 if rng == "":  # a single variable
                     var_refs.append(int(var_alias["variables"][0]))
                 else:  # multiple variables
+                    print(f"ITER (get), {key}, {rng}")
                     for [k, _] in tuple2_iter(var_alias["variables"], var_alias["variables"], rng):
                         var_refs.append(k)
                 for inst in var_alias["instances"]:  # ask simulator to provide function to set variables:
@@ -312,6 +384,7 @@ class Case:
                         )
                     )
                 elif isinstance(value, list):  # multiple variables
+                    print(f"ITER (set), {key}, {var_alias['variables']}, {value}, {rng}")
                     for [k, v] in tuple2_iter(var_alias["variables"], tuple(value), rng):
                         var_refs.append(k)
                         var_vals.append(SimulatorInterface.pytype(var_alias["type"], v))
@@ -486,28 +559,36 @@ class Cases:
         'type':CosimVariableType, 'causality':CosimVariableCausality, 'variability': CosimVariableVariability}.
         Optionally a description of the alias variable may be provided (and added to the dictionary).
         """
-        msg = "Expecting the key 'variables' in the case study specification, defining the model variables in terms of component model instances and variable names"
-        assert "variables" in self.spec, msg
-        msg = "Expecting the 'variables' section of the spec to be a dictionary of variable alias : [component(s), variable(s), [description]]"
-        assert isinstance(self.spec["variables"], dict), msg
+        _assert("variables" in self.spec, f"Mandatory key 'variables' not found in cases specification {self.file}")
+        _assert(
+            isinstance(self.spec["variables"], dict),
+            "'variables' section of the spec should be a dict - name: [component(s), variable(s), [description]]",
+        )
+        if not isinstance(self.spec["variables"], dict):
+            raise CaseInitError(
+                "'variables' section of the spec should be a dict name: [component(s), variable(s), [description]]"
+            ) from None
+
         variables = {}
         for k, v in self.spec["variables"].items():
-            assert isinstance(v, list), f"List of 'component(s)' and 'variable(s)' expected. Found {v}"
-            msg = f"2 or 3 elements expected as variable spec: [instances, variables[, description]]. Found {len(v)}."
-            assert len(v) in (2, 3), msg
-            msg = f"Component name(s) expected as first argument of variable spec. Found {v[0]}"
-            assert isinstance(v[0], (str | tuple)), msg
+            if not isinstance(v, list):
+                raise CaseInitError(f"List of 'component(s)' and 'variable(s)' expected. Found {v}") from None
+            _assert(len(v) in (2, 3), f"Variable spec should be: instance(s), variables[, description]. Found {v}.")
+            _assert(
+                isinstance(v[0], (str | tuple)),
+                f"Component name(s) expected as first argument of variable spec. Found {v[0]}",
+            )
+            assert isinstance(v[0], str), f"String expected as model name. Found {v[0]}"
             model, comp = self.simulator.match_components(v[0])
-            assert len(comp), f"No component model instances '{v[0]}' found for alias variable '{k}'"
-            msg = f"Variable name(s) expected as second argument in variable spec. Found {v[1]}"
-            assert isinstance(v[1], str), msg
+            _assert(len(comp) > 0, f"No component model instances '{v[0]}' found for alias variable '{k}'")
+            assert isinstance(v[1], str), f"Variable name(s) expected as second argument in variable spec. Found {v[1]}"
             _vars = self.simulator.match_variables(comp[0], v[1])  # tuple of matching var refs
             var: dict = {
                 "model": model,
                 "instances": comp,
                 "variables": _vars,  # variables from same model!
             }
-            assert len(var["variables"]), f"No matching variables found for alias {k}:{v}, component '{comp}'"
+            _assert(len(var["variables"]) > 0, f"No matching variables found for alias {k}:{v}, component '{comp}'")
             if len(v) > 2:
                 var.update({"description": v[2]})
             # We add also the more detailed variable info from the simulator (the FMU)
@@ -518,8 +599,10 @@ class Cases:
             for i in range(1, len(var["variables"])):
                 var_i = next(iter(self.simulator.get_variables(model, _vars[i]).values()))
                 for test in ["type", "causality", "variability"]:
-                    msg = f"Variable with ref {var['variables'][i]} not same {test} as {var0} in model {model}"
-                    assert var_i[test] == var0[test], msg
+                    _assert(
+                        var_i[test] == var0[test],
+                        f"Variable with ref {var['variables'][i]} not same {test} as {var0} in model {model}",
+                    )
             var.update({"type": var0["type"], "causality": var0["causality"], "variability": var0["variability"]})
             variables.update({k: var})
         return variables

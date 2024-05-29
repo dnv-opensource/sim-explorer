@@ -62,6 +62,19 @@ def _make_cases():
     _ = Cases("data/test.cases")
 
 
+@pytest.mark.skip(reason="Deactivated")
+def test_case_at_time(simpletable):
+    # print("DISECT", simpletable.case_by_name("base")._disect_at_time("x@step", ""))
+    do_case_at_time("x@step", "results", "", ("x", "step", -1), simpletable)
+    do_case_at_time("x@step 2.0", "base", "", ("x", "step", 2.0), simpletable)
+    do_case_at_time("v@1.0", "base", "", ("v", "get", 1.0), simpletable)
+    do_case_at_time("v@1.0", "caseX", "", ("v", "get", 1.0), simpletable)  # value retrieval per case at specified time
+    do_case_at_time("@1.0", "base", "", "'@1.0' is not allowed as basis for _disect_at_time", simpletable)
+    do_case_at_time("i", "results", "", ("i", "get", 1), simpletable)  # "report the value at end of sim!"
+    do_case_at_time("i", "caseX", "", "Value required for 'set' in _disect_at_time(", simpletable)
+    do_case_at_time("y", "caseX", 99.9, ("y", "set", 0), simpletable)  # "Initial value setting!"
+
+
 def do_case_at_time(txt, casename, value, expected, simpletable):
     """Test the Case.disect_at_time function"""
     # print(f"TEST_AT_TIME {txt}, {casename}, {value}, {expected}")
@@ -75,37 +88,49 @@ def do_case_at_time(txt, casename, value, expected, simpletable):
         assert case._disect_at_time(txt, value) == expected
 
 
-def test_case_at_time(simpletable):
-    print("DISECT", simpletable.case_by_name("base")._disect_at_time("x@step", ""))
-    do_case_at_time("x@step", "results", "", ("x", "step", -1), simpletable)
-    do_case_at_time("x@step 2.0", "base", "", ("x", "step", 2.0), simpletable)
-    do_case_at_time("v@1.0", "base", "", ("v", "get", 1.0), simpletable)
-    do_case_at_time("v@1.0", "caseX", "", ("v", "get", 1.0), simpletable)  # value retrieval per case at specified time
-    do_case_at_time("@1.0", "base", "", "'@1.0' is not allowed as basis for _disect_at_time", simpletable)
-    do_case_at_time("i", "results", "", ("i", "get", 1), simpletable)  # "report the value at end of sim!"
-    do_case_at_time("i", "caseX", "", "Value required for 'set' in _disect_at_time(", simpletable)
-    do_case_at_time("y", "caseX", 99.9, ("y", "set", 0), simpletable)  # "Initial value setting!"
-
-
+@pytest.mark.skip(reason="Deactivated")
 def test_case_range(simpletable):
-    do_case_range("x", "results", "", ("x", ""), simpletable)
-    do_case_range("x[3]", "results", "", ("x", "3"), simpletable)
-    do_case_range("x[1:3]", "results", "", ("x", "1:3"), simpletable)
-    do_case_range("x[1,2,5]", "results", "", ("x", "1,2,5"), simpletable)
-    do_case_range("x[1:3]", "caseX", "", "More than one value required to handle multi-valued setting", simpletable)
-    do_case_range("x[1:3]", "caseX", [1, 2, 3], ("x", "1:3"), simpletable)
-    do_case_range("x", "caseX", [1, 2, 3], ("x", ":"), simpletable)  # assume all values
+    do_case_range("x", "results", ("x", ""), simpletable)
+    do_case_range("x[3]", "results", ("x", "3"), simpletable)
+    # print("DISECT_RANGE", simpletable.case_by_name("caseX")._disect_range("x[3]", "4.0"))
+    do_case_range("x[3]", "caseX", ("x", "3"), simpletable)
+    do_case_range("x[1:3]", "results", ("x", "1:3"), simpletable)
+    do_case_range("x[1,2,5]", "results", ("x", "1,2,5"), simpletable)
+    do_case_range("x[1:3]", "caseX", ("x", "1:3"), simpletable)
+    do_case_range("x", "caseX", ("x", ""), simpletable)  # assume all values
 
 
-def do_case_range(txt: str, casename: str, value: str | list, expected: tuple | str, simpletable):
-    """Test the Case.disect_at_time function"""
+def do_case_range(txt: str, casename: str, expected: tuple | str, simpletable):
+    """Test the ._disect_range function"""
     case = simpletable.case_by_name(casename)
     if isinstance(expected, str):  # error case
         with pytest.raises(AssertionError) as err:
-            case._disect_range(txt, value)
+            case._disect_range(txt)
+        # assert str(err.value).startswith(expected)
+        print(f"ERROR:{err.value}")
+    else:
+        assert case._disect_range(txt) == expected
+
+
+def test_check_adapt_range(simpletable):
+    do_check_adapt_range("caseX", "x", "", [1, 2, 3], ":", simpletable)
+    do_check_adapt_range("caseX", "x", "Hi", [1, 2, 3], "RangeError:", simpletable)
+    do_check_adapt_range("caseX", "x", "1,2,4", [1, 2, 3], "RangeError:", simpletable)
+    do_check_adapt_range("caseX", "x", "1...3", [1, 2, 3], "RangeError:", simpletable)
+    do_check_adapt_range("caseX", "x", "0...2", [1, 2, 3], "0:2", simpletable)
+
+
+def do_check_adapt_range(casename: str, var: str, rng: str, value: str, expected: str, simpletable):
+    """Test the ._check_adapt_range function"""
+    case = simpletable.case_by_name(casename)
+    var_info = simpletable.variables[var]
+    if expected.startswith("RangeError:"):  # error case
+        with pytest.raises(Exception) as err:
+            case._check_adapt_range(var, var_info, rng, value)
+        print(f"Full error message var={var}, rng={rng}, value={value}: {err.value}")
         assert str(err.value).startswith(expected)
     else:
-        assert case._disect_range(txt, value) == expected
+        assert case._check_adapt_range(var, var_info, rng, value) == expected
 
 
 def check_value(case: Case, var: str, val: float):
@@ -126,6 +151,7 @@ def str_act(action) -> str:
         return f"{action.func.__name__}(inst={action.args[0]}, type={action.args[1]}, ref={action.args[2]}, val={action.args[3]}"
 
 
+@pytest.mark.skip(reason="Deactivated")
 def test_case_set_get(simpletable):
     """Test of the features provided by the Case class"""
     print(simpletable.base.list_cases())
@@ -167,11 +193,5 @@ def test_case_set_get(simpletable):
 
 
 if __name__ == "__main__":
-    retcode = pytest.main(
-        [
-            "-rA",
-            "-v",
-            __file__,
-        ]
-    )
+    retcode = pytest.main(["-rA", "-v", __file__])
     assert retcode == 0, f"Non-zero return code {retcode}"

@@ -323,6 +323,7 @@ class Json5Reader:
         #            print("Found quoted", self.js5[q1:q2], m)
         assert m is not None, self._msg("value expected")
         if m.group() in ("{", "["):  # found an object or a list start (quotation not allowed!)
+            assert ":" not in self.js5[self.pos : self.pos + m.start()], self._msg("Found ':'. Forgot ','?")
             self.pos += m.start()
             v = self._object() if m.group() == "{" else self._list()
             m = re.search(r"[,\}\]]", self.js5[self.pos :])
@@ -338,14 +339,15 @@ class Json5Reader:
             m.start() if m.group() in ("}", "]") else m.end()
         )  # leave the '}', ']', but make sure that ',' is eaten
 
-        #        print(f"VALUE '{v}' @ {self.pos}:'{self.js5[self.pos:self.pos+50]}'")
         if isinstance(v, str):
             v = v.strip().strip("'").strip('"').strip()
+        # print(f"VALUE {v} @ {self.pos}:'{self.js5[self.pos:self.pos+50]}'")
         if isinstance(v, (dict, list)):
             return v
         elif isinstance(v, str) and not len(v):  # might be empty due to trailing ','
             return ""
 
+        assert ":" not in v, self._msg(f"Key separator ':' in value: {v}. Forgot ','?")
         try:
             return int(v)  # type: ignore
         except Exception:
