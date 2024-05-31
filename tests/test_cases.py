@@ -1,8 +1,7 @@
 from pathlib import Path
-from typing import Generator
 
 import pytest
-from case_study.case import Cases, tuple2_iter
+from case_study.case import Cases
 from case_study.simulator_interface import SimulatorInterface
 
 
@@ -12,21 +11,21 @@ def _file(file: str = "BouncingBall.cases"):
     return path
 
 
-def test_tuple_iter():
-    """Test of the features provided by the Case class"""
-
-    def check(gen: Generator, expectation: list):
-        lst = [x[0] for x in gen]
-        assert lst == expectation, f"Expected: {expectation}. Found: {lst}"
-
-    tpl20 = tuple(range(20))
-    check(tuple2_iter(tpl20, tpl20, "3"), [3])
-    check(tuple2_iter(tpl20, tpl20, "3:7"), [3, 4, 5, 6, 7])
-    check(tuple2_iter(tpl20, tpl20, ":3"), list(range(0, 4)))
-    check(tuple2_iter(tpl20, tpl20, "17:"), list(range(17, 20)))
-    check(tuple2_iter(tpl20, tpl20, "10:-5"), list(range(10, 16)))
-    check(tuple2_iter(tpl20, tpl20, ":"), list(range(20)))
-    check(tuple2_iter(tpl20, tpl20, "1,3,4,9"), [1, 3, 4, 9])
+# def test_tuple_iter():
+#     """Test of the features provided by the Case class"""
+#
+#     def check(gen: Generator, expectation: list):
+#         lst = [x[0] for x in gen]
+#         assert lst == expectation, f"Expected: {expectation}. Found: {lst}"
+#
+#     tpl20 = tuple(range(20))
+#     check(tuple2_iter(tpl20, tpl20, "3"), [3])
+#     check(tuple2_iter(tpl20, tpl20, "3:7"), [3, 4, 5, 6, 7])
+#     check(tuple2_iter(tpl20, tpl20, ":3"), list(range(0, 4)))
+#     check(tuple2_iter(tpl20, tpl20, "17:"), list(range(17, 20)))
+#     check(tuple2_iter(tpl20, tpl20, "10:-5"), list(range(10, 16)))
+#     check(tuple2_iter(tpl20, tpl20, ":"), list(range(20)))
+#     check(tuple2_iter(tpl20, tpl20, "1,3,4,9"), [1, 3, 4, 9])
 
 
 def test_cases():

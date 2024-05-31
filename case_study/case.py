@@ -126,12 +126,11 @@ class Case:
         else:
             assert isinstance(self.spec, dict), f"A dict is expected as spec. Found {self.spec}"
             for k, v in self.spec.items():
-                if isinstance(v, (str, float, int, bool)) or (
-                    isinstance(v, list) and all(isinstance(x, (str, float, int, bool)) for x in v)
-                ):
-                    self.read_spec_item(k, v)  # type: ignore
-                else:
-                    raise AssertionError(f"Unhandled spec value {v}") from None
+                #                if isinstance(v, (str, float, int, bool)):
+                # isinstance(v, list) and all(isinstance(x, (str, float, int, bool)) for x in v)
+                self.read_spec_item(k, v)  # type: ignore
+                # else:
+                #    raise AssertionError(f"Unhandled spec value {v}") from None
 
         if self.name == "base":
             self.special = self._ensure_specials(self.special)  # must specify for base case
@@ -250,57 +249,64 @@ class Case:
             else:
                 return (pre, "set" if Case._num_elements(value) else "get", arg_float)
 
-    def _disect_range(self, txt: str) -> tuple[str, str]:
-        """Extract the explicit variable range, if relevant
+    def _disect_range(self, key: str) -> tuple[str, dict, list|range]:
+        """Extract the variable name, definition and explicit variable range, if relevant
         (multi-valued variables, where only some all elements are addressed).
-        Note: since values are not specified for get actions, the validity of the provided range cannot further be checked here.
-        """
-        pre, _, rng = txt.partition("[")
-        if len(rng):  # range among several variables
-            rng = rng.rstrip("]").strip()
-        else:  # no range (single variable)
-            rng = ""
-        return (pre, rng)
+        Note: since values are not specified for get actions, the validity of values cannot be checked here.
+        ToDo: handle multi-dimensional arrays (tables, ...).
 
-    def _check_adapt_range(self, key: str, case_var: dict, rng: str, value: PyVal | list[PyVal] | None = None) -> str:
-        """Check the range consistency with respect to the case_var definition and the provided values.
+        Args:
+            key (str): The key as provided in case spec(, with [range] if provided).
 
-        ToDo: handle multi-dimensional arrays (tables, ...)
+        Returns
+        -------
+            1. The variable name as defined in the 'variables' section of the spec
+            2. The variable definition, which the name refers to
+            3. An iterator over indices of the variable, i.e. the range
         """
-        dim = len(case_var["variables"])  # number of elements of the case variable
-        num_vals = Case._num_elements(value)
-        _assert(
-            dim >= num_vals, f"RangeError: Values supplied {value} exceed the dimension {dim} of variable {case_var}"
-        )
-        if rng == "":
-            if dim > 1:
-                return ":"  # all elements
-            else:
-                return ""  # sole element
-        else:
-            parts_comma = rng.split(",")
-            max_idx = -1
+        pre, _, r = key.partition("[")
+        try:
+            cvar_info = self.cases.variables[pre]
+        except KeyError as err:
+            raise CaseInitError(f"Variable {pre} was not found in list of defined case variables") from err
+        cvar_len = len(cvar_info["variables"])  # len of the tuple of refs
+        if len(r):  # range among several variables
+            r = r.rstrip("]").strip()  # string version of a non-trivial range
+            parts_comma = r.split(",")
+            rng : range | list[int] = []
             for i, p in enumerate(parts_comma):
-                parts_ellipses = p.split("...")
-                if len(parts_ellipses) == 1:  # should be an index
+                parts_ellipses = p.split("..")
+                if len(parts_ellipses) == 1:  # no ellipses. Should be an index
                     try:
                         idx = int(p)
-                        max_idx = max(max_idx, idx)
+                        assert 0 <= idx < cvar_len, f"Index {idx} of variable {pre} out of range"
                     except ValueError as err:
-                        raise CaseInitError(f"RangeError: Unhandled index {i}({p}) for variable {case_var}") from err
+                        raise CaseInitError(f"Unhandled index {p}[{i}] for variable {pre}") from err
+                    assert isinstance(rng,list), "A list was expected as range here. Found {rng}"
+                    rng.append(idx)
                 else:
-                    _assert(len(parts_ellipses) == 2, f"RangeError: Exactly two indices expected in {p}")
-                    for part in parts_ellipses:
-                        try:
-                            idx = int(part)
-                            max_idx = max(max_idx, idx)
-                        except ValueError as err:
-                            raise CaseInitError(
-                                f"RangeError: Unhandled ellipses '{part}' for variable {case_var}"
-                            ) from err
-                    rng = parts_ellipses[0] + ":" + parts_ellipses[1]
-        assert max_idx < dim, f"RangeError: Index {max_idx} does not exist in variable {case_var}"
-        return rng
+                    _assert(len(parts_ellipses) == 2, f"RangeError: Exactly two indices expected in {p} of {pre}")
+                    parts_ellipses[1] = parts_ellipses[1].lstrip(".")  # facilitates the option to use '...' or '..'
+                    try:
+                        if len(parts_ellipses[0]) == 0:
+                            idx0 = 0
+                        else:
+                            idx0 = int(parts_ellipses[0])
+                        assert 0 <= idx0 <= cvar_len, f"Index {idx0} of variable {pre} out of range"
+                        if len(parts_ellipses[1]) == 0:
+                            idx1 = cvar_len
+                        else:
+                            idx1 = int(parts_ellipses[1])
+                        assert idx0 <= idx1 <= cvar_len, f"Index {idx1} of variable {pre} out of range"
+                    except ValueError as err:
+                        raise CaseInitError(f"Unhandled ellipses '{parts_comma}' for variable {pre}") from err
+                    rng = range(idx0, idx1)
+        else:  # no expicit range
+            if cvar_len == 1:  # scalar variable
+                rng = [0]
+            else:  # all elements
+                rng = range(cvar_len)
+        return (pre, cvar_info, rng)
 
     def read_spec_item(self, key: str, value: PyVal | list[PyVal] | None = None):
         """Use the alias variable information (key) and the value to construct an action function,
@@ -326,38 +332,36 @@ class Case:
              Get actions performed at every communication point (no time-spec),
              or at time-spec time intervals
 
-        The function tuple2_iter() is designed to iterate over the variable/values with respect to rng.
-
         Note: 'Get' actions are normally specified within 'results' and are the same for all cases.
           The possibility to observe specific variables in given cases is added through the syntax var@time : 'NoValue',
           which says: keep the value but record the variable.
 
         Args:
             key (str): the key of the spec item
-            value (PyVal,list[PyVal])=None: the value(s) with respect to the item. For 'results' this is not used
+            value (list[PyVal])=None: the values with respect to the item. For 'results' this is not used
         """
         if key in ("startTime", "stopTime", "stepSize"):
             self.special.update({key: value})  # just keep these as a dictionary so far
         else:  # expect a  variable-alias : value(s) specificator
             key, at_time_type, at_time_arg = self._disect_at_time(key, value)
-            key, rng = self._disect_range(key)
+            key, cvar_info, rng = self._disect_range(key)
             key = key.strip()
-            try:
-                var_alias = self.cases.variables[key]
-            except KeyError as err:
-                raise CaseInitError(f"Variable {key} was not found in list of defined variable aliases") from err
-            rng = self._check_adapt_range(key, var_alias, rng, value)  # check consistency and detail rng
+            if value is not None:  # check also the number of supplied values
+                if isinstance(value, (str, float, int, bool)):  # make sure that there are always lists
+                    value = [value]
+                _assert(
+                    sum(1 for _ in rng) == Case._num_elements(value),
+                    f"Variable {key}: # values {Case._num_elements( value)} != # vars {sum( 1 for _ in rng)}",
+                )
             var_refs = []
             var_vals = []
-            # print(f"READ_SPEC, {key}@{at_time_arg}({at_time_type}):{value}[{rng}], alias={var_alias}")
+            for i, r in enumerate(rng):
+                var_refs.append(cvar_info["variables"][r])
+                if value is not None:
+                    var_vals.append(value[i])
+            # print(f"READ_SPEC, {key}@{at_time_arg}({at_time_type}):{value}[{rng}], alias={cvar_info}")
             if at_time_type in ("get", "step"):  # get actions
-                if rng == "":  # a single variable
-                    var_refs.append(int(var_alias["variables"][0]))
-                else:  # multiple variables
-                    print(f"ITER (get), {key}, {rng}")
-                    for [k, _] in tuple2_iter(var_alias["variables"], var_alias["variables"], rng):
-                        var_refs.append(k)
-                for inst in var_alias["instances"]:  # ask simulator to provide function to set variables:
+                for inst in cvar_info["instances"]:  # ask simulator to provide function to set variables:
                     _inst = self.cases.simulator.simulator.slave_index_from_instance_name(inst)
                     if _inst not in self.result_slave_index_map:
                         self.result_slave_index_map[_inst] = {"instance": inst}
@@ -371,7 +375,7 @@ class Case:
                         self.add_action(
                             "get",
                             self.cases.simulator.get_variable_value,
-                            (_inst, var_alias["type"], tuple(var_refs)),
+                            (_inst, cvar_info["type"], tuple(var_refs)),
                             at_time_arg if at_time_arg <= 0 else at_time_arg * self.cases.timefac,
                         )
                     else:  # step actions
@@ -379,46 +383,33 @@ class Case:
                             self.add_action(
                                 time,
                                 self.cases.simulator.get_variable_value,
-                                (_inst, var_alias["type"], tuple(var_refs)),
+                                (_inst, cvar_info["type"], tuple(var_refs)),
                                 at_time_arg * self.cases.timefac,
                             )
 
             else:  # set actions
-                assert value is not None, f"Value needed for manipulator actions. Found {value}"
-                if rng == "":  # a single variable
-                    var_refs.append(var_alias["variables"][0])
-                    var_vals.append(
-                        SimulatorInterface.pytype(
-                            var_alias["type"], value if isinstance(value, (str, float, int, bool)) else value[0]
-                        )
-                    )
-                elif isinstance(value, list):  # multiple variables
-                    print(f"ITER (set), {key}, {var_alias['variables']}, {value}, {rng}")
-                    for [k, v] in tuple2_iter(var_alias["variables"], tuple(value), rng):
-                        var_refs.append(k)
-                        var_vals.append(SimulatorInterface.pytype(var_alias["type"], v))
-
+                assert value is not None, f"Variable {key}: Value needed for 'set' actions."
                 assert at_time_type in ("set"), f"Unknown @time type {at_time_type} for case '{self.name}'"
                 if at_time_arg <= self.special["startTime"]:  # initial settings use set_initial
-                    for inst in var_alias["instances"]:  # ask simulator to provide function to set variables:
+                    for inst in cvar_info["instances"]:  # ask simulator to provide function to set variables:
                         _inst = self.cases.simulator.simulator.slave_index_from_instance_name(inst)
                         if not self.cases.simulator.allowed_action("set", _inst, tuple(var_refs), 0):
                             raise AssertionError(self.cases.simulator.message) from None
                         self.add_action(
                             at_time_type,
                             self.cases.simulator.set_initial,
-                            (_inst, var_alias["type"], tuple(var_refs), tuple(var_vals)),
+                            (_inst, cvar_info["type"], tuple(var_refs), tuple(var_vals)),
                             at_time_arg * self.cases.timefac,
                         )
                 else:
-                    for inst in var_alias["instances"]:  # ask simulator to provide function to set variables:
+                    for inst in cvar_info["instances"]:  # ask simulator to provide function to set variables:
                         _inst = self.cases.simulator.simulator.slave_index_from_instance_name(inst)
                         if not self.cases.simulator.allowed_action("set", _inst, tuple(var_refs), at_time_arg):
                             raise AssertionError(self.cases.simulator.message) from None
                         self.add_action(
                             at_time_type,
                             self.cases.simulator.set_variable_value,
-                            (_inst, var_alias["type"], tuple(var_refs), tuple(var_vals)),
+                            (_inst, cvar_info["type"], tuple(var_refs), tuple(var_vals)),
                             at_time_arg * self.cases.timefac,
                         )
 
@@ -706,7 +697,7 @@ class Cases:
                     _ = Case(self, k, description=str(v.get("description", "")), parent=parent_case, spec=v["spec"])
         else:
             raise CaseInitError(
-                "Both the sections 'base' and 'results' shall be defined as js5 objects in *.cases"
+                f"Mandatory main sections 'base' and 'results' needed. Found {list(self.spec.keys())}"
             ) from None
 
     def case_by_name(self, name: str) -> Case | None:
@@ -820,6 +811,7 @@ class Cases:
             t_get, a_get = (tstop + 1, [])
         results = self._make_results_header(case)
         print(f"BEFORE LOOP: {time}:{t_set}, act:{a_set}")
+        return
         while time < tstop:
             while time >= t_set:  # issue the set actions
                 print(f"@{time}. Set actions {a_set}")
@@ -852,44 +844,3 @@ class Cases:
             case.save_results(results, dump)
         case.results = results
         return results
-
-
-def tuple2_iter(tpl1: tuple, tpl2: tuple, rng: str):
-    """Make an iterator over the tuples 'tpl1' and 'tpl2' with respect to range 'rng' provided as text.
-
-    Args:
-        tpl1 (tuple): the first tuple from which to return elements
-        tpl2 (tuple): the second tuple from which to return elements
-        rng (str): variable range description as string.
-             Can be a single integer, a python slice without [], or a comma-separated list of integers
-    """
-    assert len(tpl1) == len(tpl2), f"The two tuples shall be of equal length. Found {tpl1} <-> {tpl2}"
-    try:
-        idx = int(rng)
-        assert len(tpl2) > idx, f"Supplied tuples not long enough to return index {idx}"
-        yield (tpl1[idx], tpl2[idx])
-    except Exception:
-        if ":" in rng:  # seems to be a slice
-            pre, _, post = rng.partition(":")
-            if not len(post):
-                end = len(tpl1) - 1
-            else:
-                try:
-                    end = int(post)
-                    if end < -1:
-                        end += len(tpl1)
-                except ValueError as err:
-                    raise CaseInitError(f"Unreadable range specification '{rng}'") from err
-            idx = int(pre) if pre.isnumeric() else 0
-            while idx <= end:
-                yield (tpl1[idx], tpl2[idx])
-                idx += 1
-        elif "," in rng:  # seems to be a comma-separated list
-            for e in rng.split(","):
-                try:
-                    idx = int(e)
-                except ValueError as err:
-                    raise CaseInitError(f"A comma-separated range must consist of integers. Found {rng}") from err
-                yield (tpl1[idx], tpl2[idx])
-        else:
-            assert True, f"Only single integer, slice of comma-separated list allowed as range. Found {rng}"
