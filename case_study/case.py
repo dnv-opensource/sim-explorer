@@ -90,6 +90,9 @@ class Case:
         self.name = name
         self.description = description
         self.parent = parent
+        # Map slave indeces to instance names and variable references that then map to variables
+        self.result_slave_index_map = {}
+
         if self.parent is not None:
             self.parent.append(self)
         self.subs: list = []  # own subcases
@@ -356,6 +359,12 @@ class Case:
                         var_refs.append(k)
                 for inst in var_alias["instances"]:  # ask simulator to provide function to set variables:
                     _inst = self.cases.simulator.simulator.slave_index_from_instance_name(inst)
+                    if _inst not in self.result_slave_index_map:
+                        self.result_slave_index_map[_inst] = {"instance": inst}
+
+                    for i_ref in var_refs:
+                        self.result_slave_index_map[_inst][i_ref] = key
+
                     if not self.cases.simulator.allowed_action("get", _inst, tuple(var_refs), 0):
                         raise AssertionError(self.cases.simulator.message) from None
                     elif at_time_type == "get" or at_time_arg == -1:
@@ -764,11 +773,24 @@ class Cases:
         """
 
         def results_add(time, instance, alias, rng, values):
-
+            """Add the results of a get action to the results dict for the case.
+            
+            Args:
+                time (float): the time of the results
+                instance (int): The slave index of the instance
+                alias (int): The data type alias of the variable
+                rng (int[]): The variable references linked to this variable definition
+                values (list): the values of the variable"""
             try:
                 [time].update({alias: [instance, rng, values]})
             except Exception:  # first set for this time
-                results.update({time: {alias: [instance, rng, values]}})
+                instance_dict = self.results.result_slave_index_map[instance]
+                result_vars = {} if time not in results else results[time][instance_dict['instance']]
+
+                for i, ref in enumerate(rng):
+                    result_vars.update({instance_dict[ref]: values[i]})
+                
+                results.update({time: {instance_dict['instance']: result_vars}})
 
         if isinstance(name, str):
             case = self.case_by_name(name)
