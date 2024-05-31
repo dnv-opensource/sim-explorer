@@ -136,7 +136,14 @@ The variable name specification (the key) is much richer than the simple cases l
 
 `case_variable[range]@time`
 
-where `range` is either a python-like slice, or a list of integer indices. `@time` is an optional time specification where `time` is a float number. 
+where `range` is either 
+
+* a list of integer indices.
+* a python-like slice written as `int1..int2` or `int1...int2` , since `:` denote key separators and cannot be used inside a key.
+  Note that slicing with negative integers (counting from end) is (currently) not implemented.  
+
+`@time` is an optional time specification where `time` is a float number.
+
 Both extensions apply also to results specifications, i.e. results collection at given times. 
 With respect to results there is an additional keyword 'step' which can be used. `@step` leads to results collection at every communication point and 
 `@step interval` leads to results collection at the given fixed time interval. 
