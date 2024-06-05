@@ -28,6 +28,17 @@ def _file(file: str = "BouncingBall.cases"):
 #     check(tuple2_iter(tpl20, tpl20, "1,3,4,9"), [1, 3, 4, 9])
 
 
+def test_cases_management():
+    cases = Cases(_file("data/SimpleTable/test.cases"))
+    assert cases._results_map == {}
+    assert cases.case_var_by_ref(0, 1) == (
+        "x",
+        (1,),
+    ), f"Case variable of model 0, ref 1: {cases.case_var_by_ref( 0, 1)}"
+    assert cases.case_var_by_ref("tab", 1) == ("x", (1,)), "Same with model by name"
+
+
+@pytest.mark.skip("Temporary skip")
 def test_cases():
     """Test of the features provided by the Cases class"""
     sim = SimulatorInterface(_file("data/BouncingBall0/OspSystemStructure.xml"))

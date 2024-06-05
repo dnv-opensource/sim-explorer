@@ -32,15 +32,7 @@ class Json5Reader:
           Double-quote ml comments are also supported per default
     """
 
-    __slots__ = (
-        "comments",
-        "comments_eol",
-        "comments_ml",
-        "js5",
-        "js_py",
-        "lines",
-        "pos",
-    )
+    __slots__ = ("comments", "comments_eol", "comments_ml", "js5", "js_py", "lines", "pos")
 
     def __init__(
         self,
@@ -63,12 +55,13 @@ class Json5Reader:
             self.js5 = js5
         else:
             raise Json5Error(f"File {Path(js5)} not found")
-        self.js5, self.comments = self._comments()
         if self.js5[0] != "{":
             self.js5 = "{\n" + self.js5
         if self.js5[-1] != "}":
             self.js5 = self.js5 + "\n}"
-        self.js5, self.lines = self._newline()  # replace unnecessary LFs and return start position per line
+        self.js5, self.lines = self._lines()  # map the lines first so that error messages work
+        self.js5, self.comments = self._comments()
+        self.js5, _ = self._newline()  # replace unnecessary LFs and return start position per line
         self.js_py = {}  # is replaced by the python json5 dict when to_py() is run
         if auto:
             self.js_py = self.to_py()
@@ -86,6 +79,20 @@ class Json5Reader:
             return f"Json5 read error at {line}({p}): {pre}: {self.js5[pos : pos+num]}"
         except Json5Error as err:  # can happen when self.lines does not yet exist
             return f"Json5 read error at {pos}: {pre}: {self.js5[pos : pos+num]}: {err}"
+
+    def _lines(self):
+        """Map start positions of lines and replace all newline CR-LF combinations with single newline (LF)."""
+        c = re.compile(r"\n\r|\r\n|\r|\n")
+        pos = 0
+        lines = [0]
+        js = ""
+        while True:
+            s = c.search(self.js5[pos:])
+            if s is None:
+                return (js + self.js5[pos:], lines)
+            js += self.js5[pos : pos + s.start()] + "\n"
+            lines.append(len(js))  # register line start
+            pos += s.end()
 
     def _newline(self):
         """Replace unnecessary line feeds with spaces and return list of start position per line."""
@@ -159,28 +166,63 @@ class Json5Reader:
 
         _js5 = self.js5 if js5 == "" else js5
         comments = {}
-        cq = re.compile(r"'([^']*)'")
-        cq2 = re.compile(r'"([^"]*)"')
+        cq = re.compile(r"'([^']*)'")  #  single quotes
+        cq2 = re.compile(r'"([^"]*)"')  # double quotes
         for cmt in self.comments_eol:  # handle end-of-line comments
             js5 = _js5
             _js5 = ""
-            c = re.compile(r"" + cmt + ".*$", re.MULTILINE)
+            c = re.compile(r"" + cmt + ".*$", re.MULTILINE)  # eol comments
             pos = 0
             while True:
                 s = c.search(js5[pos:])
                 sq = cq.search(js5[pos:])
                 sq2 = cq2.search(js5[pos:])
-                if (
-                    s is None
-                    or (sq is not None and sq.end() > s.start())
-                    or (sq2 is not None and sq2.end() > s.start())
-                ):
+                # print("_COMMENTS", pos, s, sq, sq2)
+                if s is None:
                     _js5 += js5[pos:]
                     break
-                _js5 += js5[pos : pos + s.start()]
-                comments.update({pos + s.start(): s.group()})
-                _js5 += " " * len(s.group())
-                pos += s.end()
+                elif (sq is None or s.start() < sq.start() or s.start() > sq.end()) and (
+                    sq2 is None or s.start() < sq2.start() or s.start() > sq2.end()
+                ):
+                    # no quote or comments starts before or after quote. Handle comment
+                    comments.update({pos + s.start(): s.group()})
+                    _js5 += js5[pos : pos + s.start()]
+                    _js5 += " " * len(s.group())
+                    pos += s.end()
+                elif sq is not None and sq.start() < s.start() < sq.end():
+                    # Comment sign within single quotes. Leave alone
+                    _js5 += js5[pos : pos + sq.end()]
+                    pos += sq.end()
+                elif sq2 is not None and sq2.start() < s.start() < sq2.end():
+                    # Comment sign within double quotes. Leave alone
+                    _js5 += js5[pos : pos + sq2.end()]
+                    pos += sq2.end()
+                else:
+                    raise Json5Error(f"Unhandled EOL-comment removal: {s}, {sq}, {sq2}")
+
+        #                 if (
+        #                     s is None
+        #                     or (sq is not None and sq.end() < s.start())
+        #                     or (sq2 is not None and sq2.end() < s.start())
+        #                 ):
+        #                     _js5 += js5[pos:]
+        #                     break
+        #                 if (s is not None and
+        #                     (sq is None or sq.start() > s.start() or s.start() > sq.end()) and
+        #                     (sq2 is None or sq2.start() > s.start() or s.start() > sq2.end())): # comment sign outside quotes
+        #                     comments.update({pos + s.start(): s.group()})
+        #                     _js5 += js5[pos : pos + s.start()]
+        #                     _js5 += " " * len(s.group())
+        #                     pos += s.end()
+        #                 elif sq is not None:
+        #                     _js5 += js5[pos : sq.end()]
+        #                     pos += sq.end()
+        #                 elif sq2 is not None:
+        #                     _js5 += js5[pos : sq2.end()]
+        #                     pos += sq2.end()
+        #                 else:
+        #                     raise Json5Error(f"Unresolved when removing comments {js5[pos:]}") from None
+
         for cmt in self.comments_ml:  # handle multi-line comments
             js5 = _js5
             _js5 = ""
@@ -295,7 +337,7 @@ class Json5Reader:
         if q1 >= 0:  # found a quoted string
             self.pos = q2
             k = self.js5[q1 + 1 : q2 - 1]
-            # print("KEY", k, self.js5[self.pos :])
+            # print("QUOTED KEY", k, self.js5[self.pos :])
             m = re.search(r":", self.js5[self.pos :])
             assert m is not None, self._msg(f"Quoted key {k} found, but no ':'")
             assert not len(self.js5[self.pos : self.pos + m.start()].strip()), self._msg(
@@ -335,10 +377,11 @@ class Json5Reader:
             raise Json5Error(
                 f"Unhandled situation. Quoted: ({q1-self.pos},{q2-self.pos}), search: {m}. From pos: {self.js5[self.pos : ]}"
             )
+        # save_pos = self.pos
         self.pos += (
             m.start() if m.group() in ("}", "]") else m.end()
         )  # leave the '}', ']', but make sure that ',' is eaten
-
+        # print(f"VALUE. Jump:{self.js5[save_pos:self.pos]}, return:{v}")
         if isinstance(v, str):
             v = v.strip().strip("'").strip('"').strip()
         # print(f"VALUE {v} @ {self.pos}:'{self.js5[self.pos:self.pos+50]}'")

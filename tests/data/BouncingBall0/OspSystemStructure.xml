@@ -5,6 +5,10 @@
     <Simulators>
         <Simulator name="bb" source="BouncingBall.fmu">
         </Simulator>
+        <Simulator name="bb2" source="BouncingBall.fmu">
+        </Simulator>
+        <Simulator name="bb3" source="BouncingBall.fmu">
+        </Simulator>
     </Simulators>
     <Connections>
     </Connections>

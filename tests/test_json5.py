@@ -6,10 +6,10 @@ from case_study.json5 import Json5Reader, json5_write
 
 def test_json5_syntax():
     assert Json5Reader("Hello World", False).js5 == "{ Hello World }", "Automatic addition of '{}' did not work"
-
     js = Json5Reader("Hello\nWorld\rHei\n\rHo\r\nHi", auto=False)
-    assert js.js5 == "{ Hello World Hei  Ho  Hi }", "Automatic replacement of newlines did not work"
-    assert js.line(-1) == "}", "Ending '}' expected"
+    assert js.lines[6] == 24, f"Line 6 should start at {js.lines[6]}"
+    assert js.js5 == "{ Hello World Hei Ho Hi }", "Automatic replacement of newlines did not work"
+    assert js.line(-1)[-1] == "}", "Ending '}' expected"
     assert js.line(3) == "Hei", "Quote of line 3 wrong"
     assert js.line(5) == "Hi", "Quote of line 5 wrong"
     js = Json5Reader("Hello 'W\norld'", 0).js5
@@ -21,6 +21,13 @@ def test_json5_syntax():
 
     assert Json5Reader("Hello//EOL comment", 0).js5 == "{ Hello              }", "Comment not properly replaced"
     assert Json5Reader("Hello#EOL comment", 0).js5 == "{ Hello             }", "Comment not properly replaced"
+    raw = """{spec: {
+           dp:1.5, #'com1'
+           dr@0.9 : 10,  # "com2"
+           }}"""
+    js = Json5Reader(raw)
+    assert js.comments == {28: "#'com1'", 61: '# "com2"'}, "Comments not extracted as expected"
+    assert js.js_py["spec"]["dp"] == 1.5, "Comments not properly removed"
     js = Json5Reader("Hello /*Line1\nLine2\n..*/..", 0)
     assert js.js5 == "{ Hello                   .. }", "Incorrect multi-line comment"
     assert Json5Reader("{'Hi':1, Ho:2}").js_py == {"Hi": 1.0, "Ho": 2.0}, "Simple dict expected. Second key without '"

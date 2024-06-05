@@ -118,39 +118,40 @@ class SimulatorInterface:
         else:
             return CosimExecution.from_ssp_file(str(file))
 
-    def get_components(self, model: str | None = None) -> dict:
-        """Provide a dict of component models (instances) in the system model.
-        For each component either the modelDescription path (if available) is added or an int ID unique per model.
-        In this way, if comps[x]==comps[y] the components x and y relate to the same model.
-        If model is provided, only the components related to model are returned.
+    def same_model(self, ref: int, refs: list[int] | set[int]):
+        ref_vars = self.get_variables(ref)
+        for r in refs:
+            r_vars = self.get_variables(r)
+            yield (r, r_vars == ref_vars)
+
+    def get_components(self, model: int = -1) -> dict:
+        """Provide a dict of `{ component_instances_name : model_ID, ...}` in the system model.
+        For each component a unique ID per basic model (FMU) is used.
+        In this way, if comps[x]==comps[y] the components x and y relate to the same basic model.
+        If model != -1, only the components (instances) related to model are returned.
         """
-        if self.simulator is None:
-            return {}
-        comp_infos = list(self.simulator.slave_infos())
         comps = {}
+        if self.simulator is None:
+            pass  # nothing to do we return an empty dict
 
-        all_variables: list = []
-        for comp in comp_infos:
-            name = comp.name.decode()
-            variables = self.get_variables(name)
-            idx = -1
-            for i, v in enumerate(all_variables):
-                if v == variables:
-                    idx = i
-                    break
-            if idx < 0:
-                all_variables.append(variables)
-                idx = len(all_variables) - 1
-            comps.update({name: idx})
+        elif model >= 0:  # use self.components to extract only components related to the provided model
+            for comp, mod in self.components.items():
+                if mod == model:
+                    comps.update({comp: self.components[comp]})
 
-        if model is None:
-            return comps
         else:
-            model_comps = {}
-            for c, m in comps.items():
-                if m == model:
-                    model_comps.update({c: m})
-            return model_comps
+            comp_infos = self.simulator.slave_infos()
+            print(
+                "COMP_INFOS", comp_infos, comp_infos[0].name, comp_infos[0].index, len(comp_infos)
+            )  # , comp_infos.name, comp_infos.index)
+            for comp in comp_infos:
+                for r, same in self.same_model(comp.index, set(comps.values())):
+                    if same:
+                        comps.update({comp.name.decode(): r})
+                        break
+                if comp.name.decode() not in comps:  # new model
+                    comps.update({comp.name.decode(): comp.index})
+        return comps
 
     def get_models(self) -> list:
         """Get the list of basic models based on self.components."""
@@ -163,7 +164,7 @@ class SimulatorInterface:
     def match_components(self, comps: str | tuple[str, ...]) -> tuple[str, tuple]:
         """Identify component (instances) based on 'comps' (component alias or tuple of aliases).
         comps can be a (tuple of) full component names or component names with wildcards.
-        Returned components shall are based on the same model.
+        Returned components shall be based on the same model.
         """
         if isinstance(comps, str):
             comps = (comps,)
@@ -427,7 +428,7 @@ class SimulatorInterface:
             return typ(val)
 
     @staticmethod
-    def _default_initial(causality: int, variability: int, max_possible: bool = False) -> int:
+    def default_initial(causality: int, variability: int, max_possible: bool = False) -> int:
         """Return default initial setting as int, as initial setting is not explicitly available in OSP. See p.50 FMI2.
         maxPossible = True chooses the the initial setting with maximum allowance.
 
@@ -483,7 +484,7 @@ class SimulatorInterface:
                 _type = var_info["type"]
                 _causality = var_info["causality"]
                 _variability = var_info["variability"]
-                initial = SimulatorInterface._default_initial(_causality, _variability, True)
+                initial = SimulatorInterface.default_initial(_causality, _variability, True)
 
                 if action == "get":  # no restrictions on get
                     pass
@@ -522,17 +523,23 @@ class SimulatorInterface:
                     return False
         return True
 
-    def component_name_from_idx(self, idx: int) -> str:
-        for name, index in self.components.items():
-            if index == idx:
-                return name
-        return ""
-
     def variable_name_from_ref(self, comp: int | str, ref: int) -> str:
         for name, info in self.get_variables(comp).items():
             if info["reference"] == ref:
                 return name
         return ""
+
+    def component_name_from_id(self, idx: int) -> str:
+        """Retrieve the component name from the given index, or an empty string if not found."""
+        for slave_info in self.simulator.slave_infos():
+            if slave_info.index == idx:
+                return slave_info.name.decode()
+        return ""
+
+    def component_id_from_name(self, name: str) -> int:
+        """Get the component id from the name. -1 if not found."""
+        id = self.simulator.slave_index_from_instance_name(name)
+        return id if id is not None else -1
 
 
 def match_with_wildcard(findtxt: str, matchtxt: str) -> bool:

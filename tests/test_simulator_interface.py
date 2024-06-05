@@ -32,7 +32,10 @@ def test_pytype():
 def test_component_variable_name():
     path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
     system = SimulatorInterface(str(path), name="BouncingBall")
-    assert "bb" == system.component_name_from_idx(0)
+    assert 1 == system.simulator.slave_index_from_instance_name("bb")
+    assert 0 == system.simulator.slave_index_from_instance_name("bb2")
+    assert 2 == system.simulator.slave_index_from_instance_name("bb3")
+    assert system.components["bb"] == 0, f"Error in unique model index. Found {system.components['bb']}"
     assert system.variable_name_from_ref("bb", 0) == "time"
     assert system.variable_name_from_ref("bb", 1) == "h"
     assert system.variable_name_from_ref("bb", 2) == "der(h)"
@@ -45,20 +48,21 @@ def test_component_variable_name():
 
 
 def test_default_initial():
-    assert SimulatorInterface._default_initial(0, 0) == 3, f"Found {SimulatorInterface._default_initial( 0, 0)}"
-    assert SimulatorInterface._default_initial(1, 0) == 3, f"Found {SimulatorInterface._default_initial( 1, 0)}"
-    assert SimulatorInterface._default_initial(2, 0) == 0, f"Found {SimulatorInterface._default_initial( 2, 0)}"
-    assert SimulatorInterface._default_initial(3, 0) == 3, f"Found {SimulatorInterface._default_initial( 3, 0)}"
-    assert SimulatorInterface._default_initial(4, 0) == 0, f"Found {SimulatorInterface._default_initial( 4, 0)}"
-    assert SimulatorInterface._default_initial(5, 0) == 3, f"Found {SimulatorInterface._default_initial( 5, 0)}"
-    assert SimulatorInterface._default_initial(1, 1) == 0, f"Found {SimulatorInterface._default_initial( 1, 1)}"
-    assert SimulatorInterface._default_initial(1, 2) == 0, f"Found {SimulatorInterface._default_initial( 1, 1)}"
-    assert SimulatorInterface._default_initial(1, 3) == 3, f"Found {SimulatorInterface._default_initial( 1, 1)}"
-    assert SimulatorInterface._default_initial(1, 4) == 3, f"Found {SimulatorInterface._default_initial( 1, 1)}"
-    assert SimulatorInterface._default_initial(2, 0) == 0, f"Found {SimulatorInterface._default_initial( 2, 0)}"
-    assert SimulatorInterface._default_initial(5, 4) == 3, f"Found {SimulatorInterface._default_initial( 5, 4)}"
-    assert SimulatorInterface._default_initial(3, 2) == 2, f"Found {SimulatorInterface._default_initial( 3, 2)}"
-    assert SimulatorInterface._default_initial(4, 2) == 2, f"Found {SimulatorInterface._default_initial( 4, 2)}"
+    print("DIR", dir(SimulatorInterface))
+    assert SimulatorInterface.default_initial(0, 0) == 3, f"Found {SimulatorInterface._default_initial( 0, 0)}"
+    assert SimulatorInterface.default_initial(1, 0) == 3, f"Found {SimulatorInterface._default_initial( 1, 0)}"
+    assert SimulatorInterface.default_initial(2, 0) == 0, f"Found {SimulatorInterface._default_initial( 2, 0)}"
+    assert SimulatorInterface.default_initial(3, 0) == 3, f"Found {SimulatorInterface._default_initial( 3, 0)}"
+    assert SimulatorInterface.default_initial(4, 0) == 0, f"Found {SimulatorInterface._default_initial( 4, 0)}"
+    assert SimulatorInterface.default_initial(5, 0) == 3, f"Found {SimulatorInterface._default_initial( 5, 0)}"
+    assert SimulatorInterface.default_initial(1, 1) == 0, f"Found {SimulatorInterface._default_initial( 1, 1)}"
+    assert SimulatorInterface.default_initial(1, 2) == 0, f"Found {SimulatorInterface._default_initial( 1, 1)}"
+    assert SimulatorInterface.default_initial(1, 3) == 3, f"Found {SimulatorInterface._default_initial( 1, 1)}"
+    assert SimulatorInterface.default_initial(1, 4) == 3, f"Found {SimulatorInterface._default_initial( 1, 1)}"
+    assert SimulatorInterface.default_initial(2, 0) == 0, f"Found {SimulatorInterface._default_initial( 2, 0)}"
+    assert SimulatorInterface.default_initial(5, 4) == 3, f"Found {SimulatorInterface._default_initial( 5, 4)}"
+    assert SimulatorInterface.default_initial(3, 2) == 2, f"Found {SimulatorInterface._default_initial( 3, 2)}"
+    assert SimulatorInterface.default_initial(4, 2) == 2, f"Found {SimulatorInterface._default_initial( 4, 2)}"
 
 
 def test_simulator_from_system_structure():
@@ -83,8 +87,9 @@ def test_simulator_instantiated():
         simulator=sim,
     )
     #    simulator.check_instances_variables()
-    assert len(simulator.components) == 1, "Single instantiated component"
+    assert len(simulator.components) == 3, "Three instantiated (identical) components"
     assert simulator.components["bb"] == 0, f"... given a unique identifier {simulator.components['bb']}"
+    assert simulator.components["bb2"] == 0, f"... given a unique identifier {simulator.components['bb2']}"
     variables = simulator.get_variables("bb")
     assert variables["g"] == {"reference": 5, "type": 0, "causality": 1, "variability": 1}
     assert simulator.allowed_action("set", "bb", "g", 0)

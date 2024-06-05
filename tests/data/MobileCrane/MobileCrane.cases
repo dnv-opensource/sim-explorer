@@ -10,32 +10,42 @@ variables : {
    dp_dt : ['mobileCrane', 'pedestal_angularVelocity', "Angular velocity of pedestal (around z-axis). [radians]"],
    db_dt : ['mobileCrane', 'boom_angularVelocity', "Angular velocity of boom (polar direction). [radians]"],
    dr_dt : ['mobileCrane', 'rope_lengthVelocity', "Linear lenght change of crane rope. [m/s]"],   
-   v : ['mobileCrane', 'craneVelocity', "Linear velocity of whole crane with respect to base. [|v|, normal]"],
-   T  : ['mobileCrane', 'craneTorque', "Total torque of the crane with respect to its base, i.e. the sum of static and dynamic torques. Provided as 3D spherical vector."],
+   v     : ['mobileCrane', 'craneVelocity', "Linear velocity of whole crane with respect to base. [|v|, normal]"],
+   T     : ['mobileCrane', 'craneTorque', "Total torque of the crane with respect to its base, i.e. the sum of static and dynamic torques. Provided as 3D spherical vector."],
    x_load : ['mobileCrane', 'rope_tip', "Cartesian coordinate of rope tip (load position)"],
-   load : ['mobileCrane', 'rope_mass', "Rope mass (load) [kg]"],
+   load : ['mobileCrane', 'changeLoad', "Rope mass (load) [kg]"],
 },  
 base : {
    description : "Variable settings for the base case. Represents a mobile crane folded for street use.",
    spec: {
-      stopTime : 10,
+      stopTime : 1.0,
       stepSize : 0.1,
       p[0,2]   : [3,0],
-      b[0,1]   : [8, 1.5708],
-      r[0]     : 1e6,
+      b[0,1]   : [8, 0.7854],
+      r[0]     : 1e-6,
       da_dt    : [0,0,0,0],
       dp_dt    : 0,
       db_dt    : 0,
+      dr_dt    : 0,
       v        : [0,0,0,0],
       load     : 50,
    }},
 static : {
     description : "Static end position. Represents a mobile crane during lifting (turned 90deg, boom lifted 45 deg, load lifted 1 m)",
     spec: {
-      p[2]  : '90 deg',
-      b[1]  : '45 deg',
+      p[2]  : 1.5708, #'90 deg'
+      b[1]  : 0.7854, #'45 deg'
       r[0]  : 7.657,
       load  : 1000,
+   }},   
+dynamic : {
+    description : "Movement to end position. Represents a mobile crane during lifting (turned 90deg, boom lifted 45 deg, load lifted 1 m)",
+    spec: {
+      dp_dt  : 1.5708, #'90 deg/sec'
+      db_dt  : 0.7854, #'45 deg/sec'
+      db_dt@0.9 : 0.7,
+      #dr_dt@0.9 : 10,  # 1m / 0.1sec
+      #load@0.9 : 1000,
    }},   
 results : {
    spec : [

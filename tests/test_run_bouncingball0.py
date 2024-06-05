@@ -28,7 +28,7 @@ def expected_actions(case: Case, act: dict, expect: dict):
             for k in range(1, len(action.args)):
                 if k == 3:
                     assert len(a_expect[i]) == 5, f"{msg}. Need also a value argument in expect:{expect}"
-                    assert action.args[3] == a_expect[i][4], f"{msg}. Erroneous value argument {action.args[3]}"
+                    assert tuple(action.args[3]) == a_expect[i][4], f"{msg}. Erroneous value argument {action.args[3]}."
                 else:
                     assert (
                         arg[k] == a_expect[i][k + 1]
@@ -88,6 +88,7 @@ def test_run_case1():
     expected_actions(
         base, base.act_set, {0: [("set", "bb", float, ("g",), (-9.81,)), ("set", "bb", float, ("e",), (0.71,))]}
     )
+    print("CASE1", case1.act_set)
     expected_actions(
         case1, case1.act_set, {0: [("set", "bb", float, ("g",), (-9.81,)), ("set", "bb", float, ("e",), (0.35,))]}
     )
