@@ -242,7 +242,7 @@ class SimulatorInterface:
 
         Returns
         -------
-            A dictionary of variable names : info, where info is a dictionary containing reference, type, causality and variability
+            A dictionary of variable {names:info, ...}, where info is a dictionary containing reference, type, causality and variability
         """
         if isinstance(comp, str):
             component = self.simulator.slave_index_from_instance_name(comp)
@@ -345,7 +345,7 @@ class SimulatorInterface:
     #                     )
     #         return groups
 
-    def set_initial(self, instance: int, typ: int, var_refs: tuple[int, ...], var_vals: tuple[PyVal, ...]):
+    def set_initial(self, instance: int, typ: int, var_refs: tuple[int], var_vals: tuple[PyVal]):
         """Set initial values of variables, based on tuples of var_refs and var_vals (OSP only allows simple variables).
         The signature is the same as the manipulator functions slave_real_values()...,
         only that variables are set individually and the type is added as argument.
@@ -355,21 +355,21 @@ class SimulatorInterface:
         res = []
         if typ == CosimVariableType.REAL.value:
             for i in range(len(var_refs)):
-                res.append(self.simulator.real_initial_value(instance, var_refs[i], var_vals[i]))
+                res.append(self.simulator.real_initial_value(instance, var_refs[i], self.pytype(typ,var_vals[i])))
         elif typ == CosimVariableType.INTEGER.value:
             for i in range(len(var_refs)):
-                res.append(self.simulator.integer_initial_value(instance, var_refs[i], var_vals[i]))
+                res.append(self.simulator.integer_initial_value(instance, var_refs[i], self.pytype(typ,var_vals[i])))
         elif typ == CosimVariableType.STRING.value:
             for i in range(len(var_refs)):
-                res.append(self.simulator.string_initial_value(instance, var_refs[i], var_vals[i]))
+                res.append(self.simulator.string_initial_value(instance, var_refs[i], self.pytype(typ,var_vals[i])))
         elif typ == CosimVariableType.BOOLEAN.value:
             for i in range(len(var_refs)):
-                res.append(self.simulator.boolean_initial_value(instance, var_refs[i], var_vals[i]))
+                res.append(self.simulator.boolean_initial_value(instance, var_refs[i], self.pytype(typ,var_vals[i])))
         msg = f"Initial setting of ref:{var_refs}, type {typ} to val:{var_vals} failed. Status: {res}"
         assert all(x for x in res), msg
 
     def set_variable_value(
-        self, instance: int, typ: int, var_refs: tuple[int, ...], var_vals: tuple[PyVal, ...]
+        self, instance: int, typ: int, var_refs: tuple[int], var_vals: tuple[PyVal]
     ) -> Callable:
         """Provide a manipulator function which sets the 'variable' (of the given 'instance' model) to 'value'.
 
@@ -378,18 +378,19 @@ class SimulatorInterface:
             var_refs (tuple): Tuple of variable references for which the values shall be set
             var_vals (tuple): Tuple of values (of the correct type), used to set model variables
         """
+        _vals = [ self.pytype(typ, x) for x in var_vals] # ensure list and correct type
         if typ == CosimVariableType.REAL.value:
-            return self.manipulator.slave_real_values(instance, var_refs, var_vals)
+            return self.manipulator.slave_real_values(instance, list(var_refs), _vals)
         elif typ == CosimVariableType.INTEGER.value:
-            return self.manipulator.slave_integer_values(instance, var_refs, var_vals)
+            return self.manipulator.slave_integer_values(instance, list(var_refs), _vals)
         elif typ == CosimVariableType.BOOLEAN.value:
-            return self.manipulator.slave_boolean_values(instance, var_refs, var_vals)
+            return self.manipulator.slave_boolean_values(instance, list(var_refs), _vals)
         elif typ == CosimVariableType.STRING.value:
-            return self.manipulator.slave_string_values(instance, var_refs, var_vals)
+            return self.manipulator.slave_string_values(instance, list(var_refs), _vals)
         else:
             raise CaseUseError(f"Unknown type {typ}") from None
 
-    def get_variable_value(self, instance: int, typ: int, var_refs: tuple[int, ...]) -> Callable:
+    def get_variable_value(self, instance: int, typ: int, var_refs: tuple[int]) -> Callable:
         """Provide an observer function which gets the 'variable' value (of the given 'instance' model) at the time when called.
 
         Args:
@@ -397,13 +398,13 @@ class SimulatorInterface:
             var_refs (tuple): Tuple of variable references for which the values shall be retrieved
         """
         if typ == CosimVariableType.REAL.value:
-            return self.observer.last_real_values(instance, var_refs)
+            return self.observer.last_real_values(instance, list(var_refs))
         elif typ == CosimVariableType.INTEGER.value:
-            return self.observer.last_integer_values(instance, var_refs)
+            return self.observer.last_integer_values(instance, list(var_refs))
         elif typ == CosimVariableType.BOOLEAN.value:
-            return self.observer.last_boolean_values(instance, var_refs)
+            return self.observer.last_boolean_values(instance, list(var_refs))
         elif typ == CosimVariableType.STRING.value:
-            return self.observer.last_string_values(instance, var_refs)
+            return self.observer.last_string_values(instance, list(var_refs))
         else:
             raise CaseUseError(f"Unknown type {typ}") from None
 

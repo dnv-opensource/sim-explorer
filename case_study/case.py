@@ -804,7 +804,7 @@ class Cases:
             self._results_map[comp].update({refs: (component, var)})
         return component, var
 
-    def _results_add(self, results: dict, time: float, comp: int, typ: int, refs: tuple[int], values: list):
+    def _results_add(self, results: dict, time: float, comp: int, typ: int, refs: tuple[int], values: tuple):
         """Add the results of a get action to the results dict for the case.
 
         Args:
@@ -813,13 +813,13 @@ class Cases:
             component (int): The index of the component
             typ (int): The data type of the variable as enumeration int
             ref (list): The variable references linked to this variable definition
-            values (list): the values of the variable
+            values (tuple): the values of the variable
             print_type (str)='plain': 'plain': use indices as supplied
         """
         if self.results_print_type == "plain":
             ref = refs[0] if len(refs) == 1 else str(refs)  # comply to js5 key rules
         elif self.results_print_type == "names":
-            comp, ref = self._results_map_get(comp, refs)
+            comp, ref = self._results_map_get(comp, tuple(refs))
         if time in results:
             if comp in results[time]:
                 results[time][comp].update({ref: values})
@@ -867,8 +867,8 @@ class Cases:
         print(f"BEFORE LOOP: {time}:{t_set}, act:{a_set}")
         while time < tstop:
             while time >= t_set:  # issue the set actions
-                print(f"@{time}. Set actions {a_set}")
                 for a in a_set:
+                    print(f"@{time}. Set actions type:{a.args[1]} refs:{a.args[2]}, values:{a.args[3]}, type:{type(a.args[3][0])}")                
                     a()
                 try:
                     t_set, a_set = next(set_iter)

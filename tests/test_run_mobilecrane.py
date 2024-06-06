@@ -51,12 +51,8 @@ def test_start_simulator():
     assert static.spec == {"p[2]": 1.5708, "b[1]": 0.7854, "r[0]": 7.657, "load": 1000}
     assert static.act_get[-1][0].args == (0, 0, (9, 10, 11)), f"Step action arguments {static.act_get[-1][0].args}"
     assert sim.get_variable_value(0, 0, (9, 10, 11)) == [0.0, 0.0, 0.0], "Initial value of T"
-    assert static.act_set[0][0].args == (
-        0,
-        0,
-        (13, 15),
-        (3, 1.5708),
-    ), f"SET actions argument: {static.act_set[0][0].args}"
+    msg = f"SET actions argument: {static.act_set[0][0].args}"
+    assert static.act_set[0][0].args == (0, 0, (13, 15), (3, 1.5708)), msg 
     sim.set_initial(0, 0, (13, 15), (3, 0))
     # assert sim.get_variable_value(0, 0, (13, 15)) == [3.0, 0.0], "Initial value of T"
     print(f"Special: {static.special}")
