@@ -20,15 +20,15 @@ base : {
    spec: {
       stopTime : 1.0,
       stepSize : 0.1,
-      p[0,2]   : [3,0],
-      b[0,1]   : [8, 0.7854],
+      p[0,2]   : [3.0, 0.0],
+      b[0,1]   : [8.0, 0.7854],
       r[0]     : 1e-6,
-      da_dt    : [0,0,0,0],
-      dp_dt    : 0,
-      db_dt    : 0,
-      dr_dt    : 0,
-      v        : [0,0,0,0],
-      load     : 50,
+      da_dt    : [0,0, 0,0],
+      dp_dt    : 0.0,
+      db_dt    : 0.0,
+      dr_dt    : 0.0,
+      v        : [0.0, 0.0, 0.0, 0.0],
+      load     : 50.0,
    }},
 static : {
     description : "Static end position. Represents a mobile crane during lifting (turned 90deg, boom lifted 45 deg, load lifted 1 m)",
@@ -44,8 +44,8 @@ dynamic : {
       dp_dt  : 1.5708, #'90 deg/sec'
       db_dt  : 0.7854, #'45 deg/sec'
       db_dt@0.9 : 0.7,
-      #dr_dt@0.9 : 10,  # 1m / 0.1sec
-      #load@0.9 : 1000,
+      dr_dt@0.9 : 10,  # 1m / 0.1sec
+      load@0.9 : 1000,
    }},   
 results : {
    spec : [

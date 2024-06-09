@@ -42,6 +42,7 @@ build-backend = "setuptools.build_meta"
         "dist",
         "__pycache__",
         "./doc/source/conf.py",
+        "./tests/data",
     ]
     src = ["case_study"]
     lint.ignore = [
@@ -100,4 +101,5 @@ build-backend = "setuptools.build_meta"
         "dist",
         "**/__pycache__",
         "./doc/source/conf.py",
+        "./tests/data",
     ]

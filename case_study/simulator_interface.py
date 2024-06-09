@@ -89,11 +89,11 @@ class SimulatorInterface:
         self.components = self.get_components()  # dict of {component name : modelId}
         # Instantiate a suitable manipulator for changing variables.
         self.manipulator = CosimManipulator.create_override()
-        self.simulator.add_manipulator(manipulator=self.manipulator)
+        assert self.simulator.add_manipulator(manipulator=self.manipulator), "Could not add manipulator object"
 
         # Instantiate a suitable observer for collecting results.
         self.observer = CosimObserver.create_last_value()
-        self.simulator.add_observer(observer=self.observer)
+        assert self.simulator.add_observer(observer=self.observer), "Could not add observer object"
         self.message = ""  # possibility to save additional message for (optional) retrieval by client
 
     @property
@@ -355,22 +355,20 @@ class SimulatorInterface:
         res = []
         if typ == CosimVariableType.REAL.value:
             for i in range(len(var_refs)):
-                res.append(self.simulator.real_initial_value(instance, var_refs[i], self.pytype(typ,var_vals[i])))
+                res.append(self.simulator.real_initial_value(instance, var_refs[i], self.pytype(typ, var_vals[i])))
         elif typ == CosimVariableType.INTEGER.value:
             for i in range(len(var_refs)):
-                res.append(self.simulator.integer_initial_value(instance, var_refs[i], self.pytype(typ,var_vals[i])))
+                res.append(self.simulator.integer_initial_value(instance, var_refs[i], self.pytype(typ, var_vals[i])))
         elif typ == CosimVariableType.STRING.value:
             for i in range(len(var_refs)):
-                res.append(self.simulator.string_initial_value(instance, var_refs[i], self.pytype(typ,var_vals[i])))
+                res.append(self.simulator.string_initial_value(instance, var_refs[i], self.pytype(typ, var_vals[i])))
         elif typ == CosimVariableType.BOOLEAN.value:
             for i in range(len(var_refs)):
-                res.append(self.simulator.boolean_initial_value(instance, var_refs[i], self.pytype(typ,var_vals[i])))
+                res.append(self.simulator.boolean_initial_value(instance, var_refs[i], self.pytype(typ, var_vals[i])))
         msg = f"Initial setting of ref:{var_refs}, type {typ} to val:{var_vals} failed. Status: {res}"
         assert all(x for x in res), msg
 
-    def set_variable_value(
-        self, instance: int, typ: int, var_refs: tuple[int], var_vals: tuple[PyVal]
-    ) -> Callable:
+    def set_variable_value(self, instance: int, typ: int, var_refs: tuple[int], var_vals: tuple[PyVal]) -> Callable:
         """Provide a manipulator function which sets the 'variable' (of the given 'instance' model) to 'value'.
 
         Args:
@@ -378,7 +376,7 @@ class SimulatorInterface:
             var_refs (tuple): Tuple of variable references for which the values shall be set
             var_vals (tuple): Tuple of values (of the correct type), used to set model variables
         """
-        _vals = [ self.pytype(typ, x) for x in var_vals] # ensure list and correct type
+        _vals = [self.pytype(typ, x) for x in var_vals]  # ensure list and correct type
         if typ == CosimVariableType.REAL.value:
             return self.manipulator.slave_real_values(instance, list(var_refs), _vals)
         elif typ == CosimVariableType.INTEGER.value:

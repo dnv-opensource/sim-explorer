@@ -736,7 +736,7 @@ class Cases:
                 return found
         return None
 
-    def case_var_by_ref(self, comp: int | str, ref: int | tuple[int]) -> tuple[str, tuple]:
+    def case_var_by_ref(self, comp: int | str, ref: int | tuple[int,...]) -> tuple[str, tuple]:
         """Get the case variable name related to the component model `comp` and the reference `ref`
         Returns a tuple of case variable name and an index (if composit variable).
         """
@@ -787,7 +787,7 @@ class Cases:
         }
         return results
 
-    def _results_map_get(self, comp: int, refs: tuple[int]):
+    def _results_map_get(self, comp: int, refs: tuple[int,...]):
         """Get the translation of the component id `comp` + references `refs`
         to the variable names used in the cases file.
         To speed up the process the process the cache dict _results_map is used.
@@ -804,7 +804,7 @@ class Cases:
             self._results_map[comp].update({refs: (component, var)})
         return component, var
 
-    def _results_add(self, results: dict, time: float, comp: int, typ: int, refs: tuple[int], values: tuple):
+    def _results_add(self, results: dict, time: float, comp: int, typ: int, refs: tuple[int,...], values: tuple):
         """Add the results of a get action to the results dict for the case.
 
         Args:
@@ -868,7 +868,9 @@ class Cases:
         while time < tstop:
             while time >= t_set:  # issue the set actions
                 for a in a_set:
-                    print(f"@{time}. Set actions type:{a.args[1]} refs:{a.args[2]}, values:{a.args[3]}, type:{type(a.args[3][0])}")                
+                    print(
+                        f"@{time}. Set actions type:{a.args[1]} refs:{a.args[2]}, values:{a.args[3]}, type:{type(a.args[3][0])}"
+                    )
                     a()
                 try:
                     t_set, a_set = next(set_iter)
