@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+from math import sqrt
 from case_study.case import Cases
 from case_study.json5 import Json5Reader
 from case_study.simulator_interface import SimulatorInterface
@@ -10,6 +11,18 @@ from libcosimpy.CosimManipulator import CosimManipulator
 from libcosimpy.CosimObserver import CosimObserver
 from libcosimpy.CosimSlave import CosimLocalSlave
 
+def is_nearly_equal( x:float|list, expected:float|list, eps:float=1e-10)-> int:
+    if isinstance(x, float):
+        if abs( x-expected)<eps:
+            return True
+        else:
+            raise AssertionError(f"{x} is not nealry equal to {expected}") from None
+    else:
+        for i,y in enumerate(x):
+            if not abs( y-expected[i])<eps:
+                raise AssertionError(f"{x}[{i}] is not as expected: {expected}")
+                return False
+        return True
 
 @pytest.mark.skip("Basic reading of js5 cases  definition")
 def test_read_cases():
@@ -75,7 +88,7 @@ def test_step_by_step_cosim():
         sim.step()  # simulate_until(t * 1e9)
 
 
-# @pytest.mark.skip("Alternative step-by step, using SimulatorInterface and Cases")
+@pytest.mark.skip("Alternative step-by step, using SimulatorInterface and Cases")
 def test_step_by_step_cases():
 
     def get_ref(name: str):
@@ -195,9 +208,15 @@ def test_run_basic():
     sim.simulator.simulate_until(1e9)
 
 
-@pytest.mark.skip("Run all cases defined in MobileCrane.cases")
+#@pytest.mark.skip("Run all cases defined in MobileCrane.cases")
 def test_run_cases():
+    def reset_simulator():
+            cases.simulator = SimulatorInterface( system_structure,
+                                                  name=str(cases.spec.get("name", "")),
+                                                  description=str(cases.spec.get("description", "")))
+            
     path = Path(Path(__file__).parent, "data/MobileCrane/MobileCrane.cases")
+    system_structure = Path(Path(__file__).parent, "data/MobileCrane/OspSystemStructure.xml")
     assert path.exists(), "MobileCrane cases file not found"
     cases = Cases(path, results_print_type="names")
     # for v, info in cases.variables.items():
@@ -208,8 +227,23 @@ def test_run_cases():
             print(t, static.str_act(a))
     print("Running case 'base'...")
     res = cases.run_case("base", dump="results_base")
+    #ToDo: expected Torque?
+    assert is_nearly_equal( res[1.0]['mobileCrane']['x_pedestal'], [0.0,0.0,3.0])
+    assert is_nearly_equal( res[1.0]['mobileCrane']['x_boom'], [8,0.0,3])
+    assert is_nearly_equal( res[1.0]['mobileCrane']['x_load'], [8,0,3.0-1e-6])
+
     print("Running case 'static'...")
+    #reset_simulator()
+    res = cases.run_case("base", dump="results_base2")
+    return
+
+
     res = cases.run_case("static", dump="results_static")
+    print("RES(1.0)", res[1.0]['mobileCrane'])
+    return
+    assert is_nearly_equal( res[1.0]['mobileCrane']['x_pedestal'], [0.0,0.0,3.0])
+    assert is_nearly_equal( res[1.0]['mobileCrane']['x_boom'], [8/sqrt(2),3.0+8/sqrt(2), 0], 1e-4)
+    assert is_nearly_equal( res[1.0]['mobileCrane']['x_load'], [8,1.0-1e-6,0])
     print("Running case 'dynamic'...")
     res = cases.run_case("dynamic", dump="results_dynamic")
     assert len(res) > 0
