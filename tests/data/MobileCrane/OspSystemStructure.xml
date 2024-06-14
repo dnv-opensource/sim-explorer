@@ -1,26 +1,6 @@
 <OspSystemStructure xmlns="http://opensimulationplatform.com/MSMI/OSPSystemStructure" version="0.1">
    <Simulators>
       <Simulator name="mobileCrane" source="MobileCrane.fmu" stepSize="0.1">
-         <InitialValues>
-            <InitialValue variable="pedestal_mass"><Real value="5000.0" /></InitialValue>
-            <InitialValue variable="pedestal_boom[0]"><Real value="3.0" /></InitialValue>
-            <InitialValue variable="pedestal_boom[2]"><Real value="0.0" /></InitialValue>
-            <InitialValue variable="boom_boom[0]"><Real value="8.0" /></InitialValue>
-            <InitialValue variable="boom_boom[1]"><Real value="0.7854" /></InitialValue>
-            <InitialValue variable="rope_boom[0]"><Real value="1e-6" /></InitialValue>
-            <InitialValue variable="pedestal_angularVelocity"><Real value="0" /></InitialValue>
-            <InitialValue variable="boom_angularVelocity"><Real value="0" /></InitialValue>
-            <InitialValue variable="rope_lengthVelocity"><Real value="0" /></InitialValue>
-            <InitialValue variable="craneAngularVelocity[0]"><Real value="0" /></InitialValue>
-            <InitialValue variable="craneAngularVelocity[1]"><Real value="0" /></InitialValue>
-            <InitialValue variable="craneAngularVelocity[2]"><Real value="0" /></InitialValue>
-            <InitialValue variable="craneAngularVelocity[3]"><Real value="0" /></InitialValue>
-            <InitialValue variable="craneVelocity[0]"><Real value="0" /></InitialValue>
-            <InitialValue variable="craneVelocity[1]"><Real value="0" /></InitialValue>
-            <InitialValue variable="craneVelocity[2]"><Real value="0" /></InitialValue>
-            <InitialValue variable="craneVelocity[3]"><Real value="0" /></InitialValue>
-            <InitialValue variable="rope_mass"><Real value="50" /></InitialValue>
-         </InitialValues>
       </Simulator>
    </Simulators>
 </OspSystemStructure>

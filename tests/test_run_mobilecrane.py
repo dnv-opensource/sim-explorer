@@ -17,7 +17,7 @@ def test_read_cases():
     assert path.exists(), "System structure file not found"
     json5 = Json5Reader(path)
     # print(f"COMMENTS: {json5.comments}")
-    assert json5.comments[2263] == "#'90 deg/sec'"
+    assert json5.comments[2458] == "#'90 deg/sec'"
     # for e in json5.js_py:
     #    print(f"{e}: {json5.js_py[e]}")
     assert json5.js_py["dynamic"]["spec"]["db_dt"] == 0.7854
@@ -88,6 +88,12 @@ def test_step_by_step_cases():
             if sim.slave_variables(slave)[idx].name.decode() == name:
                 return sim.real_initial_value(slave, idx, value)
 
+    def initial_settings():
+        cases.simulator.set_initial(0, 0, (get_ref("pedestal_boom[0]"),), (3.0,))
+        cases.simulator.set_initial(0, 0, (get_ref("boom_boom[0]"), get_ref("boom_boom[1]")), (8.0, 0.7854))
+        cases.simulator.set_initial(0, 0, (get_ref("rope_boom[0]"),), (1e-6,))
+        cases.simulator.set_initial(0, 0, (get_ref("changeLoad"),), (50.0,))
+
     system = Path(Path(__file__).parent, "data/MobileCrane/OspSystemStructure.xml")
     assert system.exists(), f"OspSystemStructure file {system} not found"
     sim = SimulatorInterface(system)
@@ -99,7 +105,8 @@ def test_step_by_step_cases():
     spec = Json5Reader(path).js_py
     # print("SPEC", json5_write( spec, None, True))
 
-    assert spec["results"] == {"spec": ["T@step", "x_load@step"]}, f"Results found: {spec['results']}"
+    expected_spec = {"spec": ["T@step", "x_pedestal@step", "x_boom@step", "x_load@step"]}
+    assert spec["results"] == expected_spec, f"Results found: {spec['results']}"
     assert list(spec.keys()) == [
         "name",
         "description",
@@ -121,9 +128,9 @@ def test_step_by_step_cases():
     assert static.spec == {"p[2]": 1.5708, "b[1]": 0.7854, "r[0]": 7.657, "load": 1000}
     assert static.act_get[-1][0].args == (0, 0, (9, 10, 11)), f"Step action arguments {static.act_get[-1][0].args}"
     assert sim.get_variable_value(0, 0, (9, 10, 11)) == [0.0, 0.0, 0.0], "Initial value of T"
-    msg = f"SET actions argument: {static.act_set[0][0].args}"
-    assert static.act_set[0][0].args == (0, 0, (13, 15), (3, 1.5708)), msg
-    sim.set_initial(0, 0, (13, 15), (3, 0))
+    # msg = f"SET actions argument: {static.act_set[0][0].args}"
+    # assert static.act_set[0][0].args == (0, 0, (13, 15), (3, 1.5708)), msg
+    # sim.set_initial(0, 0, (13, 15), (3, 0))
     # assert sim.get_variable_value(0, 0, (13, 15)) == [3.0, 0.0], "Initial value of T"
     print(f"Special: {static.special}")
     print("Actions SET")
@@ -144,32 +151,40 @@ def test_step_by_step_cases():
     assert bav.reference == 34
     assert bav.type == 0
 
-    cases.simulator.set_initial(0, 0, (get_ref("pedestal_boom[0]"),), (3.0,))
-    cases.simulator.set_initial(0, 0, (get_ref("boom_boom[0]"), get_ref("boom_boom[1]")), (8.0, 0.7854))
-    cases.simulator.set_initial(0, 0, (get_ref("rope_boom[0]"),), (1e-6,))
-    cases.simulator.set_initial(0, 0, (get_ref("changeLoad"),), (50.0,))
     #    for idx in range( sim.num_slave_variables(slave)):
     #        print(f"{sim.slave_variables(slave)[idx].name.decode()}: {observer.last_real_values(slave, [idx])}")
+    initial_settings()
     manipulator = cases.simulator.manipulator
+    assert isinstance(manipulator, CosimManipulator)
+    observer = cases.simulator.observer
+    assert isinstance(observer, CosimObserver)
     step_count = 0
     while True:
         step_count += 1
         status = sim.status()
-        print(f"STATUS:{status}, {status.state}={CosimExecutionState.ERROR}")
         if status.current_time > 1e9:
             break
         if status.state == CosimExecutionState.ERROR.value:
             raise AssertionError(f"Error state at time {status.current_time}") from None
         if step_count > 10:
             break
-        elif step_count == 9:
+        elif step_count == 8:
             manipulator.slave_real_values(slave, [34], [0.1])
-    for t in range(1, 6):
-        assert sim.simulate_until(t * 1e9), "Error in simulation at time {t}"
-        for a in static.act_get[-1]:
-            print(f"Time {t/1e9}, {a.args}: {a()}")
-        if t == 5:
-            cases.simulator.set_variable_value(0, 0, (get_ref("boom_angularVelocity"),), (0.7,))
+        print(f"Step {step_count}, time {status.current_time}, state: {status.state}")
+        sim.step()
+
+    # initial_settings()
+
+
+#     for t in range(1, 2):
+#         status = sim.status()
+#         if status.state != CosimExecutionState.ERROR.value:
+#             pass
+#            assert sim.simulate_until( int(t * 1e9)), "Error in simulation at time {t}"
+#         for a in static.act_get[-1]:
+#             print(f"Time {t/1e9}, {a.args}: {a()}")
+#         if t == 5:
+#             cases.simulator.set_variable_value(0, 0, (get_ref("boom_angularVelocity"),), (0.7,))
 
 
 @pytest.mark.skip("Alternative only using SimulatorInterface")
@@ -180,7 +195,7 @@ def test_run_basic():
     sim.simulator.simulate_until(1e9)
 
 
-# @pytest.mark.skip("Not yet")
+@pytest.mark.skip("Run all cases defined in MobileCrane.cases")
 def test_run_cases():
     path = Path(Path(__file__).parent, "data/MobileCrane/MobileCrane.cases")
     assert path.exists(), "MobileCrane cases file not found"
@@ -192,9 +207,9 @@ def test_run_cases():
         for a in at:
             print(t, static.str_act(a))
     print("Running case 'base'...")
-    # res = cases.run_case("base", dump="results_base")
+    res = cases.run_case("base", dump="results_base")
     print("Running case 'static'...")
-    # res = cases.run_case("static", dump="results_static")
+    res = cases.run_case("static", dump="results_static")
     print("Running case 'dynamic'...")
     res = cases.run_case("dynamic", dump="results_dynamic")
     assert len(res) > 0

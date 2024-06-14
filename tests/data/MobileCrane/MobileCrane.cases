@@ -12,6 +12,8 @@ variables : {
    dr_dt : ['mobileCrane', 'rope_lengthVelocity', "Linear lenght change of crane rope. [m/s]"],   
    v     : ['mobileCrane', 'craneVelocity', "Linear velocity of whole crane with respect to base. [|v|, normal]"],
    T     : ['mobileCrane', 'craneTorque', "Total torque of the crane with respect to its base, i.e. the sum of static and dynamic torques. Provided as 3D spherical vector."],
+   x_pedestal : ['mobileCrane', 'pedestal_tip', "Cartesian coordinate of pedestal tip"],
+   x_boom : ['mobileCrane', 'boom_tip', "Cartesian coordinate of booom tip"],
    x_load : ['mobileCrane', 'rope_tip', "Cartesian coordinate of rope tip (load position)"],
    load : ['mobileCrane', 'changeLoad', "Rope mass (load) [kg]"],
 },  
@@ -50,6 +52,8 @@ dynamic : {
 results : {
    spec : [
       T@step,
-      x_load@step,
+      x_pedestal@step,
+      x_boom@step,
+      x_load@step,      
    ]}
 }
