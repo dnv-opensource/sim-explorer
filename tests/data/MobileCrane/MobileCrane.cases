@@ -3,18 +3,18 @@ description : 'Case Study with the MobileCrane FMU (standalone)',
 modelFile : "OspSystemStructure.xml",
 timeUnit  : "second",
 variables : {
-   p     : ['mobileCrane', 'pedestal_boom', "Length and angle of pedestal. Use p[2] to set pedestal azimuth [radians]"],
-   b     : ['mobileCrane', 'boom_boom', "Length and angle of boom. Use b[1] to set boom polar angle [radians]"],
+   p     : ['mobileCrane', 'pedestal_boom', "Length and angle of pedestal. Use p[2] to set pedestal azimuth [degrees]"],
+   b     : ['mobileCrane', 'boom_boom', "Length and angle of boom. Use b[1] to set boom polar angle [degrees]"],
    r     : ['mobileCrane', 'rope_boom', "Length and angle of rope. Use r[0] to set rope length [m]"],   
-   da_dt : ['mobileCrane', 'craneAngularVelocity', "Angular velocity of whole crane with respect to base. [|da_dt|, normal]"],
-   dp_dt : ['mobileCrane', 'pedestal_angularVelocity', "Angular velocity of pedestal (around z-axis). [radians]"],
-   db_dt : ['mobileCrane', 'boom_angularVelocity', "Angular velocity of boom (polar direction). [radians]"],
+   df_dt : ['mobileCrane', 'fixation_angularVelocity', "Angular velocity of whole crane with respect to base. [polar/time, azimuth/time]"],
+   dp_dt : ['mobileCrane', 'pedestal_angularVelocity[1]', "Angular velocity of pedestal (around z-axis). [azimuth/time]"],
+   db_dt : ['mobileCrane', 'boom_angularVelocity[0]', "Angular velocity of boom (polar direction). [polar/time]"],
    dr_dt : ['mobileCrane', 'rope_lengthVelocity', "Linear lenght change of crane rope. [m/s]"],   
    v     : ['mobileCrane', 'craneVelocity', "Linear velocity of whole crane with respect to base. [|v|, normal]"],
    T     : ['mobileCrane', 'craneTorque', "Total torque of the crane with respect to its base, i.e. the sum of static and dynamic torques. Provided as 3D spherical vector."],
-   x_pedestal : ['mobileCrane', 'pedestal_tip', "Cartesian coordinate of pedestal tip"],
-   x_boom : ['mobileCrane', 'boom_tip', "Cartesian coordinate of booom tip"],
-   x_load : ['mobileCrane', 'rope_tip', "Cartesian coordinate of rope tip (load position)"],
+   x_pedestal : ['mobileCrane', 'pedestal_end', "Cartesian coordinate of pedestal tip"],
+   x_boom : ['mobileCrane', 'boom_end', "Cartesian coordinate of booom tip"],
+   x_load : ['mobileCrane', 'rope_end', "Cartesian coordinate of rope tip (load position)"],
    load : ['mobileCrane', 'changeLoad', "Rope mass (load) [kg]"],
 },  
 base : {
@@ -23,9 +23,9 @@ base : {
       stopTime : 1.0,
       stepSize : 0.1,
       p[0,2]   : [3.0, 0.0],
-      b[0,1]   : [8.0, 1.5708], # 90 deg polar (horizontal)
+      b[0,1]   : [8.0, 1.570796], # 90 deg polar (horizontal)
       r[0]     : 1e-6, # very short rope
-      da_dt    : [0,0, 0,0],
+      df_dt    : [0.0, 0.0],
       dp_dt    : 0.0,
       db_dt    : 0.0,
       dr_dt    : 0.0,
@@ -35,8 +35,8 @@ base : {
 static : {
     description : "Static end position. Represents a mobile crane during lifting (turned 90deg, boom lifted 45 deg, load lifted 1 m)",
     spec: {
-      p[2]  : 1.5708, # 90 deg azimuth
-      b[1]  : 0.7854, # 45 deg polar
+      p[2]  : 1.570796, # 90 deg azimuth (turned in y-direction)
+      b[1]  : 0.785398, # 45 deg polar (turned 45 deg up)
       r[0]  : 7.657,  # length of rope such that load 1m over floor
       load  : 1000,   # load weight in kg
    }},   
@@ -44,8 +44,8 @@ dynamic : {
     description : "Movement to end position. Represents a mobile crane during lifting (turned 90deg, boom lifted 45 deg, load lifted 1 m)",
     spec: {
       stopTime : 1.1,
-      dp_dt  : 1.5708, #'90 deg/sec'
-      db_dt  : 0.7854, #'45 deg/sec'
+      dp_dt  : 1.570796, #'90 deg/sec'
+      db_dt  : 0.785498, #'45 deg/sec'
       dr_dt  : 7.657,  # prolong to keep at 'floor'
       dp_dt@1.0 : 0.0,
       db_dt@1.0 : 0.0,

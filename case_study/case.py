@@ -190,10 +190,13 @@ class Case:
             for i, act in enumerate(dct[at_time]):
                 if act.func.__name__ == action.__name__ and all(act.args[k] == args[k] for k in range(2)):
                     # the type of action, the model id and the variable type match
-                    if all(r in act.args[2] for r in args[2]):  # refs are a subset or equal
-                        if typ == "get":
-                            return  # leave alone. Already included
-                        else:  # set action. Need to (partially) replace value(s)
+                    if isinstance(args[2], int):  # single variable (used for initial set actions)
+                        if args[2] == act.args[2]:
+                            if typ == "set":
+                                dct[at_time][i] = partial(action, *args)  # replace
+                            return
+                    elif all(r in act.args[2] for r in args[2]):  # refs are a subset or equal
+                        if typ == "set":  # Need to (partially) replace value(s)
                             values = list(act.args[3])  # copy of existing values
                             for k, r in enumerate(act.args[2]):  # go through refs
                                 for _k, _r in enumerate(args[2]):
@@ -202,7 +205,7 @@ class Case:
                             dct[at_time][i] = partial(
                                 action, args[0], args[1], act.args[2], tuple(values)
                             )  # replace action
-                            return
+                        return  # Note: get actions do not need special actions
             dct[at_time].append(partial(action, *args))
 
         else:  # no action for this time yet
@@ -360,7 +363,7 @@ class Case:
                     value = [value]
                 _assert(
                     sum(1 for _ in rng) == Case._num_elements(value),
-                    f"Variable {key}: # values {Case._num_elements( value)} != # vars {sum( 1 for _ in rng)}",
+                    f"Variable {key}: # values {value} != # vars {rng}",
                 )
             var_refs = []
             var_vals = []
@@ -368,7 +371,7 @@ class Case:
                 var_refs.append(cvar_info["variables"][r])
                 if value is not None:
                     var_vals.append(value[i])
-            # print(f"READ_SPEC, {key}@{at_time_arg}({at_time_type}):{value}[{rng}], alias={cvar_info}")
+            # print(f"CASE.read_spec, {key}@{at_time_arg}({at_time_type}):{value}[{rng}], alias={cvar_info}")
             if at_time_type in ("get", "step"):  # get actions
                 for inst in cvar_info["instances"]:  # ask simulator to provide function to set variables:
                     _inst = self.cases.simulator.component_id_from_name(inst)
@@ -393,18 +396,20 @@ class Case:
             else:  # set actions
                 assert value is not None, f"Variable {key}: Value needed for 'set' actions."
                 assert at_time_type in ("set"), f"Unknown @time type {at_time_type} for case '{self.name}'"
-                if SimulatorInterface.default_initial(cvar_info["causality"], cvar_info["variability"]) < 3:
+                if at_time_arg <= self.special["startTime"]:
+                    #  SimulatorInterface.default_initial(cvar_info["causality"], cvar_info["variability"]) < 3:
                     assert at_time_arg <= self.special["startTime"], f"Initial settings at time {at_time_arg}?"
                     for inst in cvar_info["instances"]:  # ask simulator to provide function to set variables:
                         _inst = self.cases.simulator.component_id_from_name(inst)
                         if not self.cases.simulator.allowed_action("set", _inst, tuple(var_refs), 0):
                             raise AssertionError(self.cases.simulator.message) from None
-                        self.add_action(
-                            at_time_type,
-                            self.cases.simulator.set_initial,
-                            (_inst, cvar_info["type"], tuple(var_refs), tuple(var_vals)),
-                            at_time_arg * self.cases.timefac,
-                        )
+                        for ref, val in zip(var_refs, var_vals, strict=False):
+                            self.add_action(
+                                at_time_type,
+                                self.cases.simulator.set_initial,
+                                (_inst, cvar_info["type"], ref, val),
+                                at_time_arg * self.cases.timefac,
+                            )
                 else:
                     for inst in cvar_info["instances"]:  # ask simulator to provide function to set variables:
                         _inst = self.cases.simulator.component_id_from_name(inst)
@@ -458,7 +463,49 @@ class Case:
                 raise CaseInitError("'stepSize' should be specified as part of the 'base' specification.") from None
         return special
 
-    def save_results(self, results: dict, jsfile: bool | str):
+    def _results_make_header(self):
+        """Make a standard header for the results of 'case'.
+        The data is added in run_case().
+        """
+        assert isinstance(self.cases.spec, dict), f"Top level spec of cases: {type(self.cases.spec)}"
+        results = {
+            "Header": {
+                "case": self.name,
+                "dateTime": time.time(),
+                "cases": self.cases.spec.get("name", "None"),
+                "file": str(self.cases.file),
+                "casesDate": os.path.getmtime(self.cases.file),
+                "timeUnit": self.cases.spec.get("timeUnit", "None"),
+                "timeFactor": self.cases.timefac,
+            }
+        }
+        return results
+
+    def _results_add(self, results: dict, time: float, comp: int, typ: int, refs: tuple[int, ...], values: tuple):
+        """Add the results of a get action to the results dict for the case.
+
+        Args:
+            results (dict): The results dict (js5-dict) collected so far and where a new item is added.
+            time (float): the time of the results
+            component (int): The index of the component
+            typ (int): The data type of the variable as enumeration int
+            ref (list): The variable references linked to this variable definition
+            values (tuple): the values of the variable
+            print_type (str)='plain': 'plain': use indices as supplied
+        """
+        if self.cases.results_print_type == "plain":
+            ref = refs[0] if len(refs) == 1 else str(refs)  # comply to js5 key rules
+        elif self.cases.results_print_type == "names":
+            comp, ref = self.cases.comp_refs_to_case_var(comp, tuple(refs))
+        if time in results:
+            if comp in results[time]:
+                results[time][comp].update({ref: values})
+            else:
+                results[time].update({comp: {ref: values}})
+        else:
+            results.update({time: {comp: {ref: values}}})
+
+    def _results_save(self, results: dict, jsfile: bool | str):
         """Dump the results dict to a json5 file.
 
         Args:
@@ -472,6 +519,80 @@ class Case:
         elif not jsfile.endswith(".js5"):
             jsfile += ".js5"
         json5_write(results, Path(self.cases.file.parent, jsfile))
+
+    def run(self, dump: bool | str = False):
+        """Set up case 'name' and run it.
+
+        Args:
+            name (str,Case): case name as str or case object. The case to be run
+            dump (str): Optionally save the results as json file.
+              False:  only as string, True: json file with automatic file name, str: explicit filename.json
+        """
+
+        # Note: final actions are included as _get at end time
+        # print("ACTIONS_SET", settings['actions_set')
+        # print("ACTIONS_GET", settings['actions_get')
+        # print("ACTIONS_STEP", settings['actions_step')
+        act_step = self.act_get.get(-1, None)
+        tstart = int(self.special["startTime"] * self.cases.timefac)
+        time = tstart
+        tstop = int(self.special["stopTime"] * self.cases.timefac)
+        tstep = int(self.special["stepSize"] * self.cases.timefac)
+
+        set_iter = self.act_set.items().__iter__()  # iterator over set actions => time, action_list
+        try:
+            t_set, a_set = next(set_iter)
+        except StopIteration:
+            t_set, a_set = (float("inf"), [])  # satisfy linter
+        get_iter = self.act_get.items().__iter__()  # iterator over get actions => time, action_list
+        try:
+            t_get, a_get = next(get_iter)
+        except StopIteration:
+            t_get, a_get = (tstop + 1, [])
+        results = self._results_make_header()
+        print(f"BEFORE LOOP. SET: {time}:{t_set}")
+        for a in a_set:
+            print(f"   {a.args[2]}={a.args[3]}")
+        print(f"BEFORE LOOP.GET: {time}:{t_get}")
+        for a in a_get:
+            print(f"   {a.args[2]}={a()}")
+        while time < tstop:
+            print(f"CASE.run SET, {time}-{tstop}: {t_set}, {a_set}")
+            while time >= t_set:  # issue the set actions
+                if len(a_set):
+                    for a in a_set:
+                        print(f"@{time}. Set actions type:{a.args[1]} refs:{a.args[2]}, values:{a.args[3]}")
+                        a()
+                    try:
+                        t_set, a_set = next(set_iter)
+                    except StopIteration:
+                        t_set, a_set = 10 * tstop, []
+                    print(f"@{time}. Next set actions: {t_set}, {a_set}")
+
+            time += tstep
+            self.cases.simulator.simulator.simulate_until(time)
+
+            while time >= t_get:  # issue the current get actions
+                print(f"CASE.run GET@{time}, {t_get}")
+                for a in a_get:
+                    print(f"CASE.GET args@{time}: {a.args[2]}={a()}")
+                    self._results_add(results, time / self.cases.timefac, a.args[0], a.args[1], a.args[2], a())
+                try:
+                    t_get, a_get = next(get_iter)
+                except StopIteration:
+                    t_get, a_get = 10 * tstop, []
+
+            if act_step is not None:  # there are step-always actions
+                for a in act_step:
+                    # print("STEP args", a.args)
+                    self._results_add(results, time / self.cases.timefac, a.args[0], a.args[1], a.args[2], a())
+
+        self.cases.simulator.reset()
+        if dump:
+            print(f"saving to file {dump}")
+            self._results_save(results, dump)
+        self.results = results
+        return results
 
     def plot_time_series(self, aliases: list[str], title=""):
         """Use self.results to extract the provided alias variables and plot the data found in the same plot."""
@@ -539,7 +660,7 @@ class Cases:
         "variables",
         "base",
         "results",
-        "_results_map",
+        "_comp_refs_to_case_var_cache",
         "results_print_type",
     )
 
@@ -549,7 +670,6 @@ class Cases:
         self.file = Path(spec)  # everything relative to the folder of this file!
         assert self.file.exists(), f"Cases spec file {spec} not found"
         self.spec = Json5Reader(spec).js_py
-        self.results_print_type = results_print_type
         if simulator is None:
             path = Path(self.file.parent, self.spec.get("modelFile", "OspSystemStructure.xml"))  # type: ignore
             assert path.exists(), f"OSP system structure file {path} not found"
@@ -568,7 +688,10 @@ class Cases:
         self.timefac = self._get_time_unit() * 1e9  # internally OSP uses pico-seconds as integer!
         # read the 'variables' section and generate dict { alias : { (instances), (variables)}}:
         self.variables = self.get_case_variables()
-        self._results_map: dict = dict()  # cache of results indices translations used by results_map_get()
+        self.results_print_type = results_print_type
+        self._comp_refs_to_case_var_cache: dict = (
+            dict()
+        )  # cache of results indices translations used by comp_refs_to_case_var()
         self.read_cases()  # sets self.base and self.results
 
     def get_case_variables(self) -> dict[str, dict]:
@@ -769,134 +892,28 @@ class Cases:
             raise ValueError(f"The argument 'case' shall be a Case object or None. Type {type(case)} found.")
         return txt
 
-    def _make_results_header(self, case: Case):
-        """Make a standard header for the results of 'case'.
-        The data is added in run_case().
-        """
-        assert isinstance(self.spec, dict), f"Top level spec of cases: {type(self.spec)}"
-        results = {
-            "Header": {
-                "case": case.name,
-                "dateTime": time.time(),
-                "cases": self.spec.get("name", "None"),
-                "file": str(self.file),
-                "casesDate": os.path.getmtime(self.file),
-                "timeUnit": self.spec.get("timeUnit", "None"),
-                "timeFactor": self.timefac,
-            }
-        }
-        return results
-
-    def _results_map_get(self, comp: int, refs: tuple[int, ...]):
+    def comp_refs_to_case_var(self, comp: int, refs: tuple[int, ...]):
         """Get the translation of the component id `comp` + references `refs`
         to the variable names used in the cases file.
-        To speed up the process the process the cache dict _results_map is used.
+        To speed up the process the process the cache dict _comp_refs_to_case_var_cache is used.
         """
         try:
-            component, var = self._results_map[comp][refs]
+            component, var = self._comp_refs_to_case_var_cache[comp][refs]
         except Exception:
             component = self.simulator.component_name_from_id(comp)
             var, rng = self.case_var_by_ref(component, refs)
             if len(rng):  # elements of a composit variable
                 var += f"{list(rng)}"
-            if comp not in self._results_map:
-                self._results_map.update({comp: {}})
-            self._results_map[comp].update({refs: (component, var)})
+            if comp not in self._comp_refs_to_case_var_cache:
+                self._comp_refs_to_case_var_cache.update({comp: {}})
+            self._comp_refs_to_case_var_cache[comp].update({refs: (component, var)})
         return component, var
 
-    def _results_add(self, results: dict, time: float, comp: int, typ: int, refs: tuple[int, ...], values: tuple):
-        """Add the results of a get action to the results dict for the case.
-
-        Args:
-            results (dict): The results dict (js5-dict) collected so far and where a new item is added.
-            time (float): the time of the results
-            component (int): The index of the component
-            typ (int): The data type of the variable as enumeration int
-            ref (list): The variable references linked to this variable definition
-            values (tuple): the values of the variable
-            print_type (str)='plain': 'plain': use indices as supplied
-        """
-        if self.results_print_type == "plain":
-            ref = refs[0] if len(refs) == 1 else str(refs)  # comply to js5 key rules
-        elif self.results_print_type == "names":
-            comp, ref = self._results_map_get(comp, tuple(refs))
-        if time in results:
-            if comp in results[time]:
-                results[time][comp].update({ref: values})
-            else:
-                results[time].update({comp: {ref: values}})
-        else:
-            results.update({time: {comp: {ref: values}}})
-
     def run_case(self, name: str | Case, dump: bool | str = False):
-        """Set up case 'name' and run it.
-
-        Args:
-            name (str,Case): case name as str or case object. The case to be run
-            dump (str): Optionally save the results as json file.
-              False:  only as string, True: json file with automatic file name, str: explicit filename.json
-        """
-
-        if isinstance(name, str):
-            case = self.case_by_name(name)
-            assert isinstance(case, Case), f"Could not find the case represented by {name}"
-        elif isinstance(name, Case):
-            case = name
+        """Initiate case run. If done from here, the case name can be chosen."""
+        if isinstance(name, Case):
+            return name.run(dump)
         else:
-            raise CaseUseError(f"Case {name} was not found") from None
-        # Note: final actions are included as _get at end time
-        # print("ACTIONS_SET", settings['actions_set')
-        # print("ACTIONS_GET", settings['actions_get')
-        # print("ACTIONS_STEP", settings['actions_step')
-        act_step = case.act_get.get(-1, None)
-        time = int(case.special["startTime"] * self.timefac)
-        tstop = int(case.special["stopTime"] * self.timefac)
-        tstep = int(case.special["stepSize"] * self.timefac)
-
-        set_iter = case.act_set.items().__iter__()  # iterator over set actions => time, action_list
-        try:
-            t_set, a_set = next(set_iter)
-        except StopIteration:
-            t_set, a_set = (float("inf"), [])  # satisfy linter
-        get_iter = case.act_get.items().__iter__()  # iterator over get actions => time, action_list
-        try:
-            t_get, a_get = next(get_iter)
-        except StopIteration:
-            t_get, a_get = (tstop + 1, [])
-        results = self._make_results_header(case)
-        print(f"BEFORE LOOP: {time}:{t_set}, act:{a_set}")
-        while time < tstop:
-            while time >= t_set:  # issue the set actions
-                for a in a_set:
-                    print(
-                        f"@{time}. Set actions type:{a.args[1]} refs:{a.args[2]}, values:{a.args[3]}, type:{type(a.args[3][0])}"
-                    )
-                    a()
-                try:
-                    t_set, a_set = next(set_iter)
-                except StopIteration:
-                    t_set, a_set = 10 * tstop, []
-            time += tstep
-            print(f"(Re-)Start simulator at {time} with step {tstep}")
-            self.simulator.simulator.simulate_until(time)
-
-            while time >= t_get:  # issue the current get actions
-                print("GET", time, t_get, a_get)
-                for a in a_get:
-                    # print("GET args", time, a.args)
-                    self._results_add(results, time / self.timefac, a.args[0], a.args[1], a.args[2], a())
-                try:
-                    t_get, a_get = next(get_iter)
-                except StopIteration:
-                    t_get, a_get = 10 * tstop, []
-
-            if act_step is not None:  # there are step-always actions
-                for a in act_step:
-                    # print("STEP args", a.args)
-                    self._results_add(results, time / self.timefac, a.args[0], a.args[1], a.args[2], a())
-
-        if dump:
-            print(f"saving to file {dump}")
-            case.save_results(results, dump)
-        case.results = results
-        return results
+            c = self.case_by_name(name)
+            assert c is not None, f"Case {name} not found"
+            return c.run(dump)

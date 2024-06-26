@@ -100,6 +100,19 @@ class SimulatorInterface:
     def path(self):
         return self.sysconfig.resolve().parent if self.sysconfig is not None else None
 
+    def reset(self):
+        """Reset the simulator interface, so that a new simulation can be run."""
+        assert isinstance(self.sysconfig, Path), "Simulator resetting does not work with explicitly supplied simulator."
+        assert self.sysconfig.exists(), "Simulator resetting does not work with explicitly supplied simulator."
+        print("PATH", self.sysconfig.name, self.sysconfig.parent, self.sysconfig.is_dir())
+        self.simulator = None
+        assert isinstance(self.manipulator, CosimManipulator)
+        assert isinstance(self.observer, CosimObserver)
+        # self.simulator = self._simulator_from_config(self.sysconfig)
+        self.simulator = CosimExecution.from_osp_config_file(str(self.sysconfig))
+        assert self.simulator.add_manipulator(manipulator=self.manipulator), "Could not add manipulator object"
+        assert self.simulator.add_observer(observer=self.observer), "Could not add observer object"
+
     def _simulator_from_config(self, file: Path):
         """Instantiate a simulator object through the a suitable configuration file.
         Intended for use case 1 when Cases are in charge.
@@ -345,28 +358,42 @@ class SimulatorInterface:
     #                     )
     #         return groups
 
-    def set_initial(self, instance: int, typ: int, var_refs: tuple[int], var_vals: tuple[PyVal]):
-        """Set initial values of variables, based on tuples of var_refs and var_vals (OSP only allows simple variables).
+    #    def set_initial(self, instance: int, typ: int, var_refs: tuple[int], var_vals: tuple[PyVal]):
+    def set_initial(self, instance: int, typ: int, var_ref: int, var_val: PyVal):
+        """Provide an _initial_value set function (OSP only allows simple variables).
         The signature is the same as the manipulator functions slave_real_values()...,
         only that variables are set individually and the type is added as argument.
         """
-        # print(f"SET initial refs:{var_refs}, type {typ}, vals:{var_vals}")
-        assert len(var_refs) == len(var_vals), f"Got #refs:{len(var_refs)} != #vals:{len(var_vals)}"
-        res = []
         if typ == CosimVariableType.REAL.value:
-            for i in range(len(var_refs)):
-                res.append(self.simulator.real_initial_value(instance, var_refs[i], self.pytype(typ, var_vals[i])))
+            return self.simulator.real_initial_value(instance, var_ref, self.pytype(typ, var_val))
         elif typ == CosimVariableType.INTEGER.value:
-            for i in range(len(var_refs)):
-                res.append(self.simulator.integer_initial_value(instance, var_refs[i], self.pytype(typ, var_vals[i])))
+            return self.simulator.integer_initial_value(instance, var_ref, self.pytype(typ, var_val))
         elif typ == CosimVariableType.STRING.value:
-            for i in range(len(var_refs)):
-                res.append(self.simulator.string_initial_value(instance, var_refs[i], self.pytype(typ, var_vals[i])))
+            return self.simulator.string_initial_value(instance, var_ref, self.pytype(typ, var_val))
         elif typ == CosimVariableType.BOOLEAN.value:
-            for i in range(len(var_refs)):
-                res.append(self.simulator.boolean_initial_value(instance, var_refs[i], self.pytype(typ, var_vals[i])))
-        msg = f"Initial setting of ref:{var_refs}, type {typ} to val:{var_vals} failed. Status: {res}"
-        assert all(x for x in res), msg
+            return self.simulator.boolean_initial_value(instance, var_ref, self.pytype(typ, var_val))
+
+    #         """Set initial values of variables, based on tuples of var_refs and var_vals (OSP only allows simple variables).
+    #         The signature is the same as the manipulator functions slave_real_values()...,
+    #         only that variables are set individually and the type is added as argument.
+    #         """
+    #         # print(f"SET initial refs:{var_refs}, type {typ}, vals:{var_vals}")
+    #         assert len(var_refs) == len(var_vals), f"Got #refs:{len(var_refs)} != #vals:{len(var_vals)}"
+    #         res = []
+    #         if typ == CosimVariableType.REAL.value:
+    #             for i in range(len(var_refs)):
+    #                 res.append(self.simulator.real_initial_value(instance, var_refs[i], self.pytype(typ, var_vals[i])))
+    #         elif typ == CosimVariableType.INTEGER.value:
+    #             for i in range(len(var_refs)):
+    #                 res.append(self.simulator.integer_initial_value(instance, var_refs[i], self.pytype(typ, var_vals[i])))
+    #         elif typ == CosimVariableType.STRING.value:
+    #             for i in range(len(var_refs)):
+    #                 res.append(self.simulator.string_initial_value(instance, var_refs[i], self.pytype(typ, var_vals[i])))
+    #         elif typ == CosimVariableType.BOOLEAN.value:
+    #             for i in range(len(var_refs)):
+    #                 res.append(self.simulator.boolean_initial_value(instance, var_refs[i], self.pytype(typ, var_vals[i])))
+    #         msg = f"Initial setting of ref:{var_refs}, type {typ} to val:{var_vals} failed. Status: {res}"
+    #         assert all(x for x in res), msg
 
     def set_variable_value(self, instance: int, typ: int, var_refs: tuple[int], var_vals: tuple[PyVal]) -> Callable:
         """Provide a manipulator function which sets the 'variable' (of the given 'instance' model) to 'value'.
