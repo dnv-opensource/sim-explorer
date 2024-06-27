@@ -231,7 +231,7 @@ def test_run_basic():
 def test_run_cases():
     path = Path(Path(__file__).parent, "data/MobileCrane/MobileCrane.cases")
     system_structure = Path(Path(__file__).parent, "data/MobileCrane/OspSystemStructure.xml")
-    assert path.exists(system_structure), "MobileCrane cases file not found"
+    assert path.exists(), "MobileCrane cases file not found"
     cases = Cases(path, results_print_type="names")
     # for v, info in cases.variables.items():
     #     print(v, info)
