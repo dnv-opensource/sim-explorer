@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import numpy as np
+import pytest
 from case_study.case import Case, Cases
 from case_study.simulator_interface import SimulatorInterface
 
@@ -20,15 +21,22 @@ def expected_actions(case: Case, act: dict, expect: dict):
                 action.func.__name__
             ]
             assert aname == a_expect[i][0], f"{msg}. Erroneous action type {aname}"
+            # make sure that arguments 2.. are tuples
+            args = [None]*5 
+            for k in range(2,len(action.args)):
+                if isinstance( action.args[k], tuple):
+                    args[k] = action.args[k]
+                else:
+                    args[k] = (action.args[k],)
             arg = [
-                sim.component_name_from_idx(action.args[0]),
+                sim.component_name_from_id(action.args[0]),
                 SimulatorInterface.pytype(action.args[1]),
-                tuple(sim.variable_name_from_ref(action.args[0], ref) for ref in action.args[2]),
+                tuple(sim.variable_name_from_ref(action.args[0], ref) for ref in args[2]),
             ]
             for k in range(1, len(action.args)):
                 if k == 3:
                     assert len(a_expect[i]) == 5, f"{msg}. Need also a value argument in expect:{expect}"
-                    assert tuple(action.args[3]) == a_expect[i][4], f"{msg}. Erroneous value argument {action.args[3]}."
+                    assert args[3] == a_expect[i][4], f"{msg}. Erroneous value argument {action.args[3]}."
                 else:
                     assert (
                         arg[k] == a_expect[i][k + 1]
@@ -56,7 +64,7 @@ def test_step_by_step_interface():
     assert sim.components["bb"] == 0
     print(f"Variables: {sim.get_variables( 0, as_numbers = False)}")
     assert sim.get_variables(0)["e"] == {"reference": 6, "type": 0, "causality": 1, "variability": 2}
-    sim.set_initial(0, 0, (6,), (0.35,))
+    sim.set_initial(0, 0, 6, 0.35)
     for t in np.linspace(1, 1e9, 1):
         sim.simulator.simulate_until(t)
         print(sim.get_variable_value(0, 0, (0, 1, 6)))
@@ -64,7 +72,7 @@ def test_step_by_step_interface():
             assert sim.get_variable_value(0, 0, (0, 1, 6)) == [0.11, 0.9411890500000001, 0.35]
 
 
-def test_run_case1():
+def test_run_cases():
     path = Path(Path(__file__).parent, "data/BouncingBall0/BouncingBall.cases")
     assert path.exists(), "BouncingBall cases file not found"
     cases = Cases(path)
@@ -99,10 +107,15 @@ def test_run_case1():
         case3, case3.act_set, {0: [("set", "bb", float, ("g",), (-9.81,)), ("set", "bb", float, ("e",), (1.4,))]}
     )
     print("Actions checked")
-    print("RESULTS", cases.run_case("base", "results"))
+    print("Run base", cases.run_case("base", "results_base"))
+    cases.simulator.reset()
+    print("Run case1", cases.run_case("case1", "results_case1"))
+    cases.simulator.reset()
+    print("Run case2", cases.run_case("case2", "results_case2"))
+    cases.simulator.reset()
+    
 
 
 if __name__ == "__main__":
-    #    test_step_by_step()
-    #    test_step_by_step_interface()
-    test_run_case1()
+    retcode = pytest.main(["-rA", "-v", __file__])
+    assert retcode == 0, f"Return code {retcode}"
