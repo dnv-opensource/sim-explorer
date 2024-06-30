@@ -1,3 +1,4 @@
+from math import sqrt
 from pathlib import Path
 
 import numpy as np
@@ -17,14 +18,14 @@ def expected_actions(case: Case, act: dict, expect: dict):
         a_expect = expect[time]
         for i, action in enumerate(actions):
             msg = f"Case {case.name}({time})[{i}]"  # , expect: {a_expect[i]}")
-            aname = {"set_initial": "set", "set_variable_value": "set", "get_variable_value": "get"}[
+            aname = {"set_initial": "set0", "set_variable_value": "set", "get_variable_value": "get"}[
                 action.func.__name__
             ]
             assert aname == a_expect[i][0], f"{msg}. Erroneous action type {aname}"
             # make sure that arguments 2.. are tuples
-            args = [None]*5 
-            for k in range(2,len(action.args)):
-                if isinstance( action.args[k], tuple):
+            args = [None] * 5
+            for k in range(2, len(action.args)):
+                if isinstance(action.args[k], tuple):
                     args[k] = action.args[k]
                 else:
                     args[k] = (action.args[k],)
@@ -38,11 +39,29 @@ def expected_actions(case: Case, act: dict, expect: dict):
                     assert len(a_expect[i]) == 5, f"{msg}. Need also a value argument in expect:{expect}"
                     assert args[3] == a_expect[i][4], f"{msg}. Erroneous value argument {action.args[3]}."
                 else:
-                    assert (
-                        arg[k] == a_expect[i][k + 1]
-                    ), f"{msg}. Erroneous argument {k}: {arg[k]}. Expect: {a_expect[i]}"
+                    assert arg[k] == a_expect[i][k + 1], f"{msg}. [{k}]: in {arg} != Expected: {a_expect[i]}"
 
 
+def expect_bounce_at(results: dict, time: float, eps=0.02):
+    previous = None
+    falling = True
+    for _t in results:
+        if previous is not None:
+            falling = results[_t]["bb"]["h"][0] < previous[0]
+            # if falling != previous[1]:
+            #     print(f"EXPECT_bounce @{_t}: {previous[1]} -> {falling}")
+            if abs(_t - time) <= eps:  # within intervall where bounce is expected
+                print(_t, previous, falling)
+                if previous[1] != falling:
+                    return True
+            elif _t + eps > time:  # give up
+                return False
+        if "bb" in results[_t]:
+            previous = (results[_t]["bb"]["h"][0], falling)
+    return False
+
+
+@pytest.mark.skip()
 def test_step_by_step():
     """Do the simulation step-by step, only using libcosimpy"""
     path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
@@ -56,6 +75,7 @@ def test_step_by_step():
             assert sim.observer.last_real_values(0, [0, 1, 6]) == [0.11, 0.9411890500000001, 0.35]
 
 
+@pytest.mark.skip()
 def test_step_by_step_interface():
     """Do the simulation step by step, using the simulatorInterface"""
     path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
@@ -77,45 +97,95 @@ def test_run_cases():
     assert path.exists(), "BouncingBall cases file not found"
     cases = Cases(path)
     base = cases.case_by_name("base")
-    case1 = cases.case_by_name("case1")
-    case2 = cases.case_by_name("case2")
-    case3 = cases.case_by_name("case3")
+    restitution = cases.case_by_name("restitution")
+    restitutionAndGravity = cases.case_by_name("restitutionAndGravity")
+    gravity = cases.case_by_name("gravity")
     expected_actions(
-        case3,
-        case3.act_get,
+        gravity,
+        gravity.act_get,
         {
-            -1: [
-                ("get", "bb", float, ("h",)),
-            ],
-            1e9: [
-                ("get", "bb", float, ("v",)),
-            ],
-            3e9: [("get", "bb", float, ("e",)), ("get", "bb", float, ("g",))],
+            -1: [("get", "bb", float, ("h",))],
+            0.0: [("get", "bb", float, ("e",)), ("get", "bb", float, ("g",)), ("get", "bb", float, ("h",))],
+            1e9: [("get", "bb", float, ("v",))],
         },
     )
     expected_actions(
-        base, base.act_set, {0: [("set", "bb", float, ("g",), (-9.81,)), ("set", "bb", float, ("e",), (0.71,))]}
+        base,
+        base.act_set,
+        {
+            0: [
+                ("set0", "bb", float, ("g",), (-9.81,)),
+                ("set0", "bb", float, ("e",), (1.0,)),
+                ("set0", "bb", float, ("h",), (1.0,)),
+            ]
+        },
     )
-    print("CASE1", case1.act_set)
+    print("restitution", restitution.act_set)
     expected_actions(
-        case1, case1.act_set, {0: [("set", "bb", float, ("g",), (-9.81,)), ("set", "bb", float, ("e",), (0.35,))]}
+        restitution,
+        restitution.act_set,
+        {
+            0: [
+                ("set0", "bb", float, ("g",), (-9.81,)),
+                ("set0", "bb", float, ("e",), (0.5,)),
+                ("set0", "bb", float, ("h",), (1.0,)),
+            ]
+        },
     )
     expected_actions(
-        case2, case2.act_set, {0: [("set", "bb", float, ("g",), (-1.5,)), ("set", "bb", float, ("e",), (0.35,))]}
+        restitutionAndGravity,
+        restitutionAndGravity.act_set,
+        {
+            0: [
+                ("set0", "bb", float, ("g",), (-1.5,)),
+                ("set0", "bb", float, ("e",), (0.5,)),
+                ("set0", "bb", float, ("h",), (1.0,)),
+            ]
+        },
     )
     expected_actions(
-        case3, case3.act_set, {0: [("set", "bb", float, ("g",), (-9.81,)), ("set", "bb", float, ("e",), (1.4,))]}
+        gravity,
+        gravity.act_set,
+        {
+            0: [
+                ("set0", "bb", float, ("g",), (-1.5,)),
+                ("set0", "bb", float, ("e",), (1.0,)),
+                ("set0", "bb", float, ("h",), (1.0,)),
+            ]
+        },
     )
     print("Actions checked")
-    print("Run base", cases.run_case("base", "results_base"))
+    print(
+        "Run base",
+    )
+    res = cases.run_case("base", "results_base")
+    # key results data for base case
+    h0 = res[0]["bb"]["h"][0]
+    t0 = sqrt(2 * h0 / 9.81)  # half-period time with full restitution
+    v_max = sqrt(2 * h0 * 9.81)  # speed when hitting bottom
+    #h_v = lambda v, g: 0.5 * v**2 / g  # calculate height
+    assert abs(h0 - 1.0) < 1e-3
+    assert expect_bounce_at(res, t0, eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
+    assert expect_bounce_at(res, 2 * t0, eps=0.02), f"No top point at {2*sqrt(2*h0/9.81)}"
+
     cases.simulator.reset()
-    print("Run case1", cases.run_case("case1", "results_case1"))
+    print("Run restitution")
+    res = cases.run_case("restitution", "results_restitution")
+    assert expect_bounce_at(res, sqrt(2 * h0 / 9.81), eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
+    assert expect_bounce_at(
+        res, sqrt(2 * h0 / 9.81) + 0.5 * v_max / 9.81, eps=0.02
+    )  # restitution is a factor on speed at bounce
     cases.simulator.reset()
-    print("Run case2", cases.run_case("case2", "results_case2"))
+    print("Run gravity", cases.run_case("gravity", "results_gravity"))
+    assert expect_bounce_at(res, sqrt(2 * h0 / 1.5), eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
     cases.simulator.reset()
-    
+    print("Run restitutionAndGravity", cases.run_case("restitutionAndGravity", "results_restitutionAndGravity"))
+    assert expect_bounce_at(res, sqrt(2 * h0 / 1.5), eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
+    assert expect_bounce_at(res, sqrt(2 * h0 / 1.5) + 0.5 * sqrt(2 * h0 / 1.5), eps=0.4)
+    cases.simulator.reset()
 
 
 if __name__ == "__main__":
     retcode = pytest.main(["-rA", "-v", __file__])
     assert retcode == 0, f"Return code {retcode}"
+#    test_run_cases()

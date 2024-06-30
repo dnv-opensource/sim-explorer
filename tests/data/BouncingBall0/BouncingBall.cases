@@ -14,32 +14,34 @@ variables : {
 base : {
    description : "Variable settings for the base case. All other cases are based on that",
    spec: {
-      stepSize : 0.1,
+      stepSize : 0.01,
       stopTime : '3',
       g : -9.81,
-      e : 0.71,
+      e : 1.0,
+      h : 1.0,
    }},
-case1 : {
+restitution : {
    description : "Smaller coefficient of restitution e",
    spec: {
-      e : 0.35,
+      e : 0.5,
    }},
-case2 : {
-   description : "Based case1 (e change), change also the gravity g",
-   parent : 'case1',
+restitutionAndGravity : {
+   description : "Based restitution (e change), change also the gravity g",
+   parent : 'restitution',
    spec : {
       g : -1.5
    }},
-case3 : {
-   description : "Related directly to base case, larger e",
+gravity : {
+   description : "Gravity like on the moon",
    spec : {
-      e : 1.4
+      g : -1.5
    }},
 results : {
    spec : [
+      e@0.0,
+      g@0.0,
+      h@0.0,
       h@step,
       v@1.0,
-      e,
-      g,
    ]}
 }

@@ -39,7 +39,7 @@ def test_read_cases():
     assert json5.js_py["dynamic"]["spec"]["db_dt"] == 0.785498
 
 
-@pytest.mark.skip("Alternative step-by step, only using libcosimpy")
+# @pytest.mark.skip("Alternative step-by step, only using libcosimpy")
 def test_step_by_step_cosim():
 
     def set_var(name: str, value: float, slave: int = 0):
@@ -100,7 +100,7 @@ def test_step_by_step_cosim():
         sim.simulate_until(step_count * 1e9)
 
 
-@pytest.mark.skip("Alternative step-by step, using SimulatorInterface and Cases")
+# @pytest.mark.skip("Alternative step-by step, using SimulatorInterface and Cases")
 def test_step_by_step_cases():
 
     def get_ref(name: str):
@@ -114,10 +114,11 @@ def test_step_by_step_cases():
                 return sim.real_initial_value(slave, idx, value)
 
     def initial_settings():
-        cases.simulator.set_initial(0, 0, (get_ref("pedestal_boom[0]"),), (3.0,))
-        cases.simulator.set_initial(0, 0, (get_ref("boom_boom[0]"), get_ref("boom_boom[1]")), (8.0, 0.7854))
-        cases.simulator.set_initial(0, 0, (get_ref("rope_boom[0]"),), (1e-6,))
-        cases.simulator.set_initial(0, 0, (get_ref("changeLoad"),), (50.0,))
+        cases.simulator.set_initial(0, 0, get_ref("pedestal_boom[0]"), 3.0)
+        cases.simulator.set_initial(0, 0, get_ref("boom_boom[0]"), 8.0)
+        cases.simulator.set_initial(0, 0, get_ref("boom_boom[1]"), 0.7854)
+        cases.simulator.set_initial(0, 0, get_ref("rope_boom[0]"), 1e-6)
+        cases.simulator.set_initial(0, 0, get_ref("changeLoad"), 50.0)
 
     system = Path(Path(__file__).parent, "data/MobileCrane/OspSystemStructure.xml")
     assert system.exists(), f"OspSystemStructure file {system} not found"
@@ -219,7 +220,7 @@ def test_step_by_step_cases():
 #             cases.simulator.set_variable_value(0, 0, (get_ref("boom_angularVelocity"),), (0.7,))
 
 
-@pytest.mark.skip("Alternative only using SimulatorInterface")
+# @pytest.mark.skip("Alternative only using SimulatorInterface")
 def test_run_basic():
     path = Path(Path(__file__).parent, "data/MobileCrane/OspSystemStructure.xml")
     assert path.exists(), "System structure file not found"
@@ -230,7 +231,7 @@ def test_run_basic():
 # @pytest.mark.skip("Run all cases defined in MobileCrane.cases")
 def test_run_cases():
     path = Path(Path(__file__).parent, "data/MobileCrane/MobileCrane.cases")
-    system_structure = Path(Path(__file__).parent, "data/MobileCrane/OspSystemStructure.xml")
+    #system_structure = Path(Path(__file__).parent, "data/MobileCrane/OspSystemStructure.xml")
     assert path.exists(), "MobileCrane cases file not found"
     cases = Cases(path, results_print_type="names")
     # for v, info in cases.variables.items():

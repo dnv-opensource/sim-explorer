@@ -240,7 +240,7 @@ class Case:
         assert len(pre), f"'{txt}' is not allowed as basis for _disect_at_time"
         if not len(at):  # no @time spec
             if self.name == "results" or (isinstance(value, str) and value.lower() == "novalue"):
-                return (pre, "get", self.special["stopTime"])
+                return (pre, "get", self.special["stopTime"])  # report final value
             else:
                 msg = f"Value required for 'set' in _disect_at_time('{txt}','{self.name}','{value}')"
                 assert Case._num_elements(value), msg
@@ -377,14 +377,14 @@ class Case:
                     _inst = self.cases.simulator.component_id_from_name(inst)
                     if not self.cases.simulator.allowed_action("get", _inst, tuple(var_refs), 0):
                         raise AssertionError(self.cases.simulator.message) from None
-                    elif at_time_type == "get" or at_time_arg == -1:
+                    elif at_time_type == "get" or at_time_arg == -1:  # normal get or step without time spec
                         self.add_action(
                             "get",
                             self.cases.simulator.get_variable_value,
                             (_inst, cvar_info["type"], tuple(var_refs)),
                             at_time_arg if at_time_arg <= 0 else at_time_arg * self.cases.timefac,
                         )
-                    else:  # step actions
+                    else:  # step actions with specified interval
                         for time in np.arange(start=at_time_arg, stop=self.special["stopTime"], step=at_time_arg):
                             self.add_action(
                                 time,
@@ -529,15 +529,24 @@ class Case:
               False:  only as string, True: json file with automatic file name, str: explicit filename.json
         """
 
+        def do_actions(_t: float, _a, _iter, time: int, results: dict | None = None):
+            while time >= _t:  # issue the _a - actions
+                if len(_a):
+                    for a in _a:
+                        res = a()
+                        if results is not None:  # get action. Store result
+                            self._results_add(results, time / self.cases.timefac, a.args[0], a.args[1], a.args[2], res)
+                    try:
+                        _t, _a = next(_iter)
+                    except StopIteration:
+                        _t, _a = 10 * tstop, []
+            return (_t, _a)
+
         # Note: final actions are included as _get at end time
-        # print("ACTIONS_SET", settings['actions_set')
-        # print("ACTIONS_GET", settings['actions_get')
-        # print("ACTIONS_STEP", settings['actions_step')
-        act_step = self.act_get.get(-1, None)
-        tstart = int(self.special["startTime"] * self.cases.timefac)
+        tstart : int = int(self.special["startTime"] * self.cases.timefac)
         time = tstart
-        tstop = int(self.special["stopTime"] * self.cases.timefac)
-        tstep = int(self.special["stepSize"] * self.cases.timefac)
+        tstop : int = int(self.special["stopTime"] * self.cases.timefac)
+        tstep : int = int(self.special["stepSize"] * self.cases.timefac)
 
         set_iter = self.act_set.items().__iter__()  # iterator over set actions => time, action_list
         try:
@@ -545,42 +554,39 @@ class Case:
         except StopIteration:
             t_set, a_set = (float("inf"), [])  # satisfy linter
         get_iter = self.act_get.items().__iter__()  # iterator over get actions => time, action_list
-        try:
-            t_get, a_get = next(get_iter)
-        except StopIteration:
-            t_get, a_get = (tstop + 1, [])
+        act_step = None
+        while True:
+            try:
+                t_get, a_get = next(get_iter)
+            except StopIteration:
+                t_get, a_get = (tstop + 1, [])
+            if t_get < 0:
+                act_step = a_get
+            else:
+                break
         results = self._results_make_header()
-        print(f"BEFORE LOOP. SET: {time}:{t_set}")
-        for a in a_set:
-            print(f"   {a.args[2]}={a.args[3]}")
-        print(f"BEFORE LOOP.GET: {time}:{t_get}")
-        for a in a_get:
-            print(f"   {a.args[2]}={a()}")
-        while time < tstop:
-            print(f"CASE.run SET, {time}-{tstop}: {t_set}, {a_set}")
-            while time >= t_set:  # issue the set actions
-                if len(a_set):
-                    for a in a_set:
-                        print(f"@{time}. Set actions type:{a.args[1]} refs:{a.args[2]}, values:{a.args[3]}")
-                        a()
-                    try:
-                        t_set, a_set = next(set_iter)
-                    except StopIteration:
-                        t_set, a_set = 10 * tstop, []
-                    print(f"@{time}. Next set actions: {t_set}, {a_set}")
+
+        #         print(f"BEFORE LOOP. SET: {time}:{t_set}")
+        #         for a in a_set:
+        #             print(f"   {a.func}, {a.args[2]}={a.args[3]}")
+        #         print(f"BEFORE LOOP.GET: {time}:{t_get}")
+        #         for a in a_get:
+        #             print(f"   {a.args[2]}={a()}")
+        #         print(f"BEFORE LOOP.STEP: ")
+        #         for a in act_step:
+        #             print(f"   {a}") #{a.args[2]}={a()}")
+        while True:
+            t_set, a_set = do_actions(t_set, a_set, set_iter, time)
+
+            if time <= tstart:  # issue the current get actions (initial values)
+                self.cases.simulator.simulator.simulate_until(1)  # one nano time step (ensure initialization)
+                t_get, a_get = do_actions(t_get, a_get, get_iter, time, results)
 
             time += tstep
+            if time > tstop:
+                break
             self.cases.simulator.simulator.simulate_until(time)
-
-            while time >= t_get:  # issue the current get actions
-                print(f"CASE.run GET@{time}, {t_get}")
-                for a in a_get:
-                    print(f"CASE.GET args@{time}: {a.args[2]}={a()}")
-                    self._results_add(results, time / self.cases.timefac, a.args[0], a.args[1], a.args[2], a())
-                try:
-                    t_get, a_get = next(get_iter)
-                except StopIteration:
-                    t_get, a_get = 10 * tstop, []
+            t_get, a_get = do_actions(t_get, a_get, get_iter, time, results)  # issue the current get actions
 
             if act_step is not None:  # there are step-always actions
                 for a in act_step:
@@ -589,7 +595,6 @@ class Case:
 
         self.cases.simulator.reset()
         if dump:
-            print(f"saving to file {dump}")
             self._results_save(results, dump)
         self.results = results
         return results

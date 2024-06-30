@@ -11,9 +11,6 @@ from libcosimpy.CosimExecution import CosimExecution  # type: ignore
 from libcosimpy.CosimManipulator import CosimManipulator  # type: ignore
 from libcosimpy.CosimObserver import CosimObserver  # type: ignore
 
-# from component_model.model import Model, model_from_fmu
-# from component_model.variable import Variable
-
 # type definitions
 PyVal: TypeAlias = str | float | int | bool  # simple python types / Json5 atom
 Json5: TypeAlias = dict[str, "Json5Val"]  # Json5 object
@@ -100,7 +97,7 @@ class SimulatorInterface:
     def path(self):
         return self.sysconfig.resolve().parent if self.sysconfig is not None else None
 
-    def reset(self):
+    def reset(self):  # , cases:Cases):
         """Reset the simulator interface, so that a new simulation can be run."""
         assert isinstance(self.sysconfig, Path), "Simulator resetting does not work with explicitly supplied simulator."
         assert self.sysconfig.exists(), "Simulator resetting does not work with explicitly supplied simulator."
@@ -112,6 +109,7 @@ class SimulatorInterface:
         self.simulator = CosimExecution.from_osp_config_file(str(self.sysconfig))
         assert self.simulator.add_manipulator(manipulator=self.manipulator), "Could not add manipulator object"
         assert self.simulator.add_observer(observer=self.observer), "Could not add observer object"
+        # for case in cases:
 
     def _simulator_from_config(self, file: Path):
         """Instantiate a simulator object through the a suitable configuration file.
@@ -243,6 +241,13 @@ class SimulatorInterface:
         #                     ), f"Model {model.get('modelName')}, alias {varname}: The variable types of {var[0].get('name')} and {sv.get('name')} shall be equal if they are combined in a 'vector'"
         #                 var.append(sv)
         return tuple(var)
+
+    def is_output_var(self, comp: int, ref: int) -> bool:
+        for idx in range(self.simulator.num_slave_variables(comp)):
+            struct = self.simulator.slave_variables(comp)[idx]
+            if struct.reference == ref:
+                return struct.causality == 2
+        return False
 
     def get_variables(self, comp: str | int, single: int | str | None = None, as_numbers: bool = True) -> dict:
         """Get the registered variables for a given component from the simulator.
