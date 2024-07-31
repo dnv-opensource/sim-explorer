@@ -35,9 +35,11 @@ jobs:
       - name: Run ruff check
         run: ruff check --diff .
 
-  pyright:
+  #pyright:
+  mypy:
     runs-on: ubuntu-latest
-    name: pyright
+    #name: pyright
+    name: mypy
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v4
@@ -48,7 +50,11 @@ jobs:
         run: |
           pip install -r requirements.txt
           pip install pytest
-      - name: Install pyright
-        run: pip install pyright==1.1.352
-      - name: Run pyright
-        run: pyright .
+      #- name: Install pyright
+      #  run: pip install pyright==1.1.352
+      #- name: Run pyright
+      #  run: pyright .
+      - name: Install mypy
+        run: pip install mypy==1.11.1
+      - name: Run mypy 
+        run: mypy ./case_study
