@@ -22,6 +22,7 @@ build-backend = "setuptools.build_meta"
         "numpy>=1.24.2",
         "libcosimpy>=0.0.2",
         "fmpy>=0.3.21",
+        "matplotlib>=3.7.1",
     ]
     #dynamic = ["version"]
 
