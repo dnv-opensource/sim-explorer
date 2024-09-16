@@ -60,8 +60,6 @@ def expect_bounce_at(results: dict, time: float, eps=0.02):
             previous = (results[_t]["bb"]["h"][0], falling)
     return False
 
-
-@pytest.mark.skip()
 def test_step_by_step():
     """Do the simulation step-by step, only using libcosimpy"""
     path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
@@ -75,7 +73,6 @@ def test_step_by_step():
             assert sim.observer.last_real_values(0, [0, 1, 6]) == [0.11, 0.9411890500000001, 0.35]
 
 
-@pytest.mark.skip()
 def test_step_by_step_interface():
     """Do the simulation step by step, using the simulatorInterface"""
     path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
@@ -100,6 +97,7 @@ def test_run_cases():
     restitution = cases.case_by_name("restitution")
     restitutionAndGravity = cases.case_by_name("restitutionAndGravity")
     gravity = cases.case_by_name("gravity")
+    assert gravity
     expected_actions(
         gravity,
         gravity.act_get,
@@ -109,6 +107,8 @@ def test_run_cases():
             1e9: [("get", "bb", float, ("v",))],
         },
     )
+
+    assert base
     expected_actions(
         base,
         base.act_set,
@@ -120,7 +120,7 @@ def test_run_cases():
             ]
         },
     )
-    print("restitution", restitution.act_set)
+    assert restitution
     expected_actions(
         restitution,
         restitution.act_set,
@@ -132,6 +132,8 @@ def test_run_cases():
             ]
         },
     )
+
+    assert restitutionAndGravity
     expected_actions(
         restitutionAndGravity,
         restitutionAndGravity.act_set,
@@ -160,7 +162,7 @@ def test_run_cases():
     )
     res = cases.run_case("base", "results_base")
     # key results data for base case
-    h0 = res[0]["bb"]["h"][0]
+    h0 = res[0.01]["bb"]["h"][0]
     t0 = sqrt(2 * h0 / 9.81)  # half-period time with full restitution
     v_max = sqrt(2 * h0 * 9.81)  # speed when hitting bottom
     #h_v = lambda v, g: 0.5 * v**2 / g  # calculate height
@@ -183,9 +185,3 @@ def test_run_cases():
     assert expect_bounce_at(res, sqrt(2 * h0 / 1.5), eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
     assert expect_bounce_at(res, sqrt(2 * h0 / 1.5) + 0.5 * sqrt(2 * h0 / 1.5), eps=0.4)
     cases.simulator.reset()
-
-
-if __name__ == "__main__":
-    retcode = pytest.main(["-rA", "-v", __file__])
-    assert retcode == 0, f"Return code {retcode}"
-#    test_run_cases()

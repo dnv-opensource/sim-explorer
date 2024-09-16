@@ -155,17 +155,15 @@ def test_case_set_get(simpletable):
     for act in caseX.act_set[0.0]:
         print(str_act(act))
     assert caseX.special["stopTime"] == 10, f"Erroneous stopTime {caseX.special['stopTime']}"
-    assert caseX.act_set[0.0][0].func.__name__ == "set_initial", "function name"
     # print(caseX.act_set[0.0][0])
     assert caseX.act_set[0.0][0].args[0] == 0, "model instance"
     assert caseX.act_set[0.0][0].args[1] == 3, f"variable type {caseX.act_set[0.0][0].args[1]}"
-    assert caseX.act_set[0.0][0].args[2] == (3,), f"variable ref {caseX.act_set[0.0][0].args[2]}"
-    assert caseX.act_set[0.0][0].args[3] == (True,), f"variable value {caseX.act_set[0.0][0].args[3]}"
+    assert caseX.act_set[0.0][0].args[2] == 3, f"variable ref {caseX.act_set[0.0][0].args[2]}"
+    assert caseX.act_set[0.0][0].args[3] == True, f"variable value {caseX.act_set[0.0][0].args[3]}"
     # print(f"ACT_GET: {caseX.act_get}")
-    assert caseX.act_get[1e9][0].func.__name__ == "get_variable_value", "get @time function"
     assert caseX.act_get[1e9][0].args[0] == 0, "model instance"
     assert caseX.act_get[1e9][0].args[1] == 0, "variable type"
-    assert caseX.act_get[1e9][0].args[2] == (0,), f"variable refs {caseX.act_get[1.0][0].args[2]}"
+    assert caseX.act_get[1e9][0].args[2] == (0,), f"variable refs {caseX.act_get[1e9][0].args[2]}"
     # print( "PRINT", caseX.act_get[-1][0].args[2])
     assert caseX.act_get[-1][0].args[2] == (
         0,

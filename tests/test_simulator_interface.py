@@ -4,8 +4,6 @@ import pytest
 from case_study.simulator_interface import SimulatorInterface, match_with_wildcard
 from libcosimpy.CosimExecution import CosimExecution
 
-
-@pytest.mark.skip()
 def test_match_with_wildcard():
     assert match_with_wildcard("Hello World", "Hello World"), "Match expected"
     assert not match_with_wildcard("Hello World", "Helo World"), "No match expected"
@@ -13,8 +11,6 @@ def test_match_with_wildcard():
     assert not match_with_wildcard("*o W*ld", "Hello Word"), "No match expected"
     assert match_with_wildcard("*o W*ld", "Hello World"), "Two wildcard matches expected"
 
-
-@pytest.mark.skip()
 def test_pytype():
     assert SimulatorInterface.pytype("REAL", "2.3") == 2.3, "Expected 2.3 as float type"
     assert SimulatorInterface.pytype("Integer", "99") == 99, "Expected 99 as int type"
@@ -30,8 +26,6 @@ def test_pytype():
     assert SimulatorInterface.pytype(3) == bool
     assert SimulatorInterface.pytype(1, 2.3) == 2
 
-
-@pytest.mark.skip()
 def test_component_variable_name():
     path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
     system = SimulatorInterface(str(path), name="BouncingBall")
@@ -49,8 +43,6 @@ def test_component_variable_name():
     assert system.variable_name_from_ref("bb", 7) == "v_min"
     assert system.variable_name_from_ref("bb", 8) == ""
 
-
-@pytest.mark.skip()
 def test_default_initial():
     print("DIR", dir(SimulatorInterface))
     assert SimulatorInterface.default_initial(0, 0) == 3, f"Found {SimulatorInterface._default_initial( 0, 0)}"
@@ -68,8 +60,6 @@ def test_default_initial():
     assert SimulatorInterface.default_initial(3, 2) == 2, f"Found {SimulatorInterface._default_initial( 3, 2)}"
     assert SimulatorInterface.default_initial(4, 2) == 2, f"Found {SimulatorInterface._default_initial( 4, 2)}"
 
-
-@pytest.mark.skip()
 def test_simulator_from_system_structure():
     """SimulatorInterface from OspSystemStructure.xml"""
     path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
@@ -79,8 +69,6 @@ def test_simulator_from_system_structure():
     assert system.get_models()[0] == 0, f"Component model {system.get_models()[0]}"
     assert "bb" in system.get_components()
 
-
-# @pytest.mark.skip()
 def test_simulator_reset():
     """SimulatorInterface from OspSystemStructure.xml"""
     path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
@@ -91,8 +79,6 @@ def test_simulator_reset():
     system.reset()
     assert system.simulator.status().current_time == 0
 
-
-@pytest.mark.skip()
 def test_simulator_instantiated():
     """Start with an instantiated simulator."""
     path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
@@ -128,8 +114,3 @@ def test_simulator_instantiated():
     assert simulator.get_variables(0) == simulator.get_variables("bb"), "Two ways of accessing variables"
     assert simulator.get_variables(0, "h"), {"h": {"reference": 1, "type": 0, "causality": 2, "variability": 4}}
     assert simulator.get_variables(0, 1), {"h": {"reference": 1, "type": 0, "causality": 2, "variability": 4}}
-
-
-if __name__ == "__main__":
-    retcode = pytest.main(["-rA", "-v", __file__])
-    assert retcode == 0, f"Non-zero return code {retcode}"

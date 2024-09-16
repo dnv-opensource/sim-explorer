@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import pytest
 from case_study.case import Cases
 from case_study.simulator_interface import SimulatorInterface
 
@@ -30,15 +29,13 @@ def _file(file: str = "BouncingBall.cases"):
 
 def test_cases_management():
     cases = Cases(_file("data/SimpleTable/test.cases"))
-    assert cases._results_map == {}
+    assert cases.results.results == {}
     assert cases.case_var_by_ref(0, 1) == (
         "x",
         (1,),
     ), f"Case variable of model 0, ref 1: {cases.case_var_by_ref( 0, 1)}"
     assert cases.case_var_by_ref("tab", 1) == ("x", (1,)), "Same with model by name"
 
-
-@pytest.mark.skip("Temporary skip")
 def test_cases():
     """Test of the features provided by the Cases class"""
     sim = SimulatorInterface(_file("data/BouncingBall0/OspSystemStructure.xml"))
@@ -51,19 +48,19 @@ def test_cases():
     descr = cases.spec["description"]
     assert isinstance(descr, str) and descr.startswith("Simple Case Study with the"), msg
     assert cases.spec.get("modelFile", "") == "OspSystemStructure.xml", "modelFile not as expected"
-    for c in ("base", "case1", "case2", "case3"):
+    for c in ("base", "restitution", "restitutionAndGravity", "gravity"):
         assert c in cases.spec, f"The case '{c}' is expected to be defined in {cases.spec['name']}"
     # find_by_name
     for c in cases.base.list_cases(as_name=False, flat=True):
         assert cases.case_by_name(c.name).name == c.name, f"Case {c.name} not found in hierarchy"
     assert cases.case_by_name("case99") is None, "Case99 was not expected to be found"
-    case3 = cases.case_by_name("case3")
-    assert case3 is not None and case3.name == "case3", "'case3' is expected to exist"
-    msg = "'case2' should not exist within the sub-hierarchy of 'case3'"
-    assert case3 is not None and case3.case_by_name("case2") is None, msg
-    case1 = cases.case_by_name("case1")
-    msg = "'case2' should exist within the sub-hierarchy of 'case1'"
-    assert case1 is not None and case1.case_by_name("case2") is not None, msg
+    gravity_case = cases.case_by_name("gravity")
+    assert gravity_case is not None and gravity_case.name == "gravity", "'gravity' is expected to exist"
+    msg = "'case2' should not exist within the sub-hierarchy of 'gravity'"
+    assert gravity_case is not None and gravity_case.case_by_name("case2") is None, msg
+    restitution_case = cases.case_by_name("restitution")
+    msg = "'restitutionAndGravity' should exist within the sub-hierarchy of 'restitution_case'"
+    assert restitution_case is not None and restitution_case.case_by_name("restitutionAndGravity") is not None, msg
     # variables (aliases)
     assert cases.variables["h"]["model"] == 0
     assert cases.variables["h"]["instances"] == ("bb",)
@@ -74,16 +71,3 @@ def test_cases():
     assert cases.variables["h"]["variability"] == 4
     vs = dict((k, v) for k, v in cases.variables.items() if k.startswith("v"))
     assert all(x in vs for x in ("v_min", "v_z", "v"))
-
-
-#    cases.base.plot_time_series( ['h'], 'TestPlot')
-
-if __name__ == "__main__":
-    retcode = pytest.main(
-        [
-            "-rA",
-            "-v",
-            __file__,
-        ]
-    )
-    assert retcode == 0, f"Non-zero return code {retcode}"

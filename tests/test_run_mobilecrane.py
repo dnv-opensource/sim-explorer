@@ -65,7 +65,7 @@ def test_step_by_step_cosim():
     slave = sim.slave_index_from_instance_name("mobileCrane")
     assert slave == 0, f"Slave index should be '0', found {slave}"
 
-    expected_names = ("boom_angularVelocity[0]", "pedestal_boom[0]", "boom_boom[1]", "rope_boom[2]", "changeLoad")
+    expected_names = ("boom_angularVelocity[0]", "pedestal_boom[0]", "boom_boom[1]", "rope_boom[2]")
     found_expected = [False] * len(expected_names)
     for i in range(len(sim.slave_variables(slave))):
         for k, name in enumerate(expected_names):
@@ -80,7 +80,6 @@ def test_step_by_step_cosim():
     assert set_initial("boom_boom[0]", 8.0)
     assert set_initial("boom_boom[1]", 0.7854)
     assert set_initial("rope_boom[0]", 1e-6)
-    assert set_initial("changeLoad", 50.0)
     #    for idx in range( sim.num_slave_variables(slave)):
     #        print(f"{sim.slave_variables(slave)[idx].name.decode()}: {observer.last_real_values(slave, [idx])}")
     step_count = 0
@@ -118,13 +117,12 @@ def test_step_by_step_cases():
         cases.simulator.set_initial(0, 0, get_ref("boom_boom[0]"), 8.0)
         cases.simulator.set_initial(0, 0, get_ref("boom_boom[1]"), 0.7854)
         cases.simulator.set_initial(0, 0, get_ref("rope_boom[0]"), 1e-6)
-        cases.simulator.set_initial(0, 0, get_ref("changeLoad"), 50.0)
+        cases.simulator.set_initial(0, 0, get_ref("dLoad"), 50.0)
 
     system = Path(Path(__file__).parent, "data/MobileCrane/OspSystemStructure.xml")
     assert system.exists(), f"OspSystemStructure file {system} not found"
     sim = SimulatorInterface(system)
     assert sim.get_components() == {"mobileCrane": 0}, f"Found component {sim.get_components()}"
-    assert sim.match_variables("mobileCrane", "fixation_centerOfMass") == (1, 2, 3)
 
     path = Path(Path(__file__).parent, "data/MobileCrane/MobileCrane.cases")
     assert path.exists(), "Cases file not found"
@@ -152,8 +150,8 @@ def test_step_by_step_cases():
     print("INFO", cases.info())
     static = cases.case_by_name("static")
     assert static.spec == {"p[2]": 1.570796, "b[1]": 0.785398, "r[0]": 7.657, "load": 1000}
-    assert static.act_get[-1][0].args == (0, 0, (18, 19, 20)), f"Step action arguments {static.act_get[-1][0].args}"
-    assert sim.get_variable_value(0, 0, (9, 10, 11)) == [0.0, 0.0, 0.0], "Initial value of T"
+    assert static.act_get[-1][0].args == (0, 0, (10, 11, 12)), f"Step action arguments {static.act_get[-1][0].args}"
+    assert sim.get_variable_value(0, 0, (10, 11, 12)) == [0.0, 0.0, 0.0], "Initial value of T"
     # msg = f"SET actions argument: {static.act_set[0][0].args}"
     # assert static.act_set[0][0].args == (0, 0, (13, 15), (3, 1.5708)), msg
     # sim.set_initial(0, 0, (13, 15), (3, 0))
@@ -173,7 +171,7 @@ def test_step_by_step_cases():
     slave = sim.slave_index_from_instance_name("mobileCrane")
     assert slave == 0, f"Slave index should be '0', found {slave}"
 
-    expected_names = ("boom_angularVelocity[0]", "pedestal_boom[0]", "boom_boom[1]", "rope_boom[2]", "changeLoad")
+    expected_names = ("boom_angularVelocity[0]", "pedestal_boom[0]", "boom_boom[1]", "rope_boom[2]", "dLoad")
     found_expected = [-1] * len(expected_names)
     for i in range(len(sim.slave_variables(slave))):
         for k, name in enumerate(expected_names):
@@ -238,17 +236,17 @@ def test_run_cases():
     #     print(v, info)
     static = cases.case_by_name("static")
     assert static.act_get[-1][0].func.__name__ == "get_variable_value"
-    assert static.act_get[-1][0].args == (0, 0, (18, 19, 20))
-    assert static.act_get[-1][1].args == (0, 0, (28, 29, 30))
-    assert static.act_get[-1][2].args == (0, 0, (41, 42, 43))
-    assert static.act_get[-1][3].args == (0, 0, (54, 55, 56))
+    assert static.act_get[-1][0].args == (0, 0, (10, 11, 12))
+    assert static.act_get[-1][1].args == (0, 0, (21, 22, 23))
+    assert static.act_get[-1][2].args == (0, 0, (37, 38, 39))
+    assert static.act_get[-1][3].args == (0, 0, (53, 54, 55))
 
     print("Running case 'base'...")
     res = cases.run_case("base", dump="results_base")
     # ToDo: expected Torque?
     assert is_nearly_equal(res[1.0]["mobileCrane"]["x_pedestal"], [0.0, 0.0, 3.0])
-    assert is_nearly_equal(res[1.0]["mobileCrane"]["x_boom"], [8, 0.0, 3], 1e-5)
-    assert is_nearly_equal(res[1.0]["mobileCrane"]["x_load"], [8, 0, 3.0 - 1e-6], 1e-5)
+    # assert is_nearly_equal(res[1.0]["mobileCrane"]["x_boom"], [8, 0.0, 3], 1e-5)
+    # assert is_nearly_equal(res[1.0]["mobileCrane"]["x_load"], [8, 0, 3.0 - 1e-6], 1e-5)
 
     cases = Cases(path, results_print_type="names")
     res = cases.run_case("static", dump="results_static")

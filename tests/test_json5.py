@@ -62,8 +62,6 @@ def test_json5_syntax():
         js = Json5Reader("{spec: {\n da_dt : [0,0,0,0], dp_dt : 0 db_dt : 0  v     : [0,0,0,0],}}")
     assert str(err.value).startswith("Json5 read error at 2(28): Found ':'")
 
-
-@pytest.mark.skip(reason="Deactivated")
 def test_json5_write():
     js1 = {"key1": 1.0, "key2": "a string", "key3": ["a", "list", "including", "numbers", 9.9, 1]}
     expected = "{key1:1.0,key2:'a string',key3:['a','list','including','numbers',9.9,1]}"
@@ -90,30 +88,7 @@ def test_json5_write():
     assert len(txt) == 189, "Length of pretty-printed JSON5"
     print(txt)
 
-
-@pytest.mark.skip(reason="Deactivated")
 def test_read_cases():
     bb_cases = Path(__file__).parent.joinpath("data/BouncingBall0/BouncingBall.cases")
     js = Json5Reader(bb_cases)
     assert js.js_py["name"] == "BouncingBall"
-
-
-#     def test_case(self):
-#         cases = Cases("BouncingBall.cases")
-#         print(cases.info())
-#         assert cases.get_scalarvariables(cases.system.instances["bb"] == "h")[0].get("name"), "h"
-#         )  # single scalar variable
-#         vars_der = cases.get_scalarvariables(cases.system.instances["bb"], "der")
-#         self.assertTrue(
-#             len(vars_der) == 2 and vars_der[1].get("name") == "der(v)"
-#         )  # example of a 'vector' of both derivatives
-
-if __name__ == "__main__":
-    retcode = pytest.main(
-        [
-            "-rA",
-            "-v",
-            __file__,
-        ]
-    )
-    assert retcode == 0, f"Non-zero return code {retcode}"

@@ -42,4 +42,7 @@ results : {
       b,
       d,
    ]}
+},
+evaluation: {
+   checkSpeed: "F(bb.v = 0)" # Eventually the speed of the BouncingBall will be 0
 }

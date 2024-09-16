@@ -66,6 +66,7 @@ class SimulatorInterface:
         simulator (CosimExecution)=None: Optional possibility to insert an existing simulator object.
            Otherwise this is generated through CosimExecution.from_osp_config_file().
     """
+    simulator: CosimExecution
 
     def __init__(
         self,
@@ -102,7 +103,6 @@ class SimulatorInterface:
         assert isinstance(self.sysconfig, Path), "Simulator resetting does not work with explicitly supplied simulator."
         assert self.sysconfig.exists(), "Simulator resetting does not work with explicitly supplied simulator."
         print("PATH", self.sysconfig.name, self.sysconfig.parent, self.sysconfig.is_dir())
-        self.simulator = None
         assert isinstance(self.manipulator, CosimManipulator)
         assert isinstance(self.observer, CosimObserver)
         # self.simulator = self._simulator_from_config(self.sysconfig)

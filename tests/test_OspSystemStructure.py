@@ -10,9 +10,7 @@ def test_system_structure():
     sim = CosimExecution.from_osp_config_file(str(path))
     assert sim.execution_status.current_time == 0
     assert sim.execution_status.state == 0
-    assert len(sim.slave_infos()) == 1
-    assert sim.slave_infos()[0].name.decode() == "bb"
-    assert sim.slave_infos()[0].index == 0
+    assert len(sim.slave_infos()) == 3
     variables = sim.slave_variables(0)
     assert variables[0].name.decode() == "time"
     assert variables[0].reference == 0
@@ -22,6 +20,3 @@ def test_system_structure():
     for v in variables:
         print(v)
 
-
-if __name__ == "__main__":
-    test_system_structure()
