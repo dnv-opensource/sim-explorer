@@ -4,12 +4,14 @@ import pytest
 from case_study.simulator_interface import SimulatorInterface, match_with_wildcard
 from libcosimpy.CosimExecution import CosimExecution
 
+
 def test_match_with_wildcard():
     assert match_with_wildcard("Hello World", "Hello World"), "Match expected"
     assert not match_with_wildcard("Hello World", "Helo World"), "No match expected"
     assert match_with_wildcard("*o World", "Hello World"), "Match expected"
     assert not match_with_wildcard("*o W*ld", "Hello Word"), "No match expected"
     assert match_with_wildcard("*o W*ld", "Hello World"), "Two wildcard matches expected"
+
 
 def test_pytype():
     assert SimulatorInterface.pytype("REAL", "2.3") == 2.3, "Expected 2.3 as float type"
@@ -25,6 +27,7 @@ def test_pytype():
     assert SimulatorInterface.pytype(2) == str
     assert SimulatorInterface.pytype(3) == bool
     assert SimulatorInterface.pytype(1, 2.3) == 2
+
 
 def test_component_variable_name():
     path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
@@ -43,6 +46,7 @@ def test_component_variable_name():
     assert system.variable_name_from_ref("bb", 7) == "v_min"
     assert system.variable_name_from_ref("bb", 8) == ""
 
+
 def test_default_initial():
     print("DIR", dir(SimulatorInterface))
     assert SimulatorInterface.default_initial(0, 0) == 3, f"Found {SimulatorInterface._default_initial( 0, 0)}"
@@ -60,6 +64,7 @@ def test_default_initial():
     assert SimulatorInterface.default_initial(3, 2) == 2, f"Found {SimulatorInterface._default_initial( 3, 2)}"
     assert SimulatorInterface.default_initial(4, 2) == 2, f"Found {SimulatorInterface._default_initial( 4, 2)}"
 
+
 def test_simulator_from_system_structure():
     """SimulatorInterface from OspSystemStructure.xml"""
     path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
@@ -68,6 +73,7 @@ def test_simulator_from_system_structure():
     assert "bb" in system.components, f"Instance name 'bb' expected. Found instances {system.components}"
     assert system.get_models()[0] == 0, f"Component model {system.get_models()[0]}"
     assert "bb" in system.get_components()
+
 
 def test_simulator_reset():
     """SimulatorInterface from OspSystemStructure.xml"""
@@ -78,6 +84,7 @@ def test_simulator_reset():
     assert system.simulator.status().current_time == 1e9
     system.reset()
     assert system.simulator.status().current_time == 0
+
 
 def test_simulator_instantiated():
     """Start with an instantiated simulator."""

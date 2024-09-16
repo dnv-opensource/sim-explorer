@@ -66,6 +66,7 @@ class SimulatorInterface:
         simulator (CosimExecution)=None: Optional possibility to insert an existing simulator object.
            Otherwise this is generated through CosimExecution.from_osp_config_file().
     """
+
     simulator: CosimExecution
 
     def __init__(

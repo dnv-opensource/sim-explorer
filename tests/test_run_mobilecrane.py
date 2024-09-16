@@ -41,7 +41,6 @@ def test_read_cases():
 
 # @pytest.mark.skip("Alternative step-by step, only using libcosimpy")
 def test_step_by_step_cosim():
-
     def set_var(name: str, value: float, slave: int = 0):
         for idx in range(sim.num_slave_variables(slave)):
             if sim.slave_variables(slave)[idx].name.decode() == name:
@@ -101,7 +100,6 @@ def test_step_by_step_cosim():
 
 # @pytest.mark.skip("Alternative step-by step, using SimulatorInterface and Cases")
 def test_step_by_step_cases():
-
     def get_ref(name: str):
         variable = cases.simulator.get_variables(0, name)
         assert len(variable), f"Variable {name} not found"
@@ -229,7 +227,7 @@ def test_run_basic():
 # @pytest.mark.skip("Run all cases defined in MobileCrane.cases")
 def test_run_cases():
     path = Path(Path(__file__).parent, "data/MobileCrane/MobileCrane.cases")
-    #system_structure = Path(Path(__file__).parent, "data/MobileCrane/OspSystemStructure.xml")
+    # system_structure = Path(Path(__file__).parent, "data/MobileCrane/OspSystemStructure.xml")
     assert path.exists(), "MobileCrane cases file not found"
     cases = Cases(path, results_print_type="names")
     # for v, info in cases.variables.items():

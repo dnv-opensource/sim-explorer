@@ -62,6 +62,7 @@ def test_json5_syntax():
         js = Json5Reader("{spec: {\n da_dt : [0,0,0,0], dp_dt : 0 db_dt : 0  v     : [0,0,0,0],}}")
     assert str(err.value).startswith("Json5 read error at 2(28): Found ':'")
 
+
 def test_json5_write():
     js1 = {"key1": 1.0, "key2": "a string", "key3": ["a", "list", "including", "numbers", 9.9, 1]}
     expected = "{key1:1.0,key2:'a string',key3:['a','list','including','numbers',9.9,1]}"
@@ -87,6 +88,7 @@ def test_json5_write():
     txt = json5_write(js2, pretty_print=True)
     assert len(txt) == 189, "Length of pretty-printed JSON5"
     print(txt)
+
 
 def test_read_cases():
     bb_cases = Path(__file__).parent.joinpath("data/BouncingBall0/BouncingBall.cases")

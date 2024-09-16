@@ -36,6 +36,7 @@ def test_cases_management():
     ), f"Case variable of model 0, ref 1: {cases.case_var_by_ref( 0, 1)}"
     assert cases.case_var_by_ref("tab", 1) == ("x", (1,)), "Same with model by name"
 
+
 def test_cases():
     """Test of the features provided by the Cases class"""
     sim = SimulatorInterface(_file("data/BouncingBall0/OspSystemStructure.xml"))

@@ -19,4 +19,3 @@ def test_system_structure():
     assert variables[0].variability == CosimVariableVariability.CONTINUOUS.value
     for v in variables:
         print(v)
-

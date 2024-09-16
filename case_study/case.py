@@ -543,10 +543,10 @@ class Case:
             return (_t, _a)
 
         # Note: final actions are included as _get at end time
-        tstart : int = int(self.special["startTime"] * self.cases.timefac)
+        tstart: int = int(self.special["startTime"] * self.cases.timefac)
         time = tstart
-        tstop : int = int(self.special["stopTime"] * self.cases.timefac)
-        tstep : int = int(self.special["stepSize"] * self.cases.timefac)
+        tstop: int = int(self.special["stopTime"] * self.cases.timefac)
+        tstep: int = int(self.special["stepSize"] * self.cases.timefac)
 
         set_iter = self.act_set.items().__iter__()  # iterator over set actions => time, action_list
         try:

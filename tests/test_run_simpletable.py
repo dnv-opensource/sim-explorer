@@ -2,6 +2,7 @@ from pathlib import Path
 
 from case_study.case import Cases
 
+
 def test_run_casex():
     path = Path(Path(__file__).parent, "data/SimpleTable/test.cases")
     assert path.exists(), "SimpleTable cases file not found"

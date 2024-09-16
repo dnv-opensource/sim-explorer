@@ -2,7 +2,6 @@ from math import sqrt
 from pathlib import Path
 
 import numpy as np
-import pytest
 from case_study.case import Case, Cases
 from case_study.simulator_interface import SimulatorInterface
 
@@ -59,6 +58,7 @@ def expect_bounce_at(results: dict, time: float, eps=0.02):
         if "bb" in results[_t]:
             previous = (results[_t]["bb"]["h"][0], falling)
     return False
+
 
 def test_step_by_step():
     """Do the simulation step-by step, only using libcosimpy"""
@@ -165,7 +165,7 @@ def test_run_cases():
     h0 = res[0.01]["bb"]["h"][0]
     t0 = sqrt(2 * h0 / 9.81)  # half-period time with full restitution
     v_max = sqrt(2 * h0 * 9.81)  # speed when hitting bottom
-    #h_v = lambda v, g: 0.5 * v**2 / g  # calculate height
+    # h_v = lambda v, g: 0.5 * v**2 / g  # calculate height
     assert abs(h0 - 1.0) < 1e-3
     assert expect_bounce_at(res, t0, eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
     assert expect_bounce_at(res, 2 * t0, eps=0.02), f"No top point at {2*sqrt(2*h0/9.81)}"

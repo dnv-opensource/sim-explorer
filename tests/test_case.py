@@ -159,7 +159,7 @@ def test_case_set_get(simpletable):
     assert caseX.act_set[0.0][0].args[0] == 0, "model instance"
     assert caseX.act_set[0.0][0].args[1] == 3, f"variable type {caseX.act_set[0.0][0].args[1]}"
     assert caseX.act_set[0.0][0].args[2] == 3, f"variable ref {caseX.act_set[0.0][0].args[2]}"
-    assert caseX.act_set[0.0][0].args[3] == True, f"variable value {caseX.act_set[0.0][0].args[3]}"
+    assert caseX.act_set[0.0][0].args[3] is True, f"variable value {caseX.act_set[0.0][0].args[3]}"
     # print(f"ACT_GET: {caseX.act_get}")
     assert caseX.act_get[1e9][0].args[0] == 0, "model instance"
     assert caseX.act_get[1e9][0].args[1] == 0, "variable type"
