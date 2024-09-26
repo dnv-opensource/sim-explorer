@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from libcosimpy.CosimEnums import CosimVariableCausality, CosimVariableType, CosimVariableVariability
 from libcosimpy.CosimExecution import CosimExecution  # type: ignore
 
@@ -10,6 +11,9 @@ def test_system_structure():
     sim = CosimExecution.from_osp_config_file(str(path))
     assert sim.execution_status.current_time == 0
     assert sim.execution_status.state == 0
+    assert len(sim.slave_infos()) == 3, "Three bouncing balls were included!"
+    assert sim.slave_infos()[0].name.decode() == "bb2", "The order of components is not maintained within OSP"
+    assert sim.slave_infos()[0].index == 0
     assert len(sim.slave_infos()) == 3
     variables = sim.slave_variables(0)
     assert variables[0].name.decode() == "time"
@@ -19,3 +23,14 @@ def test_system_structure():
     assert variables[0].variability == CosimVariableVariability.CONTINUOUS.value
     for v in variables:
         print(v)
+
+
+if __name__ == "__main__":
+    retcode = pytest.main(
+        [
+            "-rA",
+            "-v",
+            __file__,
+        ]
+    )
+    assert retcode == 0, f"Non-zero return code {retcode}"

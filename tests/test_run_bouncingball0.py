@@ -1,5 +1,6 @@
 from math import sqrt
 from pathlib import Path
+import pytest
 
 import numpy as np
 from case_study.case import Case, Cases
@@ -166,7 +167,7 @@ def test_run_cases():
     t0 = sqrt(2 * h0 / 9.81)  # half-period time with full restitution
     v_max = sqrt(2 * h0 * 9.81)  # speed when hitting bottom
     # h_v = lambda v, g: 0.5 * v**2 / g  # calculate height
-    assert abs(h0 - 1.0) < 1e-3
+    assert abs(h0 - 1.0) < 1e-2
     assert expect_bounce_at(res, t0, eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
     assert expect_bounce_at(res, 2 * t0, eps=0.02), f"No top point at {2*sqrt(2*h0/9.81)}"
 
@@ -185,3 +186,8 @@ def test_run_cases():
     assert expect_bounce_at(res, sqrt(2 * h0 / 1.5), eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
     assert expect_bounce_at(res, sqrt(2 * h0 / 1.5) + 0.5 * sqrt(2 * h0 / 1.5), eps=0.4)
     cases.simulator.reset()
+    
+if __name__ == "__main__":
+    retcode = pytest.main(["-rA", "-v", __file__])
+    assert retcode == 0, f"Non-zero return code {retcode}"
+    

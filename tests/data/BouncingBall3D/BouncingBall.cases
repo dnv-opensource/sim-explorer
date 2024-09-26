@@ -1,0 +1,44 @@
+{name        : 'BouncingBall',
+description : 'Simple Case Study with the 3D BouncingBall FMU (3D position and speed',
+modelFile : "OspSystemStructure.xml",
+timeUnit  : "second",
+variables : {
+   g : ['bb', 'g', "Gravity acting on the ball"],
+   e : ['bb', 'e', "Coefficient of restitution"],
+   x : ['bb', 'pos', "3D Position of the ball in meters"],
+   v : ['bb', 'speed', "3D speed of ball in meters/second"],
+   x_b : ['bb', 'p_bounce', "Expected 3D Position where the next bounce will occur (in meters)"],
+   },
+base : {
+   description : "Ball dropping from height 1 m. Results should be the same as the basic BouncingBall",
+   spec: {
+      stepSize : 0.01,
+      stopTime : '3',
+      g : -9.81,
+      e : 1.0,
+      x[2] : 1.0,
+   }},
+restitution : {
+   description : "Smaller coefficient of restitution e",
+   spec: {
+      e : 0.5,
+   }},
+restitutionAndGravity : {
+   description : "Based restitution (e change), change also the gravity g",
+   parent : 'restitution',
+   spec : {
+      g : -1.5
+   }},
+gravity : {
+   description : "Gravity like on the moon",
+   spec : {
+      g : -1.5
+   }},
+results : {
+   spec : [
+      e@0.0,
+      g@0.0,
+      x@step,
+      v@step,
+   ]}
+}

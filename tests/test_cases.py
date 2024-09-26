@@ -55,6 +55,13 @@ def test_cases():
     for c in cases.base.list_cases(as_name=False, flat=True):
         assert cases.case_by_name(c.name).name == c.name, f"Case {c.name} not found in hierarchy"
     assert cases.case_by_name("case99") is None, "Case99 was not expected to be found"
+    c_gravity = cases.case_by_name("gravity")
+    assert c_gravity is not None and c_gravity.name == "gravity", "'gravity' is expected to exist"
+    msg = "'restitution' should not exist within the sub-hierarchy of 'gravity'"
+    assert c_gravity is not None and c_gravity.case_by_name("restitution") is None, msg
+    c_r = cases.case_by_name("restitution")
+    msg = "'restitutionAndGravity' should exist within the sub-hierarchy of 'restitution'"
+    assert c_r is not None and c_r.case_by_name("restitutionAndGravity") is not None, msg
     gravity_case = cases.case_by_name("gravity")
     assert gravity_case is not None and gravity_case.name == "gravity", "'gravity' is expected to exist"
     msg = "'case2' should not exist within the sub-hierarchy of 'gravity'"

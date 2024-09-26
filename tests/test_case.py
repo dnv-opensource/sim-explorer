@@ -155,6 +155,12 @@ def test_case_set_get(simpletable):
     for act in caseX.act_set[0.0]:
         print(str_act(act))
     assert caseX.special["stopTime"] == 10, f"Erroneous stopTime {caseX.special['stopTime']}"
+    # print(f"ACT_SET: {caseX.act_set[0.0][0]}") #! set_initial, therefore no tuples!
+    assert caseX.act_set[0.0][0].func.__name__ == "set_initial", "function name"
+    assert caseX.act_set[0.0][0].args[0] == 0, "model instance"
+    assert caseX.act_set[0.0][0].args[1] == 3, f"variable type {caseX.act_set[0.0][0].args[1]}"
+    assert caseX.act_set[0.0][0].args[2] == 3, f"variable ref {caseX.act_set[0.0][0].args[2]}"
+    assert caseX.act_set[0.0][0].args[3], f"variable value {caseX.act_set[0.0][0].args[3]}"
     # print(caseX.act_set[0.0][0])
     assert caseX.act_set[0.0][0].args[0] == 0, "model instance"
     assert caseX.act_set[0.0][0].args[1] == 3, f"variable type {caseX.act_set[0.0][0].args[1]}"
