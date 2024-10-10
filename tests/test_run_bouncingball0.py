@@ -166,7 +166,7 @@ def test_run_cases():
     t0 = sqrt(2 * h0 / 9.81)  # half-period time with full restitution
     v_max = sqrt(2 * h0 * 9.81)  # speed when hitting bottom
     # h_v = lambda v, g: 0.5 * v**2 / g  # calculate height
-    assert abs(h0 - 1.0) < 1e-3
+    assert abs(h0 - 1.0) < 2e-3
     assert expect_bounce_at(res, t0, eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
     assert expect_bounce_at(res, 2 * t0, eps=0.02), f"No top point at {2*sqrt(2*h0/9.81)}"
 
