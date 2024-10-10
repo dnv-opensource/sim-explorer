@@ -51,3 +51,12 @@ def setup_logging(caplog: LogCaptureFixture):
 @pytest.fixture(autouse=True)
 def logger():
     return logging.getLogger()
+
+
+def pytest_addoption(parser):
+    parser.addoption("--show", action="store", default=False)
+
+
+@pytest.fixture(scope="session")
+def show(request):
+    return request.config.getoption("--show") == "True"
