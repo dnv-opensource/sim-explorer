@@ -1,3 +1,5 @@
+from typing import Any
+
 from sympy import Symbol, sympify
 
 
@@ -17,7 +19,7 @@ class Assertion:
             Any unknown symbol within the expression is defined as sympy.Symbol and is expected to match a variable.
     """
 
-    ns = {}
+    ns: dict[str, Any] = {}
 
     def __init__(self, expr: str):
         self._expr = Assertion.do_sympify(expr)
