@@ -29,7 +29,12 @@ def _file(file: str = "BouncingBall.cases"):
 
 
 def test_cases_management():
+<<<<<<< HEAD
     cases = Cases(_file("data/SimpleTable/test.cases"))
+=======
+    cases = Cases(Path.cwd().parent / "data" / "SimpleTable" / "test.cases")
+    assert cases.results.results == {}
+>>>>>>> 94746a5a6e13c97614b3070264fdb39028eefb95
     assert cases.case_var_by_ref(0, 1) == (
         "x",
         (1,),

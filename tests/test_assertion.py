@@ -49,7 +49,11 @@ def test_assertion():
     assert res, "True at some point"
     assert ass.assert_series([("t", _t), ("x", _x)], "interval") == (81, 91)
     assert ass.assert_series([("t", _t), ("x", _x)], "count") == 10
+<<<<<<< HEAD
     with pytest.raises(ValueError, match="Unknown return type 'Hello'") as err:
+=======
+    with pytest.raises(ValueError, match="Unknown return type 'Hello'"):
+>>>>>>> 94746a5a6e13c97614b3070264fdb39028eefb95
         ass.assert_series([("t", _t), ("x", _x)], "Hello")
     # Checking equivalence. '==' does not work
     ass = Assertion("(y<=4) & (y>=4)")
@@ -57,11 +61,16 @@ def test_assertion():
     assert Assertion.ns == {"t": t, "x": x, "y": y}
     assert ass.assert_single([("y", 4)])
     assert not ass.assert_series([("y", _y)], ret="bool")
+<<<<<<< HEAD
     with pytest.raises(
         ValueError, match="'==' cannot be used to check equivalence. Use 'a-b' and check against 0"
     ) as err:
         ass = Assertion("y==4")
     print(err)
+=======
+    with pytest.raises(ValueError, match="'==' cannot be used to check equivalence. Use 'a-b' and check against 0"):
+        ass = Assertion("y==4")
+>>>>>>> 94746a5a6e13c97614b3070264fdb39028eefb95
     ass = Assertion("y-4")
     assert 0 == ass.assert_single([("y", 4)])
 

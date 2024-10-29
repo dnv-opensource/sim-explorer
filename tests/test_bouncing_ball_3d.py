@@ -1,12 +1,19 @@
 from math import sqrt
 from pathlib import Path
+from shutil import copy
 
+<<<<<<< HEAD
 import pytest
 from case_study.case import Case, Cases
 
 # from component_model.tests.examples.bouncing_ball_3d import BouncingBall3D
 from component_model.model import Model
 from fmpy import plot_result, simulate_fmu
+=======
+from component_model.model import Model
+from fmpy import plot_result, simulate_fmu
+
+>>>>>>> 94746a5a6e13c97614b3070264fdb39028eefb95
 
 
 def arrays_equal(res: tuple, expected: tuple, eps=1e-7):
@@ -17,6 +24,7 @@ def arrays_equal(res: tuple, expected: tuple, eps=1e-7):
         assert abs(x - y) < eps, f"Element {i} not nearly equal in {x}, {y}"
 
 
+<<<<<<< HEAD
 @pytest.fixture(scope="session")
 def ensure_fmu():
     return _ensure_fmu()
@@ -34,6 +42,13 @@ def _ensure_fmu():
         dest=build_path,
     )
     return fmu_path
+=======
+def test_make_fmu():  # chdir):
+    fmu_path = Model.build(
+        str(Path(__file__).parent / "data" / "BouncingBall3D" / "bouncing_ball_3d.py"), dest=Path(Path.cwd())
+    )
+    copy(fmu_path, Path(__file__).parent / "data" / "BouncingBall3D")
+>>>>>>> 94746a5a6e13c97614b3070264fdb39028eefb95
 
 
 def test_run_fmpy(show):
@@ -61,6 +76,7 @@ def test_run_fmpy(show):
     assert len(result)
     if show:
         plot_result(result)
+<<<<<<< HEAD
     # no more testing than that. This is done in component-model tests
 
 
@@ -124,6 +140,37 @@ def check_case(
     arrays_equal(
         results.res.jspath(f"$['{t_before+dt}'].bb.x"),
         [t_bounce * v[0] + v[0] * e * ddt, 0, (v_bounce * e * ddt - 0.5 * g * ddt**2) / hf],
+=======
+    t_bounce = sqrt(2 * 10 * 0.0254 / 9.81)
+    v_bounce = 9.81 * t_bounce  # speed in z-direction
+    x_bounce = t_bounce / 1.0  # x-position where it bounces in m
+    # Note: default values are reported at time 0!
+    nearly_equal(result[0], (0, 0, 0, 10, 1, 0, 0, sqrt(2 * 10 / 9.81), 0, 0))  # time,pos-3, speed-3, p_bounce-3
+    print(result[1])
+    """
+    arrays_equal(
+        result(bb),
+        (
+            0.01,
+            0.01,
+            0,
+            (10 * 0.0254 - 0.5 * 9.81 * 0.01**2) / 0.0254,
+            1,
+            0,
+            -9.81 * 0.01,
+            sqrt(2 * 10 * 0.0254 / 9.81),
+            0,
+            0,
+        ),
+    )
+    """
+    t_before = int(sqrt(2 / 9.81) / dt) * dt  # just before bounce
+    print("BEFORE", t_before, result[int(t_before / dt)])
+    nearly_equal(
+        result[int(t_before / dt)],
+        (t_before, 1 * t_before, 0, 1.0 - 0.5 * 9.81 * t_before * t_before, 1, 0, -9.81 * t_before, x_bounce, 0, 0),
+        eps=0.003,
+>>>>>>> 94746a5a6e13c97614b3070264fdb39028eefb95
     )
     arrays_equal(results.res.jspath(f"$['{t_before+dt}'].bb.v"), [e * v[0], 0, (v_bounce * e - g * ddt)])
     arrays_equal(results.res.jspath(f"$['{t_before+dt}'].bb.x_b"), [x_bounce2, 0, 0])
@@ -163,6 +210,7 @@ def test_run_cases():
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
     assert retcode == 0, f"Non-zero return code {retcode}"
     # import os
@@ -170,3 +218,12 @@ if __name__ == "__main__":
     # fmu = _ensure_fmu()
     # test_run_fmpy( show=True)
     # test_run_cases()
+=======
+    #    retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
+    #    assert retcode == 0, f"Non-zero return code {retcode}"
+    import os
+
+    os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
+    test_make_fmu()
+    test_run_fmpy(show=True)
+>>>>>>> 94746a5a6e13c97614b3070264fdb39028eefb95

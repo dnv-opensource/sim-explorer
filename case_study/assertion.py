@@ -1,5 +1,9 @@
+from typing import Any
+
 from sympy import Symbol, sympify
 
+        if self.t_bounce < self.time:  # calculate first bounce
+            self.t_bounce, self.p_bounce = self.next_bounce()
 
 class Assertion:
     """Define Assertion objects for checking expectations with respect to simulation results.
@@ -17,7 +21,11 @@ class Assertion:
             Any unknown symbol within the expression is defined as sympy.Symbol and is expected to match a variable.
     """
 
+<<<<<<< HEAD
     ns: dict = {}
+=======
+    ns: dict[str, Any] = {}
+>>>>>>> 94746a5a6e13c97614b3070264fdb39028eefb95
 
     def __init__(self, expr: str):
         self._expr = Assertion.do_sympify(expr)
