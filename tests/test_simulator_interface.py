@@ -121,3 +121,8 @@ def test_simulator_instantiated():
     assert simulator.get_variables(0) == simulator.get_variables("bb"), "Two ways of accessing variables"
     assert simulator.get_variables(0, "h"), {"h": {"reference": 1, "type": 0, "causality": 2, "variability": 4}}
     assert simulator.get_variables(0, 1), {"h": {"reference": 1, "type": 0, "causality": 2, "variability": 4}}
+
+
+if __name__ == "__main__":
+    retcode = pytest.main(["-rA", "-v", __file__])
+    assert retcode == 0, f"Return code {retcode}"

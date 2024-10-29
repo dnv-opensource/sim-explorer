@@ -1,5 +1,6 @@
 from math import sqrt
 from pathlib import Path
+
 import pytest
 from fmpy import plot_result, simulate_fmu
 
@@ -55,6 +56,7 @@ def test_run_fmpy(show):
     nearly_equal(result[int(2.5 / stepsize)], (2.5, 0, 0), eps=0.4)
     nearly_equal(result[int(3 / stepsize)], (3, 0, 0))
     print("RESULT", result[int(t_before / stepsize) + 1])
+
 
 if __name__ == "__main__":
     retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])

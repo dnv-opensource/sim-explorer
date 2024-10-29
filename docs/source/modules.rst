@@ -5,13 +5,11 @@ This section documents the contents of the case_study package.
 
 json5
 -----
-Python module for reading and writing json5 files. 
+Python module for working with json5 files. 
 
-.. autoclass:: case_study.json5.Json5Reader
+.. autoclass:: case_study.json5.Json5
    :members:
    :show-inheritance:
-
-.. autofunction:: case_study.json5.json5_write
 
 
 Simulator Interface
@@ -35,3 +33,6 @@ Python module to manage cases with respect to reading *.cases files, running cas
    :members:
    :show-inheritance:
 
+.. autoclass:: case_study.case.Results
+   :members:
+   :show-inheritance:

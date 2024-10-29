@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from case_study.case import Cases
 
 
@@ -11,3 +12,8 @@ def test_run_casex():
     _ = cases.case_by_name("case1")
     _ = cases.case_by_name("caseX")
     print("RESULTS", cases.run_case("caseX", "results"))
+
+
+if __name__ == "__main__":
+    retcode = pytest.main(["-rA", "-v", __file__])
+    assert retcode == 0, f"Return code {retcode}"

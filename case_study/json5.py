@@ -1,15 +1,13 @@
 from __future__ import annotations
 
+# from jsonpath_ng.ext.filter import Expression#, Filter
 import os
 import re
 from pathlib import Path
-from typing import TypeAlias
+from typing import Any
 
-# type definitions
-PyVal: TypeAlias = str | float | int | bool  # simple python types / Json5 atom
-Json5: TypeAlias = dict[str, "Json5Val"]  # Json5 object
-Json5List: TypeAlias = list["Json5Val"]  # Json5 list
-Json5Val: TypeAlias = PyVal | Json5 | Json5List  # Json5 values
+from jsonpath_ng.ext import parse  # type: ignore
+from jsonpath_ng.jsonpath import DatumInContext  # type: ignore
 
 
 class Json5Error(Exception):
@@ -18,10 +16,13 @@ class Json5Error(Exception):
     pass
 
 
-class Json5Reader:
-    """Read json5 files and return as python dict (of dicst/lists).
+class Json5:
+    """Work with json5 files (e.g. cases specification and results).
 
-    Note that Json5 is here restricted to unique keys (within an object) and the order of key:values is preserved.
+    * Read Json5 code from file or string, representing the result internally as Python code (dict of dicts,lists,values)
+    * Searching for elements using JsonPath expressions
+    * Some Json manipulation methods
+    * Write Json5 code to file
 
     Args:
         js5 (Path,str): Path to json5 file or json5 string
@@ -48,13 +49,17 @@ class Json5Reader:
         self.pos = 0
         self.comments_eol = comments_eol
         self.comments_ml = comments_ml
-        if Path(js5).exists():
-            with open(Path(js5), "r") as file:  # read file into string
-                self.js5 = file.read()
-        elif isinstance(js5, str):
-            self.js5 = js5
-        else:
-            raise Json5Error(f"File {Path(js5)} not found")
+        try:
+            if Path(js5).exists():
+                with open(Path(js5), "r") as file:  # read file into string
+                    self.js5 = file.read()
+        except Exception:
+            pass
+        if not hasattr(self, "js5"):  # file reading not succesfull
+            if isinstance(js5, str):
+                self.js5 = js5
+            else:
+                raise Json5Error(f"Invalid Json5 input {self.js5}") from None
         if self.js5[0] != "{":
             self.js5 = "{\n" + self.js5
         if self.js5[-1] != "}":
@@ -249,7 +254,7 @@ class Json5Reader:
                 pos += s2.end()
         return _js5, comments
 
-    def to_py(self) -> Json5:
+    def to_py(self) -> dict[str, Any]:
         """Translate json5 code 'self.js5' to a python dict and store as self.js_py."""
         self.pos = 0
         return self._object()
@@ -266,12 +271,12 @@ class Json5Reader:
             else:
                 len0 = len(txt)
 
-    def _object(self) -> Json5:
+    def _object(self) -> dict[str, Any]:
         """Start reading a json5 object { ... } at current position."""
         #        print(f"OBJECT({self.pos}): {self.js5[self.pos:]}")
         assert self.js5[self.pos] == "{", self._msg("object start '{' expected")
         self.pos += 1
-        dct = None  # {}: dict[str,Json5] = {}
+        dct = None  # {}: dict[str,Any] = {}
         while True:
             r0, c0 = self._get_line_number(self.pos)
             k = self._key()  # read until ':'
@@ -291,7 +296,7 @@ class Json5Reader:
                 else:
                     dct.update({k: v})
 
-    def _list(self) -> Json5List:
+    def _list(self) -> list:
         """Read and return a list object at the current position."""
         #        print(f"LIST({self.pos}): {self.js5[self.pos:]}")
         assert self.js5[self.pos] == "[", self._msg("List start '[' expected")
@@ -354,7 +359,7 @@ class Json5Reader:
         self.pos += m.end()
         return str(self._strip(k))
 
-    def _value(self) -> PyVal | Json5List | Json5:
+    def _value(self):
         """Read and return a value at the current position, i.e. expect ,'...', "...",}."""
         q1, q2 = self._quoted()
         if q2 < 0:  # no quotation found. Include also [ and { in search
@@ -384,13 +389,14 @@ class Json5Reader:
         # print(f"VALUE. Jump:{self.js5[save_pos:self.pos]}, return:{v}")
         if isinstance(v, str):
             v = v.strip().strip("'").strip('"').strip()
+            if q2 < 0:  # no quotation was used. Key separator not allowed.
+                assert ":" not in v, self._msg(f"Key separator ':' in value: {v}. Forgot ','?")
         # print(f"VALUE {v} @ {self.pos}:'{self.js5[self.pos:self.pos+50]}'")
         if isinstance(v, (dict, list)):
             return v
         elif isinstance(v, str) and not len(v):  # might be empty due to trailing ','
             return ""
 
-        assert ":" not in v, self._msg(f"Key separator ':' in value: {v}. Forgot ','?")
         try:
             return int(v)  # type: ignore
         except Exception:
@@ -410,65 +416,159 @@ class Json5Reader:
                 else:
                     raise Json5Error(f"This should not happen. v:{v}") from None
 
+    def jspath(self, path: str, typ: type | None = None, errorMsg: bool = False):
+        """Evaluate a JsonPath expression on the Json5 code and return the result.
 
-def json5_write(
-    js5: dict[str, PyVal | Json5List | Json5], file: str | os.PathLike[str] | None = None, pretty_print: bool = True
-):
-    """Write a Json(5) tree to string or file.
+        Syntax see `RFC9535 <https://datatracker.ietf.org/doc/html/rfc9535>`_
+        and `jsonpath-ng (used here) <https://pypi.org/project/jsonpath-ng/>`_
 
-    Args:
-        js5 (Json5): The Json(5) dict which shall be written to file or string
-        file (str, Path)=None: The file name (as string or Path object) or None. If None, a string is returned.
-        pretty_print (bool)=True: Denote whether the string/file should be pretty printed (LF,indents).
-
-    Returns: The serialized Json(5) object as string. This string is optionally written to file.
-    """
-
-    def remove_comma(txt: str) -> str:
-        for i in range(len(txt) - 1, -1, -1):
-            if txt[i] == ",":
-                return txt[:i]
-        return ""
-
-    def print_js5(sub: PyVal | Json5List | Json5, level: int = 0, pretty: bool = True) -> str:
-        """Print the Json5 object recursively. Return the formated string.
+        * $: root node identifier (Section 2.2)
+        * @: current node identifier (Section 2.3.5) (valid only within filter selectors)
+        * [<selectors>]: child segment (Section 2.5.1): selects zero or more children of a node
+        * .name: shorthand for ['name']
+        * .*: shorthand for [*]
+        * ..⁠[<selectors>]: descendant segment (Section 2.5.2): selects zero or more descendants of a node
+        * ..name: shorthand for ..['name']
+        * ..*: shorthand for ..[*]
+        * 'name': name selector (Section 2.3.1): selects a named child of an object
+        * *: wildcard selector (Section 2.3.2): selects all children of a node
+        * i: (int) index selector (Section 2.3.3): selects an indexed child of an array (from 0)
+        * 0:100:5: array slice selector (Section 2.3.4): start:end:step for arrays
+        * ?<logical-expr>: filter selector (Section 2.3.5): selects particular children using a logical expression
+        * length(@.foo): function extension (Section 2.4): invokes a function in a filter expression
 
         Args:
-            sub (Json5): the Json5 object to print
-            level (int)=0: level in recursive printing. Used for indentation.
-            pretty (bool)=True: Pretty print (LF and indentation).
+            path (str): path expression as string.
         """
-        if isinstance(sub, dict):
-            res = "{"
-            for k, v in sub.items():  # print the keys and values of dicts
-                res += "\n" + "   " * level if pretty else ""
-                res += "   " * level if pretty else ""
-                res += str(k)
-                res += " : " if pretty else ":"
-                res += print_js5(v, level + 1, pretty)
-            res += "\n" + "   " * level if pretty else ""
-            res = remove_comma(res)
-            res += "}," if level > 0 else "}"
-            res += "\n" if pretty else ""
-            return res
-        elif isinstance(sub, list):
-            res = "["
-            for v in sub:
-                sub_res = print_js5(v, level=level, pretty=pretty)
-                res += "" if sub_res is None else sub_res
-            res = remove_comma(res)
-            res += "],"
-            res += "\n" if pretty else ""
-            return res
-        elif sub == "":
-            return ","
-        elif isinstance(sub, str):
-            return "'" + str(sub) + "',"
-        elif isinstance(sub, (int, float, bool)):
-            return str(sub) + ","
+        compiled = parse(path)
+        data = compiled.find(self.js_py)
+        #        print("DATA", data)
+        val = None
+        if not len(data):  # not found
+            if errorMsg:
+                raise KeyError(f"No match for {path}") from None
+            else:
+                return None
+        elif len(data) == 1:  # found a single element
+            val = data[0].value
+        else:  # multiple elements
+            if isinstance(data[0], DatumInContext):
+                val = [x.value for x in data]
 
-    txt = print_js5(js5, level=0, pretty=pretty_print)
-    if file:
-        with open(file, "w") as fp:
-            fp.write(txt)
-    return txt
+        if typ is None or isinstance(val, typ):
+            return val
+        else:
+            if errorMsg:
+                raise ValueError(f"{path} matches, but type {typ} does not match {type(val)}.")
+            else:
+                return None
+
+    @staticmethod
+    def _spath_to_keys(spath):
+        """Extract the keys from path.
+        So far this is a minimum implementation for adding data. Probably this could be done using jysonpath-ng.
+        """
+        keys = []
+        spath = spath.lstrip("$.")
+        if spath.startswith("$["):
+            spath = spath[1:]
+        c = re.compile(r"\[(.*?)\]")
+        while True:
+            m = c.search(spath)
+            if m is not None:
+                if m.start() > 0:
+                    keys.extend(spath[: m.start()].split("."))
+                keys.append(spath[m.start() + 1 : m.end() - 1])
+                spath = spath[m.end() :]
+            elif not len(spath.strip()):
+                break
+            else:
+                keys.extend(spath.split("."))
+                break
+        return keys
+
+    def update(self, spath: str, data: Any):
+        """Append data to the js_py dict at the path pointed to by keys.
+        So far this is a minimum implementation for adding data. Probably this could be done using jysonpath-ng.
+        """
+
+        keys = Json5._spath_to_keys(spath)
+        path = self.js_py
+        parent = path
+        for i, k in enumerate(keys):
+            if k not in path:
+                for j in range(len(keys) - 1, i - 1, -1):
+                    data = {keys[j]: data}
+                break
+            else:
+                parent = path
+                path = path[k]  # type: ignore [assignment]
+        # print(f"UPDATE path:{path}, parent:{parent}, k:{k}: {data}")
+        if isinstance(path, list):
+            path.append(data)
+        elif isinstance(path, dict):
+            path.update(data)
+        elif isinstance(parent, dict):  # update the parent dict (replace a value)
+            parent.update({k: data})
+        else:
+            raise ValueError(f"Unknown type of path: {path}")
+
+    def write(self, file: str | os.PathLike[str] | None = None, pretty_print: bool = True):
+        """Write a Json(5) tree to string or file.
+
+        Args:
+            file (str, Path)=None: The file name (as string or Path object) or None. If None, a string is returned.
+            pretty_print (bool)=True: Denote whether the string/file should be pretty printed (LF,indents).
+
+        Returns: The serialized Json(5) object as string. This string is optionally written to file.
+        """
+
+        def remove_comma(txt: str) -> str:
+            for i in range(len(txt) - 1, -1, -1):
+                if txt[i] == ",":
+                    return txt[:i]
+            return ""
+
+        def print_js5(sub: Any, level: int = 0, pretty: bool = True) -> str:
+            """Print the Json5 object recursively. Return the formated string.
+
+            Args:
+                sub (dict): the Json5 object to print
+                level (int)=0: level in recursive printing. Used for indentation.
+                pretty (bool)=True: Pretty print (LF and indentation).
+            """
+            if isinstance(sub, dict):
+                res = "{"
+                for k, v in sub.items():  # print the keys and values of dicts
+                    res += "\n" + "   " * level if pretty else ""
+                    res += "   " * level if pretty else ""
+                    res += str(k)
+                    res += " : " if pretty else ":"
+                    res += print_js5(v, level + 1, pretty)
+                res += "\n" + "   " * level if pretty else ""
+                res = remove_comma(res)
+                res += "}," if level > 0 else "}"
+                res += "\n" if pretty else ""
+            elif isinstance(sub, list):
+                res = "["
+                for v in sub:
+                    sub_res = print_js5(v, level=level, pretty=pretty)
+                    res += "" if sub_res is None else sub_res
+                res = remove_comma(res)
+                res += "],"
+                res += "\n" if pretty else ""
+            elif sub == "":
+                res = ","
+            elif isinstance(sub, str):
+                res = "'" + str(sub) + "',"
+            elif isinstance(sub, (int, float, bool)):
+                res = str(sub) + ","
+            else:  # try still to make a string
+                res = str(sub) + ","
+            return res
+
+        js5 = print_js5(self.js_py, level=0, pretty=pretty_print)
+        if file:
+            with open(file, "w") as fp:
+                fp.write(js5)
+        return js5

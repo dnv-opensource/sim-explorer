@@ -1,8 +1,8 @@
 from math import sqrt
 from pathlib import Path
-import pytest
 
 import numpy as np
+import pytest
 from case_study.case import Case, Cases
 from case_study.simulator_interface import SimulatorInterface
 
@@ -161,7 +161,8 @@ def test_run_cases():
     print(
         "Run base",
     )
-    res = cases.run_case("base", "results_base")
+    cases.run_case("base", "results_base")
+    res = cases.case_by_name("base").results.res
     # key results data for base case
     h0 = res[0.01]["bb"]["h"][0]
     t0 = sqrt(2 * h0 / 9.81)  # half-period time with full restitution
@@ -173,7 +174,8 @@ def test_run_cases():
 
     cases.simulator.reset()
     print("Run restitution")
-    res = cases.run_case("restitution", "results_restitution")
+    cases.run_case("restitution", "results_restitution")
+    res = cases.case_by_name("restitution").results.res
     assert expect_bounce_at(res, sqrt(2 * h0 / 9.81), eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
     assert expect_bounce_at(
         res, sqrt(2 * h0 / 9.81) + 0.5 * v_max / 9.81, eps=0.02
@@ -186,8 +188,8 @@ def test_run_cases():
     assert expect_bounce_at(res, sqrt(2 * h0 / 1.5), eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
     assert expect_bounce_at(res, sqrt(2 * h0 / 1.5) + 0.5 * sqrt(2 * h0 / 1.5), eps=0.4)
     cases.simulator.reset()
-    
+
+
 if __name__ == "__main__":
     retcode = pytest.main(["-rA", "-v", __file__])
     assert retcode == 0, f"Non-zero return code {retcode}"
-    

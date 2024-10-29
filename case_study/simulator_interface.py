@@ -3,7 +3,7 @@ import re
 import xml.etree.ElementTree as ET  # noqa: N817
 from enum import Enum
 from pathlib import Path
-from typing import Callable, TypeAlias
+from typing import TypeAlias
 from zipfile import BadZipFile, ZipFile, is_zipfile
 
 from libcosimpy.CosimEnums import CosimVariableCausality, CosimVariableType, CosimVariableVariability  # type: ignore
@@ -82,6 +82,8 @@ class SimulatorInterface:
         if simulator is None:  # instantiate the simulator through the system config file
             self.sysconfig = Path(system)
             assert self.sysconfig.exists(), f"File {self.sysconfig.name} not found"
+            ck, msg = self._check_system_structure(self.sysconfig)
+            assert ck, msg
             self.simulator = self._simulator_from_config(self.sysconfig)
         else:
             self.simulator = simulator
@@ -99,11 +101,21 @@ class SimulatorInterface:
     def path(self):
         return self.sysconfig.resolve().parent if self.sysconfig is not None else None
 
+    def _check_system_structure(self, file: Path):
+        """Check the OspSystemStructure file. Used in cases where the simulatorInterface is instantiated from Cases."""
+        el = from_xml(file)
+        assert isinstance(el, ET.Element), f"ElementTree element expected. Found {el}"
+        ns = el.tag.split("{")[1].split("}")[0]
+        msg = ""
+        for s in el.findall(".//{*}Simulator"):
+            if not Path(Path(file).parent / s.get("source", "??")).exists():
+                msg += f"Component {s.get('name')}, source {s.get('source','??')} not found. NS:{ns}"
+        return (not len(msg), msg)
+
     def reset(self):  # , cases:Cases):
         """Reset the simulator interface, so that a new simulation can be run."""
         assert isinstance(self.sysconfig, Path), "Simulator resetting does not work with explicitly supplied simulator."
         assert self.sysconfig.exists(), "Simulator resetting does not work with explicitly supplied simulator."
-        print("PATH", self.sysconfig.name, self.sysconfig.parent, self.sysconfig.is_dir())
         assert isinstance(self.manipulator, CosimManipulator)
         assert isinstance(self.observer, CosimObserver)
         # self.simulator = self._simulator_from_config(self.sysconfig)
@@ -153,9 +165,6 @@ class SimulatorInterface:
 
         else:
             comp_infos = self.simulator.slave_infos()
-            print(
-                "COMP_INFOS", comp_infos, comp_infos[0].name, comp_infos[0].index, len(comp_infos)
-            )  # , comp_infos.name, comp_infos.index)
             for comp in comp_infos:
                 for r, same in self.same_model(comp.index, set(comps.values())):
                     if same:
@@ -401,7 +410,7 @@ class SimulatorInterface:
     #         msg = f"Initial setting of ref:{var_refs}, type {typ} to val:{var_vals} failed. Status: {res}"
     #         assert all(x for x in res), msg
 
-    def set_variable_value(self, instance: int, typ: int, var_refs: tuple[int], var_vals: tuple[PyVal]) -> Callable:
+    def set_variable_value(self, instance: int, typ: int, var_refs: tuple[int], var_vals: tuple[PyVal]) -> bool:
         """Provide a manipulator function which sets the 'variable' (of the given 'instance' model) to 'value'.
 
         Args:
@@ -421,7 +430,7 @@ class SimulatorInterface:
         else:
             raise CaseUseError(f"Unknown type {typ}") from None
 
-    def get_variable_value(self, instance: int, typ: int, var_refs: tuple[int]) -> Callable:
+    def get_variable_value(self, instance: int, typ: int, var_refs: tuple[int]):
         """Provide an observer function which gets the 'variable' value (of the given 'instance' model) at the time when called.
 
         Args:
@@ -596,18 +605,19 @@ def from_xml(file: Path, sub: str | None = None, xpath: str | None = None) -> ET
     if is_zipfile(file) and sub is not None:  # expect a zipped archive containing xml file 'sub'
         with ZipFile(file) as zp:
             try:
-                xml = zp.read(sub)
+                xml = zp.read(sub).decode("utf-8")
             except BadZipFile as err:
                 raise CaseInitError(f"File '{sub}' not found in {file}: {err}") from err
-            else:
-                return ET.fromstring(xml)
     elif not is_zipfile(file) and file.exists() and sub is None:  # expect an xml file
-        try:
-            et = ET.parse(file).getroot()
-        except ET.ParseError as err:
-            raise CaseInitError(f"File '{file}' does not seem to be a proper xml file") from err
+        with open(file, encoding="utf-8") as f:
+            xml = f.read()
     else:
         raise CaseInitError(f"It was not possible to read an XML from file {file}, sub {sub}")
+
+    try:
+        et = ET.fromstring(xml)
+    except ET.ParseError as err:
+        raise CaseInitError(f"File '{file}' does not seem to be a proper xml file") from err
 
     if xpath is None:
         return et

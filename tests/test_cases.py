@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from case_study.case import Cases
 from case_study.simulator_interface import SimulatorInterface
 
@@ -29,7 +30,6 @@ def _file(file: str = "BouncingBall.cases"):
 
 def test_cases_management():
     cases = Cases(_file("data/SimpleTable/test.cases"))
-    assert cases.results.results == {}
     assert cases.case_var_by_ref(0, 1) == (
         "x",
         (1,),
@@ -79,3 +79,8 @@ def test_cases():
     assert cases.variables["h"]["variability"] == 4
     vs = dict((k, v) for k, v in cases.variables.items() if k.startswith("v"))
     assert all(x in vs for x in ("v_min", "v_z", "v"))
+
+
+if __name__ == "__main__":
+    retcode = pytest.main(["-rA", "-v", __file__])
+    assert retcode == 0, f"Non-zero return code {retcode}"

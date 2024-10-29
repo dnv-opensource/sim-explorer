@@ -3,7 +3,7 @@
                     version="0.1">
     <BaseStepSize>0.01</BaseStepSize>
     <Simulators>
-        <Simulator name="bb" source="BouncingBall.fmu">
+        <Simulator name="bb" source="BouncingBall3D.fmu">
         </Simulator>
     </Simulators>
     <Connections>

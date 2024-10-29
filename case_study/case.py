@@ -3,23 +3,16 @@ from __future__ import annotations
 
 import math
 import os
-import time
+from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable, TypeAlias
+from typing import Any, Callable
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .json5 import Json5Reader, json5_write
+from .json5 import Json5
 from .simulator_interface import SimulatorInterface, from_xml
-
-# type definitions
-PyVal: TypeAlias = str | float | int | bool  # simple python types / Json5 atom
-Json5: TypeAlias = dict[str, "Json5Val"]  # Json5 object
-Json5List: TypeAlias = list["Json5Val"]  # Json5 list
-Json5Val: TypeAlias = PyVal | Json5 | Json5List  # Json5 values
-
 
 """
 case_study module for definition and execution of simulation experiments
@@ -83,7 +76,7 @@ class Case:
         name: str,
         description: str = "",
         parent: "Case" | None = None,
-        spec: dict | list | None = None,  # Json5 | Json5List | None = None,
+        spec: dict | list | None = None,
         special: dict | None = None,
     ):
         self.cases = cases
@@ -114,7 +107,6 @@ class Case:
             self.special = dict(self.parent.special)
             self.act_get = Case._actions_copy(self.parent.act_get)
             self.act_set = Case._actions_copy(self.parent.act_set)
-        self.results: dict = {}  # Json5 dict of results, added by cases.run_case() when run
         if self.name == "results":
             assert isinstance(self.spec, list), f"A list is expected as spec. Found {self.spec}"
             for k in self.spec:  # only keys, no values
@@ -134,15 +126,19 @@ class Case:
         self.act_get = dict(sorted(self.act_get.items()))
         if self.name != "results":
             self.act_set = dict(sorted(self.act_set.items()))
+        # self.res represents the Results object and is added when collecting results or when evaluating results
+
+    def add_results_object(self, res: Results):
+        self.res = res
 
     def iter(self):
         """Construct an iterator, allowing iteration from base case to this case through the hierarchy."""
         h = []
         nxt = self
         while True:  # need first to collect the path to the base case
-            if nxt is None:
-                break
             h.append(nxt)
+            if nxt.parent is None:
+                break
             nxt = nxt.parent
         while len(h):
             yield h.pop()
@@ -222,12 +218,12 @@ class Case:
         else:
             return 1
 
-    def _disect_at_time(self, txt: str, value: PyVal | list[PyVal] | None = None) -> tuple[str, str, float]:
+    def _disect_at_time(self, txt: str, value: Any | None = None) -> tuple[str, str, float]:
         """Disect the @txt argument into 'at_time_type' and 'at_time_arg'.
 
         Args:
             txt (str): The key text after '@' and before ':'
-            value (PyVal, list(PyVal)): the value argument. Needed to distinguish the action type
+            value (Any): the value argument. Needed to distinguish the action type
 
         Returns
         -------
@@ -320,7 +316,7 @@ class Case:
                 rng = range(cvar_len)
         return (pre, cvar_info, rng)
 
-    def read_spec_item(self, key: str, value: PyVal | list[PyVal] | None = None):
+    def read_spec_item(self, key: str, value: Any | None = None):
         """Use the alias variable information (key) and the value to construct an action function,
         which is run when this variable is set/read.
 
@@ -350,7 +346,7 @@ class Case:
 
         Args:
             key (str): the key of the spec item
-            value (list[PyVal])=None: the values with respect to the item. For 'results' this is not used
+            value (Any])=None: the values with respect to the item. For 'results' this is not used
         """
         if key in ("startTime", "stopTime", "stepSize"):
             self.special.update({key: value})  # just keep these as a dictionary so far
@@ -392,11 +388,10 @@ class Case:
                                 (_inst, cvar_info["type"], tuple(var_refs)),
                                 at_time_arg * self.cases.timefac,
                             )
-
             else:  # set actions
                 assert value is not None, f"Variable {key}: Value needed for 'set' actions."
                 assert at_time_type in ("set"), f"Unknown @time type {at_time_type} for case '{self.name}'"
-                if at_time_arg <= self.special["startTime"]:
+                if at_time_arg <= self.special["startTime"]:  # False: #?? set_initial() does so far not work??#
                     #  SimulatorInterface.default_initial(cvar_info["causality"], cvar_info["variability"]) < 3:
                     assert at_time_arg <= self.special["startTime"], f"Initial settings at time {at_time_arg}?"
                     for inst in cvar_info["instances"]:  # ask simulator to provide function to set variables:
@@ -463,79 +458,23 @@ class Case:
                 raise CaseInitError("'stepSize' should be specified as part of the 'base' specification.") from None
         return special
 
-    def _results_make_header(self):
-        """Make a standard header for the results of 'case'.
-        The data is added in run_case().
-        """
-        assert isinstance(self.cases.spec, dict), f"Top level spec of cases: {type(self.cases.spec)}"
-        results = {
-            "Header": {
-                "case": self.name,
-                "dateTime": time.time(),
-                "cases": self.cases.spec.get("name", "None"),
-                "file": str(self.cases.file),
-                "casesDate": os.path.getmtime(self.cases.file),
-                "timeUnit": self.cases.spec.get("timeUnit", "None"),
-                "timeFactor": self.cases.timefac,
-            }
-        }
-        return results
-
-    def _results_add(self, results: dict, time: float, comp: int, typ: int, refs: tuple[int, ...], values: tuple):
-        """Add the results of a get action to the results dict for the case.
+    def run(self, dump: str | None = ""):
+        """Set up case and run it.
 
         Args:
-            results (dict): The results dict (js5-dict) collected so far and where a new item is added.
-            time (float): the time of the results
-            component (int): The index of the component
-            typ (int): The data type of the variable as enumeration int
-            ref (list): The variable references linked to this variable definition
-            values (tuple): the values of the variable
-            print_type (str)='plain': 'plain': use indices as supplied
-        """
-        if self.cases.results_print_type == "plain":
-            ref = refs[0] if len(refs) == 1 else str(refs)  # comply to js5 key rules
-        elif self.cases.results_print_type == "names":
-            comp, ref = self.cases.comp_refs_to_case_var(comp, tuple(refs))
-        if time in results:
-            if comp in results[time]:
-                results[time][comp].update({ref: values})
-            else:
-                results[time].update({comp: {ref: values}})
-        else:
-            results.update({time: {comp: {ref: values}}})
-
-    def _results_save(self, results: dict, jsfile: bool | str):
-        """Dump the results dict to a json5 file.
-
-        Args:
-            results (dict): results dict as produced by Cases.run_case()
-            jsfile (bool,str): json file name to use for dump. If True: automatic file name generation.
-        """
-        if not jsfile:
-            return
-        if not isinstance(jsfile, str):
-            jsfile = self.name + ".js5"
-        elif not jsfile.endswith(".js5"):
-            jsfile += ".js5"
-        json5_write(results, Path(self.cases.file.parent, jsfile))
-
-    def run(self, dump: bool | str = False):
-        """Set up case 'name' and run it.
-
-        Args:
-            name (str,Case): case name as str or case object. The case to be run
             dump (str): Optionally save the results as json file.
-              False:  only as string, True: json file with automatic file name, str: explicit filename.json
+                None: do not save, '': use default file name, str (with or without '.js5'): save with that file name
         """
 
-        def do_actions(_t: float, _a, _iter, time: int, results: dict | None = None):
+        def do_actions(_t: float, _a, _iter, time: int, record: bool = True):
             while time >= _t:  # issue the _a - actions
                 if len(_a):
-                    for a in _a:
-                        res = a()
-                        if results is not None:  # get action. Store result
-                            self._results_add(results, time / self.cases.timefac, a.args[0], a.args[1], a.args[2], res)
+                    if record:
+                        for a in _a:
+                            self.res.add(time / self.cases.timefac, a.args[0], a.args[1], a.args[2], a())
+                    else:  # do not record
+                        for a in _a:
+                            a()
                     try:
                         _t, _a = next(_iter)
                     except StopIteration:
@@ -555,6 +494,8 @@ class Case:
             t_set, a_set = (float("inf"), [])  # satisfy linter
         get_iter = self.act_get.items().__iter__()  # iterator over get actions => time, action_list
         act_step = None
+        self.add_results_object(Results(self))
+
         while True:
             try:
                 t_get, a_get = next(get_iter)
@@ -564,61 +505,23 @@ class Case:
                 act_step = a_get
             else:
                 break
-        results = self._results_make_header()
 
-        #         print(f"BEFORE LOOP. SET: {time}:{t_set}")
-        #         for a in a_set:
-        #             print(f"   {a.func}, {a.args[2]}={a.args[3]}")
-        #         print(f"BEFORE LOOP.GET: {time}:{t_get}")
-        #         for a in a_get:
-        #             print(f"   {a.args[2]}={a()}")
-        #         print(f"BEFORE LOOP.STEP: ")
-        #         for a in act_step:
-        #             print(f"   {a}") #{a.args[2]}={a()}")
         while True:
-            t_set, a_set = do_actions(t_set, a_set, set_iter, time)
-
-            if time <= tstart:  # issue the current get actions (initial values)
-                self.cases.simulator.simulator.simulate_until(1)  # one nano time step (ensure initialization)
-                t_get, a_get = do_actions(t_get, a_get, get_iter, time, results)
+            t_set, a_set = do_actions(t_set, a_set, set_iter, time, record=False)
 
             time += tstep
             if time > tstop:
                 break
             self.cases.simulator.simulator.simulate_until(time)
-            t_get, a_get = do_actions(t_get, a_get, get_iter, time, results)  # issue the current get actions
+            t_get, a_get = do_actions(t_get, a_get, get_iter, time)  # issue the current get actions
 
             if act_step is not None:  # there are step-always actions
                 for a in act_step:
-                    # print("STEP args", a.args)
-                    self._results_add(results, time / self.cases.timefac, a.args[0], a.args[1], a.args[2], a())
+                    self.res.add(time / self.cases.timefac, a.args[0], a.args[1], a.args[2], a())
 
         self.cases.simulator.reset()
-        if dump:
-            self._results_save(results, dump)
-        self.results = results
-        return results
-
-    def plot_time_series(self, aliases: list[str], title=""):
-        """Use self.results to extract the provided alias variables and plot the data found in the same plot."""
-        assert len(self.results), "The results dictionary is empty. Cannot plot results"
-        timefac = self.cases.timefac
-        for var in aliases:
-            times = []
-            values = []
-            for key in self.results:
-                if isinstance(key, int):  # time value
-                    if var in self.results[key]:
-                        times.append(key / timefac)
-                        values.append(self.results[key][var][2][0])
-            plt.plot(times, values, label=var, linewidth=3)
-
-        if len(title):
-            plt.title(title)
-        plt.xlabel("Time")
-        # plt.ylabel('Values')
-        plt.legend()
-        plt.show()
+        if dump is not None:
+            self.res.save(dump)
 
     @staticmethod
     def _actions_copy(actions: dict) -> dict:
@@ -659,6 +562,7 @@ class Cases:
 
     __slots__ = (
         "file",
+        "js",
         "spec",
         "simulator",
         "timefac",
@@ -669,12 +573,11 @@ class Cases:
         "results_print_type",
     )
 
-    def __init__(
-        self, spec: str | Path, simulator: SimulatorInterface | None = None, results_print_type: str = "names"
-    ):
+    def __init__(self, spec: str | Path, simulator: SimulatorInterface | None = None):
         self.file = Path(spec)  # everything relative to the folder of this file!
         assert self.file.exists(), f"Cases spec file {spec} not found"
-        self.spec = Json5Reader(spec).js_py
+        self.js = Json5(spec)
+        self.spec = self.js.js_py
         if simulator is None:
             path = Path(self.file.parent, self.spec.get("modelFile", "OspSystemStructure.xml"))  # type: ignore
             assert path.exists(), f"OSP system structure file {path} not found"
@@ -693,11 +596,10 @@ class Cases:
         self.timefac = self._get_time_unit() * 1e9  # internally OSP uses pico-seconds as integer!
         # read the 'variables' section and generate dict { alias : { (instances), (variables)}}:
         self.variables = self.get_case_variables()
-        self.results_print_type = results_print_type
         self._comp_refs_to_case_var_cache: dict = (
             dict()
         )  # cache of results indices translations used by comp_refs_to_case_var()
-        self.read_cases()  # sets self.base and self.results
+        self.read_cases()
 
     def get_case_variables(self) -> dict[str, dict]:
         """Read the 'variables' main key, which defines self.variables (case variables) as a dictionary:
@@ -767,6 +669,7 @@ class Cases:
         """Find system time unit from the spec and return as seconds.
         If the entry is not found, 1 second is assumed.
         """
+        # _unit =
         assert isinstance(self.spec, dict), f"Dict expected as spec. Found {type(self.spec)}"
         unit = str(self.spec["timeUnit"]) if "timeUnit" in self.spec else "second"
         if unit.lower().startswith("sec"):
@@ -807,7 +710,8 @@ class Cases:
                 "startTime": self.spec["base"]["spec"].get("startTime", 0.0),  # type: ignore
                 "stopTime": self.spec["base"]["spec"].get("stopTime", -1),  # type: ignore
             }  # type: ignore
-            assert special["stopTime"] > 0, "No stopTime defined in base case"  # type: ignore        # all case definitions are top-level objects in self.spec. 'base' and 'results' are mandatory
+            assert special["stopTime"] > 0, "No stopTime defined in base case"  # type: ignore
+            # all case definitions are top-level objects in self.spec. 'base' and 'results' are mandatory
             self.results = Case(
                 self,
                 "results",
@@ -900,7 +804,7 @@ class Cases:
     def comp_refs_to_case_var(self, comp: int, refs: tuple[int, ...]):
         """Get the translation of the component id `comp` + references `refs`
         to the variable names used in the cases file.
-        To speed up the process the process the cache dict _comp_refs_to_case_var_cache is used.
+        To speed up the process the cache dict _comp_refs_to_case_var_cache is used.
         """
         try:
             component, var = self._comp_refs_to_case_var_cache[comp][refs]
@@ -914,11 +818,160 @@ class Cases:
             self._comp_refs_to_case_var_cache[comp].update({refs: (component, var)})
         return component, var
 
-    def run_case(self, name: str | Case, dump: bool | str = False):
+    def run_case(self, name: str | Case, dump: str | None = ""):
         """Initiate case run. If done from here, the case name can be chosen."""
         if isinstance(name, Case):
-            return name.run(dump)
+            name.run(dump)
         else:
             c = self.case_by_name(name)
-            assert c is not None, f"Case {name} not found"
-            return c.run(dump)
+            assert isinstance(c, Case), f"Case {name} not found"
+            c.run(dump)
+
+
+class Results:
+    """Manage the results of a case.
+
+    * Collect results when a case is run
+    * Save case results as Json5 file
+    * Read results from file and work with them
+
+    Args:
+        case (Case,str,Path)=None: The case object, the results relate to.
+            When instantiating from Case (for collecting data) this shall be explicitly provided.
+            When instantiating from stored results, this should refer to the cases definition,
+            or the default file name <cases-name>.cases is expected.
+        file (Path,str)=None: The file where results are saved (as Json5).
+            When instantiating from stored results (for working with data) this shall be explicitly provided.
+            When instantiating from Case, this file name will be used for storing results.
+            If "" default file name is used, if None, results are not stored.
+    """
+
+    def __init__(self, case: Case | str | Path | None = None, file: str | Path | None = None):
+        self.file: Path | None  # None denotes that results are not automatically saved
+        if (case is None or isinstance(case, (str, Path))) and file is not None:
+            self._init_from_existing(file)  # instantiating from existing results file (work with data)
+        elif isinstance(case, Case):  # instantiating from cases file (for data collection)
+            self._init_new(case)
+        else:
+            raise ValueError(f"Inconsistent init arguments case:{case}, file:{file}")
+
+    def _init_from_existing(self, file: str | Path):
+        self.file = Path(file)
+        assert self.file.exists(), f"File {file} is expected to exist."
+        self.res = Json5(self.file)
+        case = Path(self.file.parent / (self.res.jspath("$.header.cases", str, True) + ".cases"))
+        try:
+            cases = Cases(Path(case))
+        except ValueError:
+            raise CaseInitError(f"Cases {Path(case)} instantiation error") from ValueError
+        self.case = cases.case_by_name(self.res.jspath("$.header.case", str, True))
+        assert isinstance(self.case, Case), f"Case {self.res.jspath( '$.header.case', str, True)} not found"
+        assert isinstance(self.case.cases, Cases), "Cases object not defined"
+        self._header_transform(False)
+        self.case.add_results_object(self)  # make Results object known to self.case
+
+    def _init_new(self, case: Case, file: str | Path | None = ""):
+        assert isinstance(case, Case), f"Case object expected as 'case' in Results. Found {type(case)}"
+        self.case = case
+        if file is not None:  # use that for storing results data as Json5
+            if file == "":  # use default file name (can be changed through self.save():
+                self.file = self.case.cases.file.parent / (self.case.name + ".js5")
+            else:
+                self.file = Path(file)
+        else:  # do not store data
+            self.file = None
+        self.res = Json5(str(self._header_make()))  # instantiate the results object
+        self._header_transform(tostring=False)
+
+    def _header_make(self):
+        """Make a standard header for the results of 'case' as dict.
+        This function is used as starting point when a new results file is created.
+        """
+        assert isinstance(self.case.cases.spec.get("name"), str), f"Spec of cases: {self.case.cases.spec.get('name')}"
+        results = {
+            "header": {
+                "case": self.case.name,
+                "dateTime": datetime.today().isoformat(),
+                "cases": self.case.cases.spec.get("name", "None"),
+                "file": Path(self.case.cases.file).as_posix(),
+                "casesDate": datetime.fromtimestamp(os.path.getmtime(self.case.cases.file)).isoformat(),
+                "timeUnit": self.case.cases.spec.get("timeUnit", "None"),
+                "timeFactor": self.case.cases.timefac,
+            }
+        }
+        return results
+
+    def _header_transform(self, tostring: bool = True):
+        """Transform the header back- and forth between python types and string.
+        tostring=True is used when saving to file and =False is used when reading from file.
+        """
+        res = self.res
+        if tostring:
+            res.update("$.header.dateTime", res.jspath("$.header.dateTime", datetime, True).isoformat())
+            res.update("$.header.casesDate", res.jspath("$.header.casesDate", datetime, True).isoformat())
+            res.update("$.header.file", res.jspath("$.header.file", Path, True).as_posix())
+        else:
+            res.update("$.header.dateTime", datetime.fromisoformat(res.jspath("$.header.dateTime", str, True)))
+            res.update("$.header.casesDate", datetime.fromisoformat(res.jspath("$.header.casesDate", str, True)))
+            res.update("$.header.file", Path(res.jspath("$.header.file", str, True)))
+
+    def add(self, time: float, comp: int, typ: int, refs: int | list[int], values: tuple):
+        """Add the results of a get action to the results dict for the case.
+
+        Args:
+            time (float): the time of the results
+            component (int): The index of the component
+            typ (int): The data type of the variable as enumeration int
+            ref (list): The variable reference(s) linked to this variable definition
+            values (tuple): the values of the variable
+        """
+        if isinstance(refs, int):
+            refs = [refs]
+            values = (values,)
+        compname, varname = self.case.cases.comp_refs_to_case_var(comp, tuple(refs))  # type: ignore [union-attr]
+        # print(f"ADD@{time}: {compname}, {varname} = {values}")
+        if len(values) == 1:
+            self.res.update("$[" + str(time) + "]" + compname, {varname: values[0]})
+        else:
+            self.res.update("$[" + str(time) + "]" + compname, {varname: values})
+
+    def save(self, jsfile: str | Path = ""):
+        """Dump the results dict to a json5 file.
+
+        Args:
+            jsfile (str|Path): Optional possibility to change the default name (self.case.name.js5) to use for dump.
+        """
+        if self.file is None:
+            return
+        if jsfile == "":
+            jsfile = self.file
+        else:  # a new file name is provided
+            if isinstance(jsfile, str):
+                if not jsfile.endswith(".js5"):
+                    jsfile += ".js5"
+            jsfile = Path(self.case.cases.file.parent / jsfile)  # type: ignore [union-attr]
+            self.file = jsfile  # remember the new file name
+        self._header_transform(tostring=True)
+        self.res.write(jsfile)
+
+    def plot_time_series(self, aliases: list[str], title=""):
+        """Extract the provided alias variables and plot the data found in the same plot."""
+        if not len(self.res.js_py) or self.case is None:
+            return
+        timefac = self.case.cases.timefac
+        for var in aliases:
+            times: list = []
+            values: list = []
+            for key in self.res.js_py:
+                if isinstance(key, int):  # time value
+                    if var in self.res.js_py[key]:
+                        times.append(key / timefac)
+                        values.append(self.res.js_py[key][var][2][0])
+            plt.plot(times, values, label=var, linewidth=3)
+
+        if len(title):
+            plt.title(title)
+        plt.xlabel("Time")
+        # plt.ylabel('Values')
+        plt.legend()
+        plt.show()

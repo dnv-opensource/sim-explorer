@@ -94,7 +94,8 @@ build-backend = "setuptools.build_meta"
     "__init__.py" = ["I001"]
     "./tests/*" = ["D"]
 
-[tool.pyright]
+
+[tool.mypy]
     exclude = [
         ".git",
         ".venv",

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 from case_study.case import Cases
-from case_study.json5 import Json5Reader
+from case_study.json5 import Json5
 from case_study.simulator_interface import SimulatorInterface
 from libcosimpy.CosimEnums import CosimExecutionState
 from libcosimpy.CosimExecution import CosimExecution
@@ -30,7 +30,7 @@ def is_nearly_equal(x: float | list, expected: float | list, eps: float = 1e-10)
 def test_read_cases():
     path = Path(Path(__file__).parent, "data/MobileCrane/MobileCrane.cases")
     assert path.exists(), "System structure file not found"
-    json5 = Json5Reader(path)
+    json5 = Json5(path)
     assert "# lift 1m / 0.1sec" in list(json5.comments.values())
     # for e in json5.js_py:
     #   print(f"{e}: {json5.js_py[e]}")
@@ -124,7 +124,7 @@ def test_step_by_step_cases():
 
     path = Path(Path(__file__).parent, "data/MobileCrane/MobileCrane.cases")
     assert path.exists(), "Cases file not found"
-    spec = Json5Reader(path).js_py
+    spec = Json5(path).js_py
     # print("SPEC", json5_write( spec, None, True))
 
     expected_spec = {"spec": ["T@step", "x_pedestal@step", "x_boom@step", "x_load@step"]}
@@ -229,7 +229,7 @@ def test_run_cases():
     path = Path(Path(__file__).parent, "data/MobileCrane/MobileCrane.cases")
     # system_structure = Path(Path(__file__).parent, "data/MobileCrane/OspSystemStructure.xml")
     assert path.exists(), "MobileCrane cases file not found"
-    cases = Cases(path, results_print_type="names")
+    cases = Cases(path)
     # for v, info in cases.variables.items():
     #     print(v, info)
     static = cases.case_by_name("static")
@@ -240,14 +240,16 @@ def test_run_cases():
     assert static.act_get[-1][3].args == (0, 0, (53, 54, 55))
 
     print("Running case 'base'...")
-    res = cases.run_case("base", dump="results_base")
+    cases.run_case("base", dump="results_base")
+    res = cases.case_by_name("base").results.res
     # ToDo: expected Torque?
     assert is_nearly_equal(res[1.0]["mobileCrane"]["x_pedestal"], [0.0, 0.0, 3.0])
     # assert is_nearly_equal(res[1.0]["mobileCrane"]["x_boom"], [8, 0.0, 3], 1e-5)
     # assert is_nearly_equal(res[1.0]["mobileCrane"]["x_load"], [8, 0, 3.0 - 1e-6], 1e-5)
 
-    cases = Cases(path, results_print_type="names")
-    res = cases.run_case("static", dump="results_static")
+    cases = Cases(path)
+    cases.run_case("static", dump="results_static")
+    res = cases.case_by_name("static").results.res
     print("RES(1.0)", res[1.0]["mobileCrane"])
     assert is_nearly_equal(res[1.0]["mobileCrane"]["x_pedestal"], [0.0, 0.0, 3.0])
     print(f"x_load: {res[1.0]['mobileCrane']['x_load']} <-> {[0, 8/sqrt(2),0]}")

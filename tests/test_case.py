@@ -3,18 +3,21 @@ from pathlib import Path
 
 import pytest
 from case_study.case import Case, Cases
-from case_study.json5 import json5_write
+from case_study.json5 import Json5
 from case_study.simulator_interface import SimulatorInterface
 
 
 @pytest.fixture
 def simpletable(scope="module", autouse=True):
+    return _simpletable()
+
+
+def _simpletable():
     path = Path(Path(__file__).parent, "data/SimpleTable/test.cases")
     assert path.exists(), "SimpleTable cases file not found"
     return Cases(path)
 
 
-@pytest.mark.skip(reason="Causes an error when run with the other tests!")
 def test_fixture(simpletable):
     assert isinstance(simpletable, Cases), f"Cases object expected. Found:{simpletable}"
 
@@ -57,7 +60,8 @@ def _make_cases():
         "caseX": {"description": "Based case1 longer simulation", "parent": "case1", "spec": {"stopTime": 10}},
         "results": {"spec": ["x@step", "x[0]@1.0", "i"]},
     }
-    json5_write(json5, "data/test.cases")
+    js = Json5(json5)
+    js.write("data/test.cases")
     _ = SimulatorInterface("data/OspSystemStructure.xml", "testSystem")
     _ = Cases("data/test.cases")
 
@@ -111,7 +115,7 @@ def do_case_range(txt: str, casename: str, expected: tuple | str, simpletable):
     if isinstance(expected, str):  # error case
         with pytest.raises(Exception) as err:
             case._disect_range(txt)
-        print(f"ERROR:{err.value}")
+        # print(f"ERROR:{err.value}")
         assert str(err.value).startswith(expected)
     else:
         assert case._disect_range(txt) == expected
@@ -188,3 +192,9 @@ def test_case_set_get(simpletable):
 if __name__ == "__main__":
     retcode = pytest.main(["-rA", "-v", __file__])
     assert retcode == 0, f"Non-zero return code {retcode}"
+#     import os
+#     os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
+#     test_fixture(_simpletable())
+#     test_case_at_time(_simpletable())
+#     test_case_range(_simpletable())
+#     test_case_set_get(_simpletable())
