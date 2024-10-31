@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 from case_study.case import Case, Cases
+from case_study.json5 import Json5
 from case_study.simulator_interface import SimulatorInterface
 
 
@@ -42,22 +43,26 @@ def expected_actions(case: Case, act: dict, expect: dict):
                     assert arg[k] == a_expect[i][k + 1], f"{msg}. [{k}]: in {arg} != Expected: {a_expect[i]}"
 
 
-def expect_bounce_at(results: dict, time: float, eps=0.02):
+def expect_bounce_at(results: Json5, time: float, eps=0.02):
     previous = None
     falling = True
-    for _t in results:
-        if previous is not None:
-            falling = results[_t]["bb"]["h"][0] < previous[0]
-            # if falling != previous[1]:
-            #     print(f"EXPECT_bounce @{_t}: {previous[1]} -> {falling}")
-            if abs(_t - time) <= eps:  # within intervall where bounce is expected
-                print(_t, previous, falling)
-                if previous[1] != falling:
-                    return True
-            elif _t + eps > time:  # give up
-                return False
-        if "bb" in results[_t]:
-            previous = (results[_t]["bb"]["h"][0], falling)
+    for t in results.js_py:
+        try:
+            _t = float(t)
+            if previous is not None:
+                falling = results.jspath(f"$.['{t}'].bb.h") < previous[0]
+                # if falling != previous[1]:
+                #     print(f"EXPECT_bounce @{_t}: {previous[1]} -> {falling}")
+                if abs(_t - time) <= eps:  # within intervall where bounce is expected
+                    print(_t, previous, falling)
+                    if previous[1] != falling:
+                        return True
+                elif _t + eps > time:  # give up
+                    return False
+            previous = (results.jspath(f"$.['{t}'].bb.h"), falling)
+            assert previous is not None, f"No data 'bb.h' found for time {t}"
+        except ValueError:
+            pass
     return False
 
 
@@ -162,20 +167,20 @@ def test_run_cases():
         "Run base",
     )
     cases.run_case("base", "results_base")
-    res = cases.case_by_name("base").results.res
+    res = cases.case_by_name("base").res.res
     # key results data for base case
-    h0 = res[0.01]["bb"]["h"][0]
+    h0 = res.jspath("$.['0.01'].bb.h")
     t0 = sqrt(2 * h0 / 9.81)  # half-period time with full restitution
     v_max = sqrt(2 * h0 * 9.81)  # speed when hitting bottom
     # h_v = lambda v, g: 0.5 * v**2 / g  # calculate height
     assert abs(h0 - 1.0) < 1e-2
-    assert expect_bounce_at(res, t0, eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
+    assert expect_bounce_at(res, t0, eps=0.02), f"Bounce: {t0} != {sqrt(2*h0/9.81)}"
     assert expect_bounce_at(res, 2 * t0, eps=0.02), f"No top point at {2*sqrt(2*h0/9.81)}"
 
     cases.simulator.reset()
     print("Run restitution")
     cases.run_case("restitution", "results_restitution")
-    res = cases.case_by_name("restitution").results.res
+    res = cases.case_by_name("restitution").res.res
     assert expect_bounce_at(res, sqrt(2 * h0 / 9.81), eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
     assert expect_bounce_at(
         res, sqrt(2 * h0 / 9.81) + 0.5 * v_max / 9.81, eps=0.02
@@ -193,3 +198,4 @@ def test_run_cases():
 if __name__ == "__main__":
     retcode = pytest.main(["-rA", "-v", __file__])
     assert retcode == 0, f"Non-zero return code {retcode}"
+    # test_run_cases()

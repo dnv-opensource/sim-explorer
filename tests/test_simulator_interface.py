@@ -126,3 +126,4 @@ def test_simulator_instantiated():
 if __name__ == "__main__":
     retcode = pytest.main(["-rA", "-v", __file__])
     assert retcode == 0, f"Return code {retcode}"
+    # test_component_variable_name()

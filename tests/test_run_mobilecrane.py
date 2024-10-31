@@ -1,7 +1,6 @@
 from math import sqrt
 from pathlib import Path
 
-import pytest
 from case_study.case import Cases
 from case_study.json5 import Json5
 from case_study.simulator_interface import SimulatorInterface
@@ -241,18 +240,19 @@ def test_run_cases():
 
     print("Running case 'base'...")
     cases.run_case("base", dump="results_base")
-    res = cases.case_by_name("base").results.res
+    res = cases.case_by_name("base").res.res
     # ToDo: expected Torque?
-    assert is_nearly_equal(res[1.0]["mobileCrane"]["x_pedestal"], [0.0, 0.0, 3.0])
+    assert is_nearly_equal(res.jspath("$['1.0'].mobileCrane.x_pedestal"), [0.0, 0.0, 3.0])
     # assert is_nearly_equal(res[1.0]["mobileCrane"]["x_boom"], [8, 0.0, 3], 1e-5)
     # assert is_nearly_equal(res[1.0]["mobileCrane"]["x_load"], [8, 0, 3.0 - 1e-6], 1e-5)
 
     cases = Cases(path)
     cases.run_case("static", dump="results_static")
-    res = cases.case_by_name("static").results.res
-    print("RES(1.0)", res[1.0]["mobileCrane"])
-    assert is_nearly_equal(res[1.0]["mobileCrane"]["x_pedestal"], [0.0, 0.0, 3.0])
-    print(f"x_load: {res[1.0]['mobileCrane']['x_load']} <-> {[0, 8/sqrt(2),0]}")
+    res = cases.case_by_name("static").res.res
+    print("RES(1.0)", res.jspath("$['1.0'].mobileCrane"))
+    assert is_nearly_equal(res.jspath("$['1.0'].mobileCrane.x_pedestal"), [0.0, 0.0, 3.0])
+    x_load = res.jspath("$['1.0'].mobileCrane.x_load")
+    print(f"x_load: {x_load} <-> {[0, 8/sqrt(2),0]}")
 
 
 #     print("Running case 'static'...")
@@ -268,5 +268,6 @@ def test_run_cases():
 
 
 if __name__ == "__main__":
-    retcode = pytest.main(["-rA", "-v", __file__])
-    assert retcode == 0, f"Return code {retcode}"
+    # retcode = pytest.main(["-rA", "-v", __file__])
+    # assert retcode == 0, f"Return code {retcode}"
+    test_run_cases()

@@ -1,15 +1,8 @@
 from pathlib import Path
 
 import pytest
-from case_study.case import Cases
+from case_study.case import Case, Cases
 from case_study.simulator_interface import SimulatorInterface
-
-
-def _file(file: str = "BouncingBall.cases"):
-    path = Path(__file__).parent.joinpath(file)
-    assert path.exists(), f"File {file} does not exist at {Path(__file__).parent}"
-    return path
-
 
 # def test_tuple_iter():
 #     """Test of the features provided by the Case class"""
@@ -29,12 +22,8 @@ def _file(file: str = "BouncingBall.cases"):
 
 
 def test_cases_management():
-<<<<<<< HEAD
-    cases = Cases(_file("data/SimpleTable/test.cases"))
-=======
-    cases = Cases(Path.cwd().parent / "data" / "SimpleTable" / "test.cases")
-    assert cases.results.results == {}
->>>>>>> 94746a5a6e13c97614b3070264fdb39028eefb95
+    cases = Cases(Path(__file__).parent / "data" / "SimpleTable" / "test.cases")
+    assert isinstance(cases.results, Case)
     assert cases.case_var_by_ref(0, 1) == (
         "x",
         (1,),
@@ -44,8 +33,8 @@ def test_cases_management():
 
 def test_cases():
     """Test of the features provided by the Cases class"""
-    sim = SimulatorInterface(_file("data/BouncingBall0/OspSystemStructure.xml"))
-    cases = Cases(_file("data/Bouncingball0/BouncingBall.cases"), sim)
+    sim = SimulatorInterface(str(Path(__file__).parent / "data" / "BouncingBall0" / "OspSystemStructure.xml"))
+    cases = Cases(Path(__file__).parent / "data" / "BouncingBall0" / "BouncingBall.cases", sim)
 
     print(cases.info())
     # cases.spec
@@ -56,6 +45,10 @@ def test_cases():
     assert cases.spec.get("modelFile", "") == "OspSystemStructure.xml", "modelFile not as expected"
     for c in ("base", "restitution", "restitutionAndGravity", "gravity"):
         assert c in cases.spec, f"The case '{c}' is expected to be defined in {cases.spec['name']}"
+    assert cases.js.jspath("$.name") == "BouncingBall"
+    assert cases.js.jspath("$.variables.g[0]") == "bb"
+    assert cases.js.jspath("$.variables.g[1]") == "g", f"Found {cases.js.jspath('$.variables.g[1]')}"
+    assert cases.js.jspath("$.variables.g[2]") == "Gravity acting on the ball"
     # find_by_name
     for c in cases.base.list_cases(as_name=False, flat=True):
         assert cases.case_by_name(c.name).name == c.name, f"Case {c.name} not found in hierarchy"
@@ -89,3 +82,5 @@ def test_cases():
 if __name__ == "__main__":
     retcode = pytest.main(["-rA", "-v", __file__])
     assert retcode == 0, f"Non-zero return code {retcode}"
+    # test_cases_management()
+    # test_cases()
