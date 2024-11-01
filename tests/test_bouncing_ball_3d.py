@@ -111,8 +111,9 @@ def check_case(
     v_bounce = g * t_bounce  # speed in z-direction
     x_bounce = v[0] * t_bounce  # x-position where it bounces
     # check outputs after first step:
-    assert results.res.jspath("$['0.01'].bb.e") == e, "Not possible to check at time 0!"
-    assert results.res.jspath("$['0.01'].bb.g") == g, "Not possible to check at time 0!"
+    assert results.res.jspath("$['0'].bb.e") == e, "??Initial value of e"
+    assert results.res.jspath("$['0'].bb.g") == g, "??Initial value of g"
+    assert results.res.jspath("$['0'].bb.['x[2]']") == x[2], "??Initial value of x[2]"
     arrays_equal(results.res.jspath("$['0.01'].bb.x"), [dt, 0, x[2] - 0.5 * g * dt**2 / hf])
     arrays_equal(results.res.jspath("$['0.01'].bb.v"), [v[0], 0, -g * dt])
     x_b = results.res.jspath("$.['0.01'].bb.['x_b[0]']")
@@ -171,12 +172,11 @@ def test_run_cases():
 
 
 if __name__ == "__main__":
-    # retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
-    # assert retcode == 0, f"Non-zero return code {retcode}"
-    import os
-
-    os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
-    fmu = _ensure_fmu()
+    retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
+    assert retcode == 0, f"Non-zero return code {retcode}"
+    # import os
+    # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
+    # fmu = _ensure_fmu()
     # test_make_fmu()
     # test_run_fmpy( show=True)
-    test_run_cases()
+    # test_run_cases()

@@ -422,7 +422,7 @@ class Case:
                         _t, _a = 10 * tstop, []
             return (_t, _a)
 
-        # Note: final actions are included as _get at end time
+        # Note: final actions are included as _get at stopTime
         tstart: int = int(self.special["startTime"] * self.cases.timefac)
         time = tstart
         tstop: int = int(self.special["stopTime"] * self.cases.timefac)
@@ -442,12 +442,15 @@ class Case:
                 t_get, a_get = next(get_iter)
             except StopIteration:
                 t_get, a_get = (tstop + 1, [])
-            if t_get < 0:
+            if t_get < 0: # negative time indicates 'always'
                 act_step = a_get
             else:
                 break
-
-        while True:
+            
+        for a in a_set: # since there is no hook to get initial values we report it this way
+            self.res.add( tstart, *a.args)
+                
+        while True: # main simulation loop
             t_set, a_set = do_actions(t_set, a_set, set_iter, time, record=False)
 
             time += tstep
@@ -1006,6 +1009,33 @@ class Results:
                                     )
         return cont
 
+    def time_series(self, variable: str):
+        """Extract the provided alias variables and make them available as two lists 'times' and 'values'
+        of equal length.
+
+        Args:
+            variable (str): variable identificator as str.
+               A variable identificator is the jspath expression after the time, i.e. <component>.<variable>[<element>]
+               For example 'bb.v[2]' identifies the z-velocity of the component 'bb'
+               
+        Returns:
+            tuple of two lists (times, values)
+        """
+        if not len(self.res.js_py) or self.case is None:
+            return
+        times: list = []
+        values: list = []
+        for key in self.res.js_py:
+            found = self.res.jspath("$['" + str(key) + "']." + variable)
+            if found is not None:
+                if isinstance(found, list):
+                    raise NotImplementedError("So far not implemented for multi-dimensional plots") from None
+                else:
+                    times.append(key)
+                    values.append(found)
+        return (times, values)
+
+
     def plot_time_series(self, variables: list[str], title: str = ""):
         """Extract the provided alias variables and plot the data found in the same plot.
 
@@ -1015,20 +1045,8 @@ class Results:
                For example 'bb.v[2]' identifies the z-velocity of the component 'bb'
             title (str): optional title of the plot
         """
-        if not len(self.res.js_py) or self.case is None:
-            return
-        #timefac = self.case.cases.timefac
         for var in variables:
-            times: list = []
-            values: list = []
-            for key in self.res.js_py:
-                found = self.res.jspath("$['" + str(key) + "']." + var)
-                if found is not None:
-                    if isinstance(found, list):
-                        raise NotImplementedError("So far not implemented for multi-dimensional plots") from None
-                    else:
-                        times.append(key)
-                        values.append(found)
+            times, values = self.time_series( var)
 
             plt.plot(times, values, label=var, linewidth=3)
 
@@ -1038,3 +1056,4 @@ class Results:
         # plt.ylabel('Values')
         plt.legend()
         plt.show()
+

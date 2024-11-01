@@ -17,6 +17,9 @@ base : {
       g : 9.81,
       e : 1.0,
       x[2] : 39.37007874015748, # this is in inch => 1m!
+#   }
+#   assert: {
+#      1 : 'abs(g-9.81)<1e-9'
    }},
 restitution : {
    description : "Smaller coefficient of restitution e",
@@ -36,9 +39,6 @@ gravity : {
    }},
 results : {
    spec : [
-      e@0.0,
-      g@0.0,
-      x@0.0,
       x@step,
       v@step,
       'x_b[0]@step',

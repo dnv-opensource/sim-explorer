@@ -1,5 +1,6 @@
 from datetime import datetime
 from pathlib import Path
+import pytest
 
 from case_study.case import Cases, Results
 
@@ -33,7 +34,8 @@ def test_add():
 
 
 def test_plot_time_series():
-    file = Path.cwd().parent / "data" / "BouncingBall3D" / "test_results.js5"
+    file = Path(__file__).parent / "data" / "BouncingBall3D" / "test_results.js5"
+    assert file.exists(), f"File {file} not found"
     res = Results(file=file)
     res.plot_time_series(("bb.x[2]", "bb.v[2]"), "Test plot")
 
@@ -53,11 +55,11 @@ def test_inspect():
 
 
 if __name__ == "__main__":
-    # retcode = pytest.main(["-rA", "-v", __file__])
-    # assert retcode == 0, f"Non-zero return code {retcode}"
+    retcode = pytest.main(["-rA", "-v", __file__])
+    assert retcode == 0, f"Non-zero return code {retcode}"
     # import os
     # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
     # test_init()
     # test_add()
-    test_plot_time_series(show=True)
+    # test_plot_time_series()
     # test_inspect()
