@@ -1,24 +1,28 @@
-{name        : 'BouncingBall',
-description : 'Simple Case Study with the basic BouncingBall FMU (ball dropped from h=1m',
-modelFile : "OspSystemStructure.xml",
-timeUnit  : "second",
-variables : {
-   g : ['bb', 'g', "Gravity acting on the ball"],
-   e : ['bb', 'e', "Coefficient of restitution"],
-   v_min : ['bb', 'v_min', "Velocity below which the ball stops bouncing"],
-   h : ['bb', 'h', "Position (z) of the ball"],
-   v_z : ['bb', 'der(h)', "Derivative of h (speed in z-direction"],
-   v : ['bb', 'v', "Velocity of ball"],
-   a_z : ['bb', 'der(v)', "Derivative of v (acceleration in z-direction)"],
-   },
+{
+header: {
+   name        : 'BouncingBall',
+   description : 'Simple Case Study with the basic BouncingBall FMU (ball dropped from h=1m',
+   modelFile : "OspSystemStructure.xml",
+   timeUnit  : "second",
+   variables : {
+      g : ['bb', 'g', "Gravity acting on the ball"],
+      e : ['bb', 'e', "Coefficient of restitution"],
+      v_min : ['bb', 'v_min', "Velocity below which the ball stops bouncing"],
+      h : ['bb', 'h', "Position (z) of the ball"],
+      v_z : ['bb', 'der(h)', "Derivative of h (speed in z-direction"],
+      v : ['bb', 'v', "Velocity of ball"],
+      a_z : ['bb', 'der(v)', "Derivative of v (acceleration in z-direction)"],
+    }},
 base : {
    description : "Variable settings for the base case. All other cases are based on that",
    spec: {
       stepSize : 0.01,
-      stopTime : '3',
+      stopTime : 3.0,
       g : -9.81,
       e : 1.0,
       h : 1.0,
+      h@step : 'result',
+      v@1.0 : 'result',
    }},
 restitution : {
    description : "Smaller coefficient of restitution e",
@@ -36,12 +40,4 @@ gravity : {
    spec : {
       g : -1.5
    }},
-results : {
-   spec : [
-      e@0.0,
-      g@0.0,
-      h@0.0,
-      h@step,
-      v@1.0,
-   ]}
 }

@@ -1,7 +1,7 @@
 from datetime import datetime
 from pathlib import Path
-import pytest
 
+import pytest
 from case_study.case import Cases, Results
 
 

@@ -388,28 +388,6 @@ class SimulatorInterface:
         elif typ == CosimVariableType.BOOLEAN.value:
             return self.simulator.boolean_initial_value(instance, var_ref, self.pytype(typ, var_val))
 
-    #         """Set initial values of variables, based on tuples of var_refs and var_vals (OSP only allows simple variables).
-    #         The signature is the same as the manipulator functions slave_real_values()...,
-    #         only that variables are set individually and the type is added as argument.
-    #         """
-    #         # print(f"SET initial refs:{var_refs}, type {typ}, vals:{var_vals}")
-    #         assert len(var_refs) == len(var_vals), f"Got #refs:{len(var_refs)} != #vals:{len(var_vals)}"
-    #         res = []
-    #         if typ == CosimVariableType.REAL.value:
-    #             for i in range(len(var_refs)):
-    #                 res.append(self.simulator.real_initial_value(instance, var_refs[i], self.pytype(typ, var_vals[i])))
-    #         elif typ == CosimVariableType.INTEGER.value:
-    #             for i in range(len(var_refs)):
-    #                 res.append(self.simulator.integer_initial_value(instance, var_refs[i], self.pytype(typ, var_vals[i])))
-    #         elif typ == CosimVariableType.STRING.value:
-    #             for i in range(len(var_refs)):
-    #                 res.append(self.simulator.string_initial_value(instance, var_refs[i], self.pytype(typ, var_vals[i])))
-    #         elif typ == CosimVariableType.BOOLEAN.value:
-    #             for i in range(len(var_refs)):
-    #                 res.append(self.simulator.boolean_initial_value(instance, var_refs[i], self.pytype(typ, var_vals[i])))
-    #         msg = f"Initial setting of ref:{var_refs}, type {typ} to val:{var_vals} failed. Status: {res}"
-    #         assert all(x for x in res), msg
-
     def set_variable_value(self, instance: int, typ: int, var_refs: tuple[int], var_vals: tuple[PyVal]) -> bool:
         """Provide a manipulator function which sets the 'variable' (of the given 'instance' model) to 'value'.
 

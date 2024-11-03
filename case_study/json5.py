@@ -19,7 +19,7 @@ class Json5Error(Exception):
 class Json5:
     """Work with json5 files (e.g. cases specification and results).
 
-    * Read Json5 code from file or string, representing the result internally as Python code (dict of dicts,lists,values)
+    * Read Json5 code from file, string or dict, representing the result internally as Python code (dict of dicts,lists,values)
     * Searching for elements using JsonPath expressions
     * Some Json manipulation methods
     * Write Json5 code to file
@@ -37,7 +37,7 @@ class Json5:
 
     def __init__(
         self,
-        js5: str | os.PathLike[str],
+        js5: str | os.PathLike[str] | dict,
         auto: bool | int = True,
         comments_eol: tuple[str, ...] = (
             "//",
@@ -49,27 +49,32 @@ class Json5:
         self.pos = 0
         self.comments_eol = comments_eol
         self.comments_ml = comments_ml
-        try:
-            if Path(js5).exists():
-                with open(Path(js5), "r") as file:  # read file into string
-                    self.js5 = file.read()
-        except Exception:
-            pass
-        if not hasattr(self, "js5"):  # file reading not succesfull
-            if isinstance(js5, str):
-                self.js5 = js5
-            else:
-                raise Json5Error(f"Invalid Json5 input {self.js5}") from None
-        if self.js5[0] != "{":
-            self.js5 = "{\n" + self.js5
-        if self.js5[-1] != "}":
-            self.js5 = self.js5 + "\n}"
-        self.js5, self.lines = self._lines()  # map the lines first so that error messages work
-        self.js5, self.comments = self._comments()
-        self.js5, _ = self._newline()  # replace unnecessary LFs and return start position per line
-        self.js_py = {}  # is replaced by the python json5 dict when to_py() is run
-        if auto:
-            self.js_py = self.to_py()
+        if isinstance(js5, dict):  # instantiation from dict
+            assert self.check_valid_js(js5), f"{js5} is not a valid Json dict"
+            self.js_py = js5
+            self.js5 = ""
+        else:  # instantiation from file
+            try:
+                if Path(js5).exists():
+                    with open(Path(js5), "r") as file:  # read file into string
+                        self.js5 = file.read()
+            except Exception:
+                pass
+            if not hasattr(self, "js5"):  # file reading not succesfull
+                if isinstance(js5, str):
+                    self.js5 = js5
+                else:
+                    raise Json5Error(f"Invalid Json5 input {self.js5}") from None
+            if self.js5[0] != "{":
+                self.js5 = "{\n" + self.js5
+            if self.js5[-1] != "}":
+                self.js5 = self.js5 + "\n}"
+            self.js5, self.lines = self._lines()  # map the lines first so that error messages work
+            self.js5, self.comments = self._comments()
+            self.js5, _ = self._newline()  # replace unnecessary LFs and return start position per line
+            self.js_py = {}  # is replaced by the python json5 dict when to_py() is run
+            if auto:
+                self.js_py = self.to_py()
 
     def _msg(self, pre: str, num: int = 50, pos: int | None = None) -> str:
         """Construct an error message from pre and a citation from the raw json5 code.
@@ -439,29 +444,32 @@ class Json5:
 
         Args:
             path (str): path expression as string.
+            typ (type)=None: optional specification of the expected type to find
+            errMsg (bool)=False: specify whether an error should be raised, or None returned (default)
         """
         compiled = parse(path)
         data = compiled.find(self.js_py)
         #        print("DATA", data)
         val = None
+        msg = ""
         if not len(data):  # not found
-            if errorMsg:
-                raise KeyError(f"No match for {path}") from None
-            else:
-                return None
+            msg = f"No match for {path}"
         elif len(data) == 1:  # found a single element
             val = data[0].value
         else:  # multiple elements
             if isinstance(data[0], DatumInContext):
                 val = [x.value for x in data]
 
-        if typ is None or isinstance(val, typ):
-            return val
-        else:
-            if errorMsg:
-                raise ValueError(f"{path} matches, but type {typ} does not match {type(val)}.")
-            else:
-                return None
+        if val is not None and typ is not None:  # check also the type
+            if not isinstance(val, typ):
+                try:  # try to convert
+                    val = typ(val)
+                except Exception:
+                    msg = f"{path} matches, but type {typ} does not match {type(val)}."
+                    val = None
+        if val is None and errorMsg:
+            raise ValueError(msg)
+        return val
 
     @staticmethod
     def _spath_to_keys(spath):
@@ -486,6 +494,42 @@ class Json5:
                 keys.extend(spath.split("."))
                 break
         return keys
+
+    @staticmethod
+    def check_valid_js(js_py, print_msg=False):
+        """Check whether the dict js_py is a valid Json dict."""
+
+        def check_valid_js_list(lst):
+            for itm in lst:
+                if isinstance(itm, dict):
+                    return Json5.check_valid_js(itm, print_msg=False)
+                elif isinstance(itm, list):
+                    return check_valid_js_list(itm)
+                else:  # accept as Json atom
+                    pass
+            return True
+
+        if not isinstance(js_py, dict):
+            if print_msg:
+                print(f"Error Not a (sub-)dict. Found type {type(js_py)}: {js_py}")
+            return False
+        for k, v in js_py.items():
+            if not isinstance(k, str):
+                if print_msg:
+                    print(f"Error: Key {k} is not a string. (sub-)dict:{js_py}")
+                return False
+            if isinstance(v, dict):  # a sub-Json dict
+                if not Json5.check_valid_js(v, print_msg):
+                    if print_msg:
+                        print(f"Error: Not a valid Json dict: {v}")
+            elif isinstance(v, list):
+                if not check_valid_js_list(v):
+                    if print_msg:
+                        print(f"Error: Not a valid Json list: {v}")
+                    return False
+            else:  # accept as atom
+                pass
+        return True
 
     def update(self, spath: str, data: Any):
         """Append data to the js_py dict at the path pointed to by keys.

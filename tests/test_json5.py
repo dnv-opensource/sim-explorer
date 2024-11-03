@@ -47,6 +47,7 @@ def _rfc9535_example():
 
 def test_jpath(ex):
     assert isinstance(ex.js_py, dict), f"Expect dict. Found {ex.js_py}"
+    print(f"DICT {ex.js_py}")
     found = ex.jspath("$.store.book[*].author", list)
     assert found == [
         "Nigel Rees",
@@ -69,9 +70,8 @@ def test_jpath(ex):
     }
     assert found == expected, "The third book"
     assert ex.jspath("$..book[2].author", str) == "Herman Melville", "The third book's author"
-    assert (
-        ex.jspath("$..book[2].publisher", str) is None
-    ), "empty result: the third book does not have a 'publisher' member"
+    found = ex.jspath("$..book[2].publisher", str)
+    assert found is None, f"Result not empty (the third book does not have a 'publisher' member): {found}"
     found = ex.jspath("$..book[-1]", dict)
     expected = {
         "category": "fiction",
@@ -90,9 +90,9 @@ def test_jpath(ex):
     assert 23 == len(ex.jspath("$..*", list)), "All member values and array elements contained in the input value"
     # working with expected match and expected type, raising an error message, or not
     assert ex.jspath("$..book[2].authors", typ=str, errorMsg=False) is None, "Fail silently"
-    with pytest.raises(KeyError) as err:
+    with pytest.raises(ValueError) as err:
         found = ex.jspath("$..book[2].authors", typ=str, errorMsg=True)
-    assert str(err.value) == "'No match for $..book[2].authors'", f"ERR:{err.value}"
+    assert str(err.value) == "No match for $..book[2].authors", f"ERR:{err.value}"
 
     assert ex.jspath("$..book[2].author", typ=float, errorMsg=False) is None, "Fail silently"
     with pytest.raises(ValueError) as err:
@@ -110,6 +110,10 @@ def test_jpath(ex):
     js = Json5("{header : { case : 'Test', timeFactor : 1.0}, 0.0 : { bb: { h : [0,0,1], v : 2.3}}}")
     assert js.jspath("$['0.0']", dict) == {"bb": {"h": [0, 0, 1], "v": 2.3}}, "Use [] notation when path includes '.'"
     # print("FOUND", type(found), 0 if found is None else len(found), found)
+
+    # run directly on dict:
+    js_py = {"header": {"case": "Test", "timeFactor": 1.0}, "0.0": {"bb": {"h": [0, 0, 1], "v": 2.3}}}
+    assert Json5(js_py).jspath("$['0.0']") == {"bb": {"h": [0, 0, 1], "v": 2.3}}
 
 
 def test_update(ex):
@@ -276,7 +280,8 @@ def test_results_header():
 def test_read_cases():
     bb_cases = Path(__file__).parent.joinpath("data/BouncingBall0/BouncingBall.cases")
     js = Json5(bb_cases)
-    assert js.js_py["name"] == "BouncingBall"
+    assert Json5.check_valid_js(js.js_py, print_msg=True)
+    assert js.jspath("$.header.name") == "BouncingBall"
 
 
 if __name__ == "__main__":
@@ -289,3 +294,4 @@ if __name__ == "__main__":
     # test_update(rfc)
     # test_results_header()
     # test_write()
+    # test_read_cases()

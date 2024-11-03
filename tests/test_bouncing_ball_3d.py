@@ -94,7 +94,7 @@ def check_case(
     x = [0, 0, x_z]  # z-value is in inch =! 1m!
     v = [1.0, 0, 0]
     # adjust to case settings:
-    for k, val in case.spec.items():
+    for k, val in case.js.jspath("$.spec").items():
         if k in ("stepSize", "stopTime"):
             pass
         elif k == "g":
@@ -103,6 +103,8 @@ def check_case(
             e = val
         elif k == "x[2]":
             x[2] = val
+        elif k in ("x@step", "v@step", "x_b[0]@step"):
+            pass  # get actions
         else:
             raise KeyError(f"Unknown key {k}")
     # check correct reporting of start values: ! seems unfortunately not possible!
@@ -172,11 +174,12 @@ def test_run_cases():
 
 
 if __name__ == "__main__":
-    retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
-    assert retcode == 0, f"Non-zero return code {retcode}"
-    # import os
-    # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
-    # fmu = _ensure_fmu()
+    # retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
+    # assert retcode == 0, f"Non-zero return code {retcode}"
+    import os
+
+    os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
+    fmu = _ensure_fmu()
     # test_make_fmu()
     # test_run_fmpy( show=True)
-    # test_run_cases()
+    test_run_cases()

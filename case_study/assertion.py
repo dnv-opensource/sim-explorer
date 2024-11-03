@@ -1,5 +1,5 @@
-
 from sympy import Symbol, sympify
+from sympy.vector import CoordSys3D
 
 
 class Assertion:
@@ -19,10 +19,13 @@ class Assertion:
     """
 
     ns: dict = {}
+    N = CoordSys3D("N")
 
     def __init__(self, expr: str):
         self._expr = Assertion.do_sympify(expr)
         self._symbols = self.get_symbols()
+        # t = Symbol('t', positive=True) # default symbol for time
+        # self._symbols.update( {'t':t})
         Assertion.update_namespace(self._symbols)
 
     @property
@@ -58,16 +61,42 @@ class Assertion:
         return {s.name: s for s in syms}
 
     @staticmethod
+    def casesvar_to_symbol(variables: dict):
+        """Register all variables defined in cases as sympy symbols.
+
+        Args:
+            variables (dict): The variables dict as registered in Cases
+        """
+        for var in variables:
+            sym = sympify(var)
+            Assertion.update_namespace({var: sym})
+
+    @staticmethod
     def reset():
         """Reset the global dictionary of symbols used by all Assertions."""
         Assertion.ns = {}
 
     @staticmethod
     def update_namespace(sym: dict):
-        """Ensure that the symbols of this expression are registered in the global namespace `ns`."""
+        """Ensure that the symbols of this expression are registered in the global namespace `ns`
+        and include all global namespace symbols in the symbol list of this class.
+
+        Args:
+            sym (dict): dict of {symbol-name : symbol}
+        """
         for n, s in sym.items():
             if n not in Assertion.ns:
                 Assertion.ns.update({n: s})
+
+    #         for name, sym in Assertion.ns:
+    #             if name not in self._symbols:
+    #                 sym = sympify( name)
+    #                 self._symbols.update( {name : sym})
+
+    @staticmethod
+    def vector(x: tuple | list):
+        assert isinstance(x, (tuple, list)) and len(x) == 3, f"Vector of length 3 expected. Found {x}"
+        return x[0] * Assertion.N.i + x[1] * Assertion.N.j + x[2] * Assertion.N.k
 
     def assert_single(self, subs: list[tuple]):
         """Perform assertion on a single data point.

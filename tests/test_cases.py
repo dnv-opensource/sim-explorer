@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-from case_study.case import Case, Cases
+from case_study.case import Cases
 from case_study.simulator_interface import SimulatorInterface
 
 # def test_tuple_iter():
@@ -23,7 +23,7 @@ from case_study.simulator_interface import SimulatorInterface
 
 def test_cases_management():
     cases = Cases(Path(__file__).parent / "data" / "SimpleTable" / "test.cases")
-    assert isinstance(cases.results, Case)
+    assert isinstance(cases.base.act_get, dict) and len(cases.base.act_get) > 0
     assert cases.case_var_by_ref(0, 1) == (
         "x",
         (1,),
@@ -38,17 +38,15 @@ def test_cases():
 
     print(cases.info())
     # cases.spec
-    assert cases.spec["name"] == "BouncingBall", "BouncingBall expected as cases name"
-    msg = f"Description: {cases.spec['description']}"
-    descr = cases.spec["description"]
-    assert isinstance(descr, str) and descr.startswith("Simple Case Study with the"), msg
-    assert cases.spec.get("modelFile", "") == "OspSystemStructure.xml", "modelFile not as expected"
+    assert cases.js.jspath("$.header.name", str, True) == "BouncingBall", "BouncingBall expected as cases name"
+    descr = cases.js.jspath("$.header.description", str, True)
+    assert isinstance(descr, str) and descr.startswith("Simple Case Study with the"), f"Error description: {descr}"
+    assert cases.js.jspath("$.header.modelFile", str, True) == "OspSystemStructure.xml", "modelFile not as expected"
     for c in ("base", "restitution", "restitutionAndGravity", "gravity"):
-        assert c in cases.spec, f"The case '{c}' is expected to be defined in {cases.spec['name']}"
-    assert cases.js.jspath("$.name") == "BouncingBall"
-    assert cases.js.jspath("$.variables.g[0]") == "bb"
-    assert cases.js.jspath("$.variables.g[1]") == "g", f"Found {cases.js.jspath('$.variables.g[1]')}"
-    assert cases.js.jspath("$.variables.g[2]") == "Gravity acting on the ball"
+        assert c in cases.js.js_py.keys(), f"The case '{c}' is expected to be defined in {list(cases.js.js_py.keys())}"
+    assert cases.js.jspath("$.header.variables.g[0]") == "bb"
+    assert cases.js.jspath("$.header.variables.g[1]") == "g", f"Found {cases.js.jspath('$.variables.g[1]')}"
+    assert cases.js.jspath("$.header.variables.g[2]") == "Gravity acting on the ball"
     # find_by_name
     for c in cases.base.list_cases(as_name=False, flat=True):
         assert cases.case_by_name(c.name).name == c.name, f"Case {c.name} not found in hierarchy"

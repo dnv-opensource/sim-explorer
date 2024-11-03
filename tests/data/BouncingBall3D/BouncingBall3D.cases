@@ -1,14 +1,15 @@
-{name        : 'BouncingBall3D',
-description : 'Simple Case Study with the 3D BouncingBall FMU (3D position and speed',
-modelFile : "OspSystemStructure.xml",
-timeUnit  : "second",
-variables : {
-   g : ['bb', 'g', "Gravity acting on the ball"],
-   e : ['bb', 'e', "Coefficient of restitution"],
-   x : ['bb', 'pos', "3D Position of the ball in meters"],
-   v : ['bb', 'speed', "3D speed of ball in meters/second"],
-   x_b : ['bb', 'p_bounce', "Expected 3D Position where the next bounce will occur (in meters)"],
-   },
+{header : {
+   name        : 'BouncingBall3D',
+   description : 'Simple Case Study with the 3D BouncingBall FMU (3D position and speed',
+   modelFile : "OspSystemStructure.xml",
+   timeUnit  : "second",
+   variables : {
+      g : ['bb', 'g', "Gravity acting on the ball"],
+      e : ['bb', 'e', "Coefficient of restitution"],
+      x : ['bb', 'pos', "3D Position of the ball in meters"],
+      v : ['bb', 'speed', "3D speed of ball in meters/second"],
+      x_b : ['bb', 'p_bounce', "Expected 3D Position where the next bounce will occur (in meters)"],
+      }},
 base : {
    description : "Ball dropping from height 1 m. Results should be the same as the basic BouncingBall",
    spec: {
@@ -17,10 +18,14 @@ base : {
       g : 9.81,
       e : 1.0,
       x[2] : 39.37007874015748, # this is in inch => 1m!
-#   }
+      x@step : 'result',
+      v@step : 'result',
+      x_b[0]@step : 'res',
+   },
 #   assert: {
 #      1 : 'abs(g-9.81)<1e-9'
-   }},
+#   }
+   },
 restitution : {
    description : "Smaller coefficient of restitution e",
    spec: {
@@ -36,11 +41,4 @@ gravity : {
    description : "Gravity like on the moon",
    spec : {
       g : 1.5
-   }},
-results : {
-   spec : [
-      x@step,
-      v@step,
-      'x_b[0]@step',
-   ]}
-}
+   }}}

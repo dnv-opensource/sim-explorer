@@ -58,11 +58,13 @@ def expect_bounce_at(results: Json5, time: float, eps=0.02):
                     if previous[1] != falling:
                         return True
                 elif _t + eps > time:  # give up
+                    print("Give up")
                     return False
             previous = (results.jspath(f"$.['{t}'].bb.h"), falling)
             assert previous is not None, f"No data 'bb.h' found for time {t}"
         except ValueError:
             pass
+    print("Time not found")
     return False
 
 
@@ -163,13 +165,27 @@ def test_run_cases():
         },
     )
     print("Actions checked")
-    print(
-        "Run base",
-    )
-    cases.run_case("base", "results_base")
+    case = cases.case_by_name("base")
+    print(f"Run {case.name}")
+    assert case.special == {"startTime": 0.0, "stopTime": 3, "stepSize": 0.01}
+    case.run("results_base")
     res = cases.case_by_name("base").res.res
+    inspect = cases.case_by_name("base").res.inspect()
+    assert inspect["bb.h"] == {
+        "len": 301,
+        "range": [0.0, 3.0],
+        "info": {
+            "model": 0,
+            "instances": ("bb",),
+            "variables": (1,),
+            "description": "Position (z) of the ball",
+            "type": 0,
+            "causality": 2,
+            "variability": 4,
+        },
+    }
     # key results data for base case
-    h0 = res.jspath("$.['0.01'].bb.h")
+    h0 = res.jspath("$.['0'].bb.h")
     t0 = sqrt(2 * h0 / 9.81)  # half-period time with full restitution
     v_max = sqrt(2 * h0 * 9.81)  # speed when hitting bottom
     # h_v = lambda v, g: 0.5 * v**2 / g  # calculate height

@@ -65,8 +65,6 @@ class Case:
     Args:
         cases (Cases): Reference to the related Cases object
         name (str): Unique name of the case
-        parent (Case): Parent case or None (base case)
-        description (str)="": human readable description of the case. Strongly recommended to not leave empty.
         spec (dict): the dictionary of the case specification
     """
 
@@ -74,58 +72,48 @@ class Case:
         self,
         cases: "Cases",
         name: str,
-        description: str = "",
-        parent: "Case" | None = None,
-        spec: dict | list | None = None,
+        spec: dict,
         special: dict | None = None,
     ):
         self.cases = cases
         self.name = name
-        self.description = description
-        self.parent = parent
-        if self.parent is not None:
-            self.parent.append(self)
+        self.js = Json5(spec)
+        self.description = self.js.jspath("$.description", str) or ""
         self.subs: list = []  # own subcases
-        assert isinstance(spec, (dict, list)), f"The spec for case {self.name} was not found"
-        self.spec = spec
-        # dict of special variable : value, like stopTime. @start of run this is sent to the Simulator to deal with it
-        # the self.act_get/set objects are sorted dicts { time : [list of set actions]},
-        #   including 'final' actions at stopTime
-        #   including step actions as get actions at given intervals
-        #   including step actions as get actions at all communication points as time=None
+
+        if name == "base":
+            self.parent = None
+        else:  # all other cases need a parent
+            parent_name = self.js.jspath("$.parent", str) or "base"
+            parent_case = self.cases.case_by_name(parent_name)
+            assert isinstance(parent_case, Case), f"Parent case for {self.name} required. Found {parent_name}"
+            self.parent = parent_case
+            self.parent.append(self)
+
         if self.name == "results":
-            assert special is not None, "startTime and stopTime settings needed for 'results'"
-            self.special = special
-            self.act_get: dict = {}
+            raise ValueError("'results' should not be used as case name. Add general results to 'base'")
         elif self.name == "base":  # take over the results info and activities
             assert special is not None, "startTime and stopTime settings needed for 'base'"
             self.special = special
-            self.act_get = self.cases.results.act_get
+            self.act_get: dict = {}
             self.act_set: dict = {}  # no set actions during results collection
         else:
             assert isinstance(self.parent, Case), f"Parent case expected for case {self.name}"
             self.special = dict(self.parent.special)
             self.act_get = Case._actions_copy(self.parent.act_get)
             self.act_set = Case._actions_copy(self.parent.act_set)
-        if self.name == "results":
-            assert isinstance(self.spec, list), f"A list is expected as spec. Found {self.spec}"
-            for k in self.spec:  # only keys, no values
-                assert isinstance(k, str), f"A key (str) is expected as list element in results. Found {k}"
-                self.read_spec_item(k)
-        else:
-            assert isinstance(self.spec, dict), f"A dict is expected as spec. Found {self.spec}"
-            for k, v in self.spec.items():
-                #                if isinstance(v, (str, float, int, bool)):
-                # isinstance(v, list) and all(isinstance(x, (str, float, int, bool)) for x in v)
-                self.read_spec_item(k, v)  # type: ignore
-                # else:
-                #    raise AssertionError(f"Unhandled spec value {v}") from None
+
+        for k, v in self.js.jspath("$.spec", dict, True).items():
+            self.read_spec_item(k, v)
+        _results = self.js.jspath("$.results", list)
+        if _results is not None:
+            for _res in _results:
+                self.read_spec_item(_res)
 
         if self.name == "base":
             self.special = self._ensure_specials(self.special)  # must specify for base case
         self.act_get = dict(sorted(self.act_get.items()))
-        if self.name != "results":
-            self.act_set = dict(sorted(self.act_set.items()))
+        self.act_set = dict(sorted(self.act_set.items()))
         # self.res represents the Results object and is added when collecting results or when evaluating results
 
     def add_results_object(self, res: Results):
@@ -164,7 +152,7 @@ class Case:
         """Append a case as sub-case to this case."""
         self.subs.append(case)
 
-    def add_action(self, typ: str, action: Callable, args: tuple, at_time: float):
+    def _add_action(self, typ: str, action: Callable, args: tuple, at_time: float):
         """Add an action to one of the properties act_set, act_get, act_final, act_step - used for results.
         We use functools.partial to return the functions with fully filled in arguments.
         Compared to lambda... this allows for still accessible (testable) argument lists.
@@ -180,7 +168,7 @@ class Case:
         elif typ == "set":
             dct = self.act_set
         else:
-            raise AssertionError(f"Unknown typ {typ} in add_action")
+            raise AssertionError(f"Unknown typ {typ} in _add_action")
         assert isinstance(at_time, (float, int)), f"Actions require a defined time as float. Found {at_time}"
         if at_time in dct:
             for i, act in enumerate(dct[at_time]):
@@ -234,8 +222,10 @@ class Case:
         """
         pre, _, at = txt.partition("@")
         assert len(pre), f"'{txt}' is not allowed as basis for _disect_at_time"
+        if value in ("result", "res"):  # marking a normal variable specification as 'get' or 'step' action
+            value = None
         if not len(at):  # no @time spec
-            if self.name == "results" or (isinstance(value, str) and value.lower() == "novalue"):
+            if value is None:
                 return (pre, "get", self.special["stopTime"])  # report final value
             else:
                 msg = f"Value required for 'set' in _disect_at_time('{txt}','{self.name}','{value}')"
@@ -256,6 +246,15 @@ class Case:
                     raise AssertionError(f"Unknown @time instruction {txt}. Case:{self.name}, value:'{value}'")
             else:
                 return (pre, "set" if Case._num_elements(value) else "get", arg_float)
+
+    def read_assertion(self, key: str, expr: Any | None = None):
+        """Read an assert statement, compile as sympy expression and return the Assertion object.
+
+        Args:
+            key (str): Identification key for the assertion. Should be unique. Recommended to use numbers
+            expr: A sympy expression using available variables
+        """
+        return
 
     def read_spec_item(self, key: str, value: Any | None = None):
         """Use the alias variable information (key) and the value to construct an action function,
@@ -281,18 +280,28 @@ class Case:
              Get actions performed at every communication point (no time-spec),
              or at time-spec time intervals
 
-        Note: 'Get' actions are normally specified within 'results' and are the same for all cases.
-          The possibility to observe specific variables in given cases is added through the syntax var@time : 'NoValue',
-          which says: keep the value but record the variable.
+        Note: 'Get' actions can be specified in a few ways:
+
+           #. All case settings are automatically reported at start time and do not need to be specified.
+           #. Within a 'results' section of a case (use the base case to get the same recordings for all cases).
+              The results variables specification must be a list and must be explicit strings to conform to Json5.
+           #. Usage of a normal variable specification as for 'set',
+              but specifying the keyword 'result' or 'res' as value: 'keep the value but record the variable'.
 
         Args:
             key (str): the key of the spec item
             value (Any])=None: the values with respect to the item. For 'results' this is not used
+
+        Returns
+        -------
+            self.act_*** actions through _add_action()
         """
         if key in ("startTime", "stopTime", "stepSize"):
             self.special.update({key: value})  # just keep these as a dictionary so far
         else:  # expect a  variable-alias : value(s) specificator
             key, at_time_type, at_time_arg = self._disect_at_time(key, value)
+            if at_time_type in ("get", "step"):
+                value = None
             key, cvar_info, rng = self.cases.disect_variable(key)
             key = key.strip()
             if value is not None:  # check also the number of supplied values
@@ -315,7 +324,7 @@ class Case:
                     if not self.cases.simulator.allowed_action("get", _inst, tuple(var_refs), 0):
                         raise AssertionError(self.cases.simulator.message) from None
                     elif at_time_type == "get" or at_time_arg == -1:  # normal get or step without time spec
-                        self.add_action(
+                        self._add_action(
                             "get",
                             self.cases.simulator.get_variable_value,
                             (_inst, cvar_info["type"], tuple(var_refs)),
@@ -323,7 +332,7 @@ class Case:
                         )
                     else:  # step actions with specified interval
                         for time in np.arange(start=at_time_arg, stop=self.special["stopTime"], step=at_time_arg):
-                            self.add_action(
+                            self._add_action(
                                 time,
                                 self.cases.simulator.get_variable_value,
                                 (_inst, cvar_info["type"], tuple(var_refs)),
@@ -340,7 +349,7 @@ class Case:
                         if not self.cases.simulator.allowed_action("set", _inst, tuple(var_refs), 0):
                             raise AssertionError(self.cases.simulator.message) from None
                         for ref, val in zip(var_refs, var_vals, strict=False):
-                            self.add_action(
+                            self._add_action(
                                 at_time_type,
                                 self.cases.simulator.set_initial,
                                 (_inst, cvar_info["type"], ref, val),
@@ -351,7 +360,7 @@ class Case:
                         _inst = self.cases.simulator.component_id_from_name(inst)
                         if not self.cases.simulator.allowed_action("set", _inst, tuple(var_refs), at_time_arg):
                             raise AssertionError(self.cases.simulator.message) from None
-                        self.add_action(
+                        self._add_action(
                             at_time_type,
                             self.cases.simulator.set_variable_value,
                             (_inst, cvar_info["type"], tuple(var_refs), tuple(var_vals)),
@@ -442,15 +451,15 @@ class Case:
                 t_get, a_get = next(get_iter)
             except StopIteration:
                 t_get, a_get = (tstop + 1, [])
-            if t_get < 0: # negative time indicates 'always'
+            if t_get < 0:  # negative time indicates 'always'
                 act_step = a_get
             else:
                 break
-            
-        for a in a_set: # since there is no hook to get initial values we report it this way
-            self.res.add( tstart, *a.args)
-                
-        while True: # main simulation loop
+
+        for a in a_set:  # since there is no hook to get initial values we report it this way
+            self.res.add(tstart, *a.args)
+
+        while True:  # main simulation loop
             t_set, a_set = do_actions(t_set, a_set, set_iter, time, record=False)
 
             time += tstep
@@ -521,13 +530,16 @@ class Cases:
         self.file = Path(spec)  # everything relative to the folder of this file!
         assert self.file.exists(), f"Cases spec file {spec} not found"
         self.js = Json5(spec)
-        self.spec = self.js.js_py
+        #        self.spec = self.js.js_py
         if simulator is None:
-            path = Path(self.file.parent, self.spec.get("modelFile", "OspSystemStructure.xml"))  # type: ignore
+            modelfile = self.js.jspath("$.header.modelFile", str) or "OspSystemStructure.xml"
+            path = self.file.parent / modelfile
             assert path.exists(), f"OSP system structure file {path} not found"
             try:
                 self.simulator = SimulatorInterface(
-                    system=path, name=str(self.spec.get("name", "")), description=str(self.spec.get("description", ""))
+                    system=path,
+                    name=self.js.jspath("$.header.name", str) or "",
+                    description=self.js.jspath("$.header.description", str) or "",
                 )
             except Exception as err:
                 raise AssertionError(f"'modelFile' needed from spec: {err}") from err
@@ -553,18 +565,8 @@ class Cases:
                         'variability': CosimVariableVariability}.
         Optionally a description of the alias variable may be provided (and added to the dictionary).
         """
-        _assert("variables" in self.spec, f"Mandatory key 'variables' not found in cases specification {self.file}")
-        _assert(
-            isinstance(self.spec["variables"], dict),
-            "'variables' section of the spec should be a dict - name: [component(s), variable(s), [description]]",
-        )
-        if not isinstance(self.spec["variables"], dict):
-            raise CaseInitError(
-                "'variables' section of the spec should be a dict name: [component(s), variable(s), [description]]"
-            ) from None
-
         variables = {}
-        for k, v in self.spec["variables"].items():
+        for k, v in self.js.jspath("$.header.variables", dict, True).items():
             if not isinstance(v, list):
                 raise CaseInitError(f"List of 'component(s)' and 'variable(s)' expected. Found {v}") from None
             _assert(len(v) in (2, 3), f"Variable spec should be: instance(s), variables[, description]. Found {v}.")
@@ -616,8 +618,7 @@ class Cases:
         If the entry is not found, 1 second is assumed.
         """
         # _unit =
-        assert isinstance(self.spec, dict), f"Dict expected as spec. Found {type(self.spec)}"
-        unit = str(self.spec["timeUnit"]) if "timeUnit" in self.spec else "second"
+        unit = self.js.jspath("$.header.timeUnit", str) or "second"
         if unit.lower().startswith("sec"):
             return 1.0
         if unit.lower().startswith("min"):
@@ -636,64 +637,25 @@ class Cases:
 
     def read_cases(self):
         """Instantiate all cases defined in the spec.
-        'results' and 'base' are defined firsts, since the others build on these
-        Return the results and base case objects.
+        'base' is defined firsts, since the others build on these
+        Return the base case object.
         The others are linked as sub-cases in their parent cases.
+        The 'header' is treated elsewhere.
         """
-        if (
-            isinstance(self.spec, dict)
-            and "base" in self.spec
-            and isinstance(self.spec["base"], dict)
-            and "spec" in self.spec["base"]
-            and isinstance(self.spec["base"]["spec"], dict)
-            and "results" in self.spec
-            and isinstance(self.spec["results"], dict)
-            and "spec" in self.spec["results"]
-            and isinstance(self.spec["results"]["spec"], list)
-        ):
+        if self.js.jspath("$.base", dict) is not None and self.js.jspath("$.base.spec", dict) is not None:
             # we need to peek into the base case where startTime and stopTime should be defined
             special: dict[str, float] = {
-                "startTime": self.spec["base"]["spec"].get("startTime", 0.0),  # type: ignore
-                "stopTime": self.spec["base"]["spec"].get("stopTime", -1),  # type: ignore
-            }  # type: ignore
-            assert special["stopTime"] > 0, "No stopTime defined in base case"  # type: ignore
-            # all case definitions are top-level objects in self.spec. 'base' and 'results' are mandatory
-            self.results = Case(
-                self,
-                "results",
-                description=str(self.spec.get("description", "")),
-                parent=None,
-                spec=self.spec["results"].get("spec", None),
-                special=special,
-            )  # type: ignore
-            self.base = Case(
-                self,
-                "base",
-                description=str(self.spec.get("description", "")),
-                parent=None,
-                spec=self.spec["base"].get("spec", None),
-                special=special,
-            )  # type: ignore
-            for k, v in self.spec.items():
-                if k not in (
-                    "name",
-                    "description",
-                    "modelFile",
-                    "variables",
-                    "timeUnit",  # ignore 'header'
-                    "base",
-                    "results",
-                ):
-                    assert isinstance(v, dict), f"dict expected as value {v} in read_case"
-                    parent_name: str = v.get("parent", "base")  # type: ignore
-                    parent_case = self.case_by_name(parent_name)
-                    assert isinstance(parent_case, Case), f"Parent case needed for case {k}"
-                    msg = f"Case spec expected. Found {v.get('spec')}"
-                    assert "spec" in v and isinstance(v["spec"], dict), msg
-                    _ = Case(self, k, description=str(v.get("description", "")), parent=parent_case, spec=v["spec"])
+                "startTime": self.js.jspath("$.base.spec.startTime", float) or 0.0,
+                "stopTime": self.js.jspath("$.base.spec.stopTime", float, True),
+            }
+            # all case definitions are top-level objects in self.spec. 'base' is mandatory
+            self.base = Case(self, "base", spec=self.js.jspath("$.base", dict, True), special=special)
+            for k in self.js.js_py:
+                if k not in ("header", "base"):
+                    _ = Case(self, k, spec=self.js.jspath(f"$.{k}", dict, True))
         else:
             raise CaseInitError(
-                f"Mandatory main sections 'base' and 'results' needed. Found {list(self.spec.keys())}"
+                f"Mandatory main section 'base' is needed. Found {list(self.js.js_py.keys())}"
             ) from None
 
     def case_by_name(self, name: str) -> Case | None:
@@ -704,10 +666,10 @@ class Cases:
         Returns:
             The case object or None
         """
-        if self.base.name == name:
+        if name == "header":
+            raise ValueError("The name 'header' is reserved and not allowed as case name") from None
+        elif name == "base":
             return self.base
-        elif self.results.name == name:
-            return self.results
         else:
             found = self.base.case_by_name(name)
             if found is not None:
@@ -804,9 +766,12 @@ class Cases:
         txt = ""
         if case is None:
             case = self.base
-            txt += f"Cases {self.spec.get('name','noName')}. {self.spec.get('description','')}\n"
-            if "modelFile" in self.spec:
-                txt += f"System spec '{self.spec['modelFile']}'.\n"
+            txt += "Cases "
+            txt += f"{self.js.jspath('$.header.name',str) or 'noName'}. "
+            txt += f"{(self.js.jspath('$.header.description', str) or '')}\n"
+            modelfile = self.js.jspath("$.header.modelFile", str)
+            if modelfile is not None:
+                txt += f"System spec '{modelfile}'.\n"
             assert isinstance(case, Case), "At this point a Case object is expected as variable 'case'"
             txt += self.info(case=case, level=level)
         elif isinstance(case, Case):
@@ -903,15 +868,15 @@ class Results:
         """Make a standard header for the results of 'case' as dict.
         This function is used as starting point when a new results file is created.
         """
-        assert isinstance(self.case.cases.spec.get("name"), str), f"Spec of cases: {self.case.cases.spec.get('name')}"
+        _ = self.case.cases.js.jspath("$.header.name", str, True)
         results = {
             "header": {
                 "case": self.case.name,
                 "dateTime": datetime.today().isoformat(),
-                "cases": self.case.cases.spec.get("name", "None"),
+                "cases": self.case.cases.js.jspath("$.header.name", str, True),
                 "file": Path(self.case.cases.file).as_posix(),
                 "casesDate": datetime.fromtimestamp(os.path.getmtime(self.case.cases.file)).isoformat(),
-                "timeUnit": self.case.cases.spec.get("timeUnit", "None"),
+                "timeUnit": self.case.cases.js.jspath("$.header.timeUnit", str) or "sec",
                 "timeFactor": self.case.cases.timefac,
             }
         }
@@ -981,7 +946,7 @@ class Results:
             A dictionary {<component.variable> : {'len':#data points, 'range':[tMin, tMax], 'info':info-dict}
             The info-dict is and element of Cases.variables. See Cases.get_case_variables() for definition.
         """
-        cont : dict = {}
+        cont: dict = {}
         assert isinstance(self.case, Case)
         assert isinstance(self.case.cases, Cases)
         for _time, components in self.res.js_py.items():
@@ -1017,8 +982,9 @@ class Results:
             variable (str): variable identificator as str.
                A variable identificator is the jspath expression after the time, i.e. <component>.<variable>[<element>]
                For example 'bb.v[2]' identifies the z-velocity of the component 'bb'
-               
-        Returns:
+
+        Returns
+        -------
             tuple of two lists (times, values)
         """
         if not len(self.res.js_py) or self.case is None:
@@ -1035,7 +1001,6 @@ class Results:
                     values.append(found)
         return (times, values)
 
-
     def plot_time_series(self, variables: list[str], title: str = ""):
         """Extract the provided alias variables and plot the data found in the same plot.
 
@@ -1046,7 +1011,7 @@ class Results:
             title (str): optional title of the plot
         """
         for var in variables:
-            times, values = self.time_series( var)
+            times, values = self.time_series(var)
 
             plt.plot(times, values, label=var, linewidth=3)
 
@@ -1056,4 +1021,3 @@ class Results:
         # plt.ylabel('Values')
         plt.legend()
         plt.show()
-

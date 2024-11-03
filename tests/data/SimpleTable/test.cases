@@ -1,18 +1,23 @@
 {
-name : 'Testing',
-description : 'Simple Case Study for testing purposes',
-timeUnit : 'second',
-variables : {
-      x : ['tab','outs','Outputs (3-dim)'],
-      i : ['tab','interpolate','Interpolation setting']},
+header : {
+   name : 'Testing',
+   description : 'Simple Case Study for testing purposes',
+   timeUnit : 'second',
+   variables : {
+         x : ['tab','outs','Outputs (3-dim)'],
+         i : ['tab','interpolate','Interpolation setting']}},
 
 base : {
       description : 'Mandatory base settings. No interpolation',
       spec : {
             stepSize : 0.1,
             stopTime : 1,
-            i : False}},
-
+            i : False,
+             },
+      results : ['x@step',
+                 'x[0]@1.0',
+                 'i@0']
+      },
 case1 : {
       description : 'Interpolation ON',
       spec : {
@@ -23,6 +28,4 @@ caseX : {
       parent : 'case1',
       spec : {
             stopTime : 10}},
-
-results : {
-      spec : ['x@step','x[0]@1.0','i']}}
+}

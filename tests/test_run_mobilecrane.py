@@ -1,6 +1,7 @@
 from math import sqrt
 from pathlib import Path
 
+import pytest
 from case_study.case import Cases
 from case_study.json5 import Json5
 from case_study.simulator_interface import SimulatorInterface
@@ -33,9 +34,9 @@ def test_read_cases():
     assert "# lift 1m / 0.1sec" in list(json5.comments.values())
     # for e in json5.js_py:
     #   print(f"{e}: {json5.js_py[e]}")
-    assert json5.js_py["base"]["spec"]["df_dt"] == [0.0, 0.0]
+    assert json5.jspath("$.base.spec.df_dt", list) == [0.0, 0.0]
     # json5_write( json5.js_py, "MobileCrane.js5")
-    assert json5.js_py["dynamic"]["spec"]["db_dt"] == 0.785498
+    assert json5.jspath("$.dynamic.spec.db_dt", float) == 0.785498
 
 
 # @pytest.mark.skip("Alternative step-by step, only using libcosimpy")
@@ -123,30 +124,21 @@ def test_step_by_step_cases():
 
     path = Path(Path(__file__).parent, "data/MobileCrane/MobileCrane.cases")
     assert path.exists(), "Cases file not found"
-    spec = Json5(path).js_py
-    # print("SPEC", json5_write( spec, None, True))
-
-    expected_spec = {"spec": ["T@step", "x_pedestal@step", "x_boom@step", "x_load@step"]}
-    assert spec["results"] == expected_spec, f"Results found: {spec['results']}"
-    assert list(spec.keys()) == [
-        "name",
-        "description",
-        "modelFile",
-        "timeUnit",
-        "variables",
+    js = Json5(path)
+    print("CASES", js.write(None, True))
+    expected_results = ["T@step", "x_pedestal@step", "x_boom@step", "x_load@step"]
+    assert js.jspath("$.base.results") == expected_results, f"Results found: {js.jspath('$.base.results')}"
+    assert list(js.js_py.keys()) == [
+        "header",
         "base",
         "static",
         "dynamic",
-        "results",
     ]
-    cases_names = [
-        n for n in spec.keys() if n not in ("name", "description", "modelFile", "timeUnit", "variables", "results")
-    ]
-    assert cases_names == ["base", "static", "dynamic"], f"Found cases names {cases_names}"
+    assert list(js.jspath("$.header", dict).keys()) == ["name", "description", "modelFile", "timeUnit", "variables"]
     cases = Cases(path, sim)
     print("INFO", cases.info())
     static = cases.case_by_name("static")
-    assert static.spec == {"p[2]": 1.570796, "b[1]": 0.785398, "r[0]": 7.657, "load": 1000}
+    assert static.js.jspath("$.spec", dict) == {"p[2]": 1.570796, "b[1]": 0.785398, "r[0]": 7.657, "load": 1000}
     assert static.act_get[-1][0].args == (0, 0, (10, 11, 12)), f"Step action arguments {static.act_get[-1][0].args}"
     assert sim.get_variable_value(0, 0, (10, 11, 12)) == [0.0, 0.0, 0.0], "Initial value of T"
     # msg = f"SET actions argument: {static.act_set[0][0].args}"
@@ -268,6 +260,8 @@ def test_run_cases():
 
 
 if __name__ == "__main__":
-    # retcode = pytest.main(["-rA", "-v", __file__])
-    # assert retcode == 0, f"Return code {retcode}"
-    test_run_cases()
+    retcode = pytest.main(["-rA", "-v", __file__])
+    assert retcode == 0, f"Return code {retcode}"
+    # test_read_cases()
+    # test_run_cases()
+    # test_step_by_step_cases()
