@@ -11,11 +11,10 @@ case_study: Python Package for managing simulation experiments
    :caption: Contents:
 
    README
-   .. CHANGELOG
+   CHANGELOG
    LICENSE
    cases_specification
    modules
-   .. cli
 
 
 Indices and tables

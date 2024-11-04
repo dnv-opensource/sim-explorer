@@ -563,6 +563,7 @@ class Cases:
                         'type':CosimVariableType,
                         'causality':CosimVariableCausality,
                         'variability': CosimVariableVariability}.
+                        
         Optionally a description of the alias variable may be provided (and added to the dictionary).
         """
         variables = {}

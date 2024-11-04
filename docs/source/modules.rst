@@ -23,7 +23,7 @@ Python module providing the interface to the simulator. Currently only Open Simu
 
 Cases
 --------
-Python module to manage cases with respect to reading *.cases files, running cases and storing results
+Python module to manage cases with respect to reading \*.cases files, running cases and storing results
 
 .. autoclass:: case_study.case.Cases
    :members:

@@ -27,8 +27,8 @@ class Json5:
     Args:
         js5 (Path,str): Path to json5 file or json5 string
         auto (bool)=True: Determine whether running to_py automatically
-        comments_eol (tuple)=('//', '#',): tuple of end-of-line comment strings which shall be recognised
-        comments_ml (tuple)=('/*', "'''", ): tuple of multi-line comment strings which shall be recognised.
+        comments_eol (tuple)= ('//', '#') : tuple of end-of-line comment strings which shall be recognised
+        comments_ml (tuple)= ('/*', "'''") : tuple of multi-line comment strings which shall be recognised.
           End of comment is always the reversed of the start of comment.
           Double-quote ml comments are also supported per default
     """
