@@ -82,7 +82,7 @@ def test_vector():
 
 
 if __name__ == "__main__":
-    retcode = pytest.main(["-rA","-v", __file__])
+    retcode = pytest.main(["-rA", "-v", __file__])
     assert retcode == 0, f"Non-zero return code {retcode}"
     # test_init()
     # test_assertion()

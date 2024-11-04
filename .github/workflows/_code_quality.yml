@@ -34,27 +34,3 @@ jobs:
         run: pip install ruff==0.3.0
       - name: Run ruff check
         run: ruff check --diff .
-
-  #pyright:
-  mypy:
-    runs-on: ubuntu-latest
-    #name: pyright
-    name: mypy
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          cache: 'pip' # cache pip dependencies
-      - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
-          pip install pytest
-      #- name: Install pyright
-      #  run: pip install pyright==1.1.352
-      #- name: Run pyright
-      #  run: pyright .
-      - name: Install mypy
-        run: pip install mypy==1.11.1
-      - name: Run mypy 
-        run: mypy ./case_study

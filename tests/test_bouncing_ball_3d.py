@@ -1,11 +1,7 @@
-from inspect import getsourcefile
 from math import sqrt
 from pathlib import Path
-from shutil import copy
 
-import pytest
 from case_study.case import Case, Cases
-from component_model.model import Model
 from fmpy import plot_result, simulate_fmu
 
 

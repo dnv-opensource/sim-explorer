@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 from case_study.case import Cases, Results
 
+
 @pytest.mark.skip(reason="File contains harcoded absolute path")
 def test_init():
     # init through existing results file
@@ -31,6 +32,7 @@ def test_add():
     res.add(0.0, 0, 0, (6,), (9.81,))
     # print( res.res.write( pretty_print=True))
     assert res.res.jspath("$['0.0'].bb.g") == 9.81
+
 
 @pytest.mark.skip(reason="Plots cannot be tested in CI")
 def test_plot_time_series():
