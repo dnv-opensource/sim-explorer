@@ -25,7 +25,8 @@ build-backend = "setuptools.build_meta"
         "matplotlib>=3.7.1",
         "pint>=0.24.3",
         "sympy>=1.13.3",
-        "component-model>=0.0.1"
+        "component-model>=0.0.1",
+        "jsonpath-ng>=1.7.0"
     ]
     #dynamic = ["version"]
 

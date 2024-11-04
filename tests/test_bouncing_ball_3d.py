@@ -17,32 +17,6 @@ def arrays_equal(res: tuple, expected: tuple, eps=1e-7):
         assert abs(x - y) < eps, f"Element {i} not nearly equal in {x}, {y}"
 
 
-@pytest.fixture(scope="session")
-def ensure_fmu():
-    return _ensure_fmu()
-
-
-def _ensure_fmu():
-    """Make sure that the FMU is available in test_working_directory"""
-
-    build_path = Path(__file__).parent / "data" / "BouncingBall3D"
-    build_path.mkdir(exist_ok=True)
-    fmu_path = Model.build(
-        str(Path(getsourcefile(Model)).parent.parent / "tests" / "examples" / "bouncing_ball_3d.py"),
-        project_files=[],
-        dest=build_path,
-    )
-    return fmu_path
-
-
-def test_make_fmu():  # chdir):
-    fmu_path = Model.build(
-        str(Path(getsourcefile(Model)).parent.parent / "tests" / "examples" / "bouncing_ball_3d.py"),
-        dest=Path(Path.cwd()),
-    )
-    copy(fmu_path, Path(__file__).parent / "data" / "BouncingBall3D")
-
-
 def test_run_fmpy(show):
     """Test and validate the basic BouncingBall using fmpy and not using OSP or case_study."""
     path = Path(__file__).parent / "data" / "BouncingBall3D" / "BouncingBall3D.fmu"
@@ -179,7 +153,6 @@ if __name__ == "__main__":
     import os
 
     os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
-    fmu = _ensure_fmu()
     # test_make_fmu()
     # test_run_fmpy( show=True)
     test_run_cases()
