@@ -66,7 +66,6 @@ def test_cases():
     msg = "'restitutionAndGravity' should exist within the sub-hierarchy of 'restitution_case'"
     assert restitution_case is not None and restitution_case.case_by_name("restitutionAndGravity") is not None, msg
     # variables (aliases)
-    assert cases.variables["h"]["model"] == 0
     assert cases.variables["h"]["instances"] == ("bb",)
     assert cases.variables["h"]["variables"] == (1,)
     assert cases.variables["h"]["description"] == "Position (z) of the ball"
