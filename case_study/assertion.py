@@ -96,7 +96,7 @@ class Assertion:
     @staticmethod
     def vector(x: tuple | list):
         assert isinstance(x, (tuple, list)) and len(x) == 3, f"Vector of length 3 expected. Found {x}"
-        return x[0] * Assertion.N.i + x[1] * Assertion.N.j + x[2] * Assertion.N.k
+        return x[0] * Assertion.N.i + x[1] * Assertion.N.j + x[2] * Assertion.N.k # type: ignore
 
     def assert_single(self, subs: list[tuple]):
         """Perform assertion on a single data point.

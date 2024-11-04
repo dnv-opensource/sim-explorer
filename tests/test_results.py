@@ -5,10 +5,9 @@ import pytest
 from case_study.case import Cases, Results
 
 
-@pytest.mark.skip(reason="File contains harcoded absolute path")
 def test_init():
     # init through existing results file
-    file = Path.cwd().parent / "data" / "BouncingBall3D" / "test_results.js5"
+    file = Path(__file__).parent / "data" / "BouncingBall3D" / "test_results.js5"
     print("FILE", file)
     res = Results(file=file)
     assert res.res.jspath("$.header.file", Path, True).exists()
@@ -34,12 +33,12 @@ def test_add():
     assert res.res.jspath("$['0.0'].bb.g") == 9.81
 
 
-@pytest.mark.skip(reason="Plots cannot be tested in CI")
-def test_plot_time_series():
+def test_plot_time_series( show):
     file = Path(__file__).parent / "data" / "BouncingBall3D" / "test_results.js5"
     assert file.exists(), f"File {file} not found"
     res = Results(file=file)
-    res.plot_time_series(("bb.x[2]", "bb.v[2]"), "Test plot")
+    if show:
+        res.plot_time_series(("bb.x[2]", "bb.v[2]"), "Test plot")
 
 
 def test_inspect():
@@ -57,7 +56,7 @@ def test_inspect():
 
 
 if __name__ == "__main__":
-    retcode = pytest.main(["-rA", "-v", __file__])
+    retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
     assert retcode == 0, f"Non-zero return code {retcode}"
     # import os
     # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")

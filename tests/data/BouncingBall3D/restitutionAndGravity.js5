@@ -1,10 +1,10 @@
 {
 header : {
       case : 'restitutionAndGravity',
-      dateTime : '2024-11-04T09:27:59.673486',
+      dateTime : '2024-11-04T11:44:09.695343',
       cases : 'BouncingBall3D',
-      file : 'C:/Users/JORMEN/Documents/SeaCo/case_study/tests/data/BouncingBall3D/BouncingBall3D.cases',
-      casesDate : '2024-11-04T09:04:34.413987',
+      file : 'C:/Users/eis/Documents/Projects/Simulation_Model_Assurance/case_study/tests/data/BouncingBall3D/BouncingBall3D.cases',
+      casesDate : '2024-11-03T21:49:56.360601',
       timeUnit : 'second',
       timeFactor : 1000000000.0},
 
