@@ -217,8 +217,6 @@ def test_json5_syntax():
     with pytest.raises(AssertionError) as err:
         js = Json5("{spec: {\n da_dt : [0,0,0,0], dp_dt : 0 db_dt : 0  v     : [0,0,0,0],}}")
     assert str(err.value).startswith("Json5 read error at 2(28): Found ':'")
-    expected = {"Path": "C:/Users/eis/Documents/Projects/Simulation_Model_Assurance/case_study/tests/test_json5.py"}
-    assert Json5("{Path:'" + str(Path(__file__).as_posix()) + "'}").js_py == expected, str(expected)
 
 
 def test_write():
@@ -270,11 +268,8 @@ def test_results_header():
     # print(js_txt)
     header = Json5(js_txt).js_py
     assert header["Header"]["case"] == "base"
-    assert header["Header"]["dateTime"] == "Thu Jan  1 04:25:45 1970"
-    assert (
-        header["Header"]["file"]
-        == "C:/Users/eis/Documents/Projects/Simulation_Model_Assurance/case_study/tests/test_json5.py"
-    )
+    # Commented out as this dateTime is different on different operating systems
+    # assert header["Header"]["dateTime"] == "Thu Jan  1 04:25:45 1970"
 
 
 def test_read_cases():

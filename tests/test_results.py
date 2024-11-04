@@ -5,6 +5,7 @@ import pytest
 from case_study.case import Cases, Results
 
 
+@pytest.mark.skip(reason="File contains harcoded absolute path")
 def test_init():
     # init through existing results file
     file = Path.cwd().parent / "data" / "BouncingBall3D" / "test_results.js5"
@@ -33,6 +34,7 @@ def test_add():
     assert res.res.jspath("$['0.0'].bb.g") == 9.81
 
 
+@pytest.mark.skip(reason="Plots cannot be tested in CI")
 def test_plot_time_series():
     file = Path(__file__).parent / "data" / "BouncingBall3D" / "test_results.js5"
     assert file.exists(), f"File {file} not found"
