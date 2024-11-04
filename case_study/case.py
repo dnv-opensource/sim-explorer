@@ -262,17 +262,17 @@ class Case:
 
         In the simplest case, the key is a cases variable name. Optionally two elements can be added:
 
-        #. a range, denoted by `[range-spec]` : choosing elements of a multi-valued variable.
-          Note: when disecting the key, the actual length of the case variable is unknown, such that checks are limited.
-          Rules:
+        1. a range, denoted by `[range-spec]` : choosing elements of a multi-valued variable.
+           Note: when disecting the key, the actual length of the case variable is unknown, such that checks are limited.
+           Rules:
 
            * no '[]': addresses always the whole variable - scalar or multi-valued. rng = ''
            * '[int]': addresses a single element of a multi-valued variable. rng = 'int'
            * '[int,int, ...]': addresses several elements of a multi-valued variable. rng = 'int,int,...'
            * '[int...int]': addresses a range of elements of a multi-valued variable. rng = 'int:int', i.e. a slice
 
-        #. a time specification, denoted by `@time-spec` : action performed at specified time.
-          Rules:
+        2. a time specification, denoted by `@time-spec` : action performed at specified time.
+           Rules:
 
            * no '@': set actions are performed initially. get actions are performed at end of simulation (record final value)
            * @float: set/get action perfomred at specified time

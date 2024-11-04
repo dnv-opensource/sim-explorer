@@ -15,7 +15,7 @@ import shutil
 import sys
 
 sys.path.insert(0, os.path.abspath("../.."))
-shutil.copyfile("../../README.rst", "readme.rst")
+shutil.copyfile("../../README.rst", "./readme.rst")
 
 
 # -- Project information -----------------------------------------------------
