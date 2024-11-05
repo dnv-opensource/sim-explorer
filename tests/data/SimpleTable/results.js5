@@ -1,10 +1,10 @@
 {
 header : {
       case : 'caseX',
-      dateTime : '2024-11-04T11:44:47.998474',
+      dateTime : '2024-11-05T10:48:04.944017',
       cases : 'Testing',
-      file : 'C:/Users/eis/Documents/Projects/Simulation_Model_Assurance/case_study/tests/data/SimpleTable/test.cases',
-      casesDate : '2024-11-01T21:33:55.186531',
+      file : 'C:/Users/JORMEN/Documents/SeaCo/case_study/tests/data/SimpleTable/test.cases',
+      casesDate : '2024-11-05T10:44:47.724849',
       timeUnit : 'second',
       timeFactor : 1000000000.0},
 

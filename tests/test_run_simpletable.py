@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-from case_study.case import Cases
+from sim_explorer.case import Cases
 
 
 def test_run_casex():

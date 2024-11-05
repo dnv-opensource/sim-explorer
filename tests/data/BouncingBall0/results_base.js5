@@ -1,10 +1,10 @@
 {
 header : {
       case : 'base',
-      dateTime : '2024-11-04T11:44:30.119146',
+      dateTime : '2024-11-05T10:47:43.734104',
       cases : 'BouncingBall',
-      file : 'C:/Users/eis/Documents/Projects/Simulation_Model_Assurance/case_study/tests/data/BouncingBall0/BouncingBall.cases',
-      casesDate : '2024-11-03T22:37:08.285872',
+      file : 'C:/Users/JORMEN/Documents/SeaCo/case_study/tests/data/BouncingBall0/BouncingBall.cases',
+      casesDate : '2024-11-05T10:44:47.727848',
       timeUnit : 'second',
       timeFactor : 1000000000.0},
 

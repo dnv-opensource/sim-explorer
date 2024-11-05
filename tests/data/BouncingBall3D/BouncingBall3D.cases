@@ -1,6 +1,6 @@
 {header : {
    name        : 'BouncingBall3D',
-   description : 'Simple Case Study with the 3D BouncingBall FMU (3D position and speed',
+   description : 'Simple sim explorer with the 3D BouncingBall FMU (3D position and speed',
    modelFile : "OspSystemStructure.xml",
    timeUnit  : "second",
    variables : {

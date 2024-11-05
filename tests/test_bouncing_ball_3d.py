@@ -1,8 +1,8 @@
 from math import sqrt
 from pathlib import Path
 
-from case_study.case import Case, Cases
 from fmpy import plot_result, simulate_fmu
+from sim_explorer.case import Case, Cases
 
 
 def arrays_equal(res: tuple, expected: tuple, eps=1e-7):
@@ -14,7 +14,7 @@ def arrays_equal(res: tuple, expected: tuple, eps=1e-7):
 
 
 def test_run_fmpy(show):
-    """Test and validate the basic BouncingBall using fmpy and not using OSP or case_study."""
+    """Test and validate the basic BouncingBall using fmpy and not using OSP or sim_explorer."""
     path = Path(__file__).parent / "data" / "BouncingBall3D" / "BouncingBall3D.fmu"
     assert path.exists(), f"File {path} does not exist"
     dt = 0.01

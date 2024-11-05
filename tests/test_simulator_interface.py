@@ -1,8 +1,8 @@
 from pathlib import Path
 
 import pytest
-from case_study.simulator_interface import SimulatorInterface, match_with_wildcard
 from libcosimpy.CosimExecution import CosimExecution
+from sim_explorer.simulator_interface import SimulatorInterface, match_with_wildcard
 
 
 def test_match_with_wildcard():

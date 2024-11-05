@@ -19,7 +19,7 @@ Json5Val: TypeAlias = PyVal | Json5 | Json5List  # Json5 values
 
 
 """
-case_study module for definition and execution of simulation experiments
+sim_explorer module for definition and execution of simulation experiments
 * read and compile the case definitions from configuration file
   Note that Json5 is here restriced to 'ordered keys' and 'unique keys within an object'
 * set the start variables for a given case

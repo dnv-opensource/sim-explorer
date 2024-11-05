@@ -3,9 +3,9 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from case_study.case import Case, Cases
-from case_study.json5 import Json5
-from case_study.simulator_interface import SimulatorInterface
+from sim_explorer.case import Case, Cases
+from sim_explorer.json5 import Json5
+from sim_explorer.simulator_interface import SimulatorInterface
 
 
 def expected_actions(case: Case, act: dict, expect: dict):

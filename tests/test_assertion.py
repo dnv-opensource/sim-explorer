@@ -2,7 +2,7 @@ from math import cos, sin
 
 import matplotlib.pyplot as plt
 import pytest
-from case_study.assertion import Assertion
+from sim_explorer.assertion import Assertion
 from sympy import symbols
 from sympy.vector import CoordSys3D
 

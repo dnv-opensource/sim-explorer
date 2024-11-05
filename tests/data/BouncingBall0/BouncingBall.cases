@@ -1,7 +1,7 @@
 {
 header: {
    name        : 'BouncingBall',
-   description : 'Simple Case Study with the basic BouncingBall FMU (ball dropped from h=1m',
+   description : 'Simple sim explorer with the basic BouncingBall FMU (ball dropped from h=1m',
    modelFile : "OspSystemStructure.xml",
    timeUnit  : "second",
    variables : {

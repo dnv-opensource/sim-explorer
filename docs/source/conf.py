@@ -20,7 +20,7 @@ shutil.copyfile("../../README.rst", "./readme.rst")
 
 # -- Project information -----------------------------------------------------
 
-project = "case_study"
+project = "sim_explorer"
 copyright = "2024, DNV AS. Released as OpenSource."
 author = "Siegfried Eisinger, DNV Simulation Technology Team, SEACo project team"
 

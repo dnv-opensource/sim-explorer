@@ -1,6 +1,6 @@
 {header : {
    name        : 'MobileCrane',
-   description : 'Case Study with the MobileCrane FMU (standalone)',
+   description : 'sim explorer with the MobileCrane FMU (standalone)',
    modelFile : "OspSystemStructure.xml",
    timeUnit  : "second",
    variables : {

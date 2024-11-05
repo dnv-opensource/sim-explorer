@@ -1,8 +1,8 @@
 from pathlib import Path
 
 import pytest
-from case_study.case import Cases
-from case_study.simulator_interface import SimulatorInterface
+from sim_explorer.case import Cases
+from sim_explorer.simulator_interface import SimulatorInterface
 
 # def test_tuple_iter():
 #     """Test of the features provided by the Case class"""
@@ -40,7 +40,7 @@ def test_cases():
     # cases.spec
     assert cases.js.jspath("$.header.name", str, True) == "BouncingBall", "BouncingBall expected as cases name"
     descr = cases.js.jspath("$.header.description", str, True)
-    assert isinstance(descr, str) and descr.startswith("Simple Case Study with the"), f"Error description: {descr}"
+    assert isinstance(descr, str) and descr.startswith("Simple sim explorer with the"), f"Error description: {descr}"
     assert cases.js.jspath("$.header.modelFile", str, True) == "OspSystemStructure.xml", "modelFile not as expected"
     for c in ("base", "restitution", "restitutionAndGravity", "gravity"):
         assert c in cases.js.js_py.keys(), f"The case '{c}' is expected to be defined in {list(cases.js.js_py.keys())}"

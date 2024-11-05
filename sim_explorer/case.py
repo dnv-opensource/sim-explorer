@@ -15,7 +15,7 @@ from .json5 import Json5
 from .simulator_interface import SimulatorInterface, from_xml
 
 """
-case_study module for definition and execution of simulation experiments
+sim_explorer module for definition and execution of simulation experiments
 * read and compile the case definitions from configuration file
   Note that Json5 is here restriced to 'ordered keys' and 'unique keys within an object'
 * set the start variables for a given case
@@ -563,7 +563,7 @@ class Cases:
                         'type':CosimVariableType,
                         'causality':CosimVariableCausality,
                         'variability': CosimVariableVariability}.
-                        
+
         Optionally a description of the alias variable may be provided (and added to the dictionary).
         """
         variables = {}

@@ -3,7 +3,7 @@ header : {
       case : 'restitutionAndGravity',
       dateTime : '2024-10-31T12:17:00.240916',
       cases : 'BouncingBall3D',
-      file : 'C:/Users/eis/Documents/Projects/Simulation_Model_Assurance/case_study/tests/data/BouncingBall3D/BouncingBall3D.cases',
+      file : 'C:/Users/eis/Documents/Projects/Simulation_Model_Assurance/sim_explorer/tests/data/BouncingBall3D/BouncingBall3D.cases',
       casesDate : '2024-10-31T12:00:16.724092',
       timeUnit : 'second',
       timeFactor : 1000000000.0},

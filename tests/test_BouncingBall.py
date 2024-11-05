@@ -14,7 +14,7 @@ def nearly_equal(res: tuple, expected: tuple, eps=1e-7):
 
 
 def test_run_fmpy(show):
-    """Test and validate the basic BouncingBall using fmpy and not using OSP or case_study."""
+    """Test and validate the basic BouncingBall using fmpy and not using OSP or sim_explorer."""
     path = Path(Path(__file__).parent, "data/BouncingBall0/BouncingBall.fmu")
     assert path.exists(), f"File {path} does not exist"
     stepsize = 0.01

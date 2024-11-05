@@ -64,7 +64,7 @@ Definition of case variables
 The unique identification of a variable in a system requires an identificator containing both the component (instance) and the variable name (or reference).
 The identificators can thus become lengthy and difficult to work with. 
 In addition, there are system models with several components from the same model, where the user might want to address all of them (e.g. max power setting of thrusters). Moreover, FMI2 knows only scalar variables, while it would be nice to also be able to work with vectors, tables and their elements. 
-Therefore case study adops the principle that case variables are speparately defined. 
+Therefore sim explorer adops the principle that case variables are speparately defined. 
 The `variables` entry is a dictionary where each element is specified as
 
 `identificator : [component(s), variable_name(s), description]` 

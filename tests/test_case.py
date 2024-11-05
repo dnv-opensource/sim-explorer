@@ -3,9 +3,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from case_study.case import Case, Cases
-from case_study.json5 import Json5
-from case_study.simulator_interface import SimulatorInterface
+from sim_explorer.case import Case, Cases
+from sim_explorer.json5 import Json5
+from sim_explorer.simulator_interface import SimulatorInterface
 
 
 @pytest.fixture
@@ -38,7 +38,7 @@ def _make_cases():
 
     json5 = {
         "name": "Testing",
-        "description": "Simple Case Study for testing purposes",
+        "description": "Simple sim explorer for testing purposes",
         "timeUnit": "second",
         "variables": {
             "x": ["tab", "outs", "Outputs (3-dim)"],

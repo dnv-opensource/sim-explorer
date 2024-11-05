@@ -1,10 +1,10 @@
 {
 header : {
       case : 'base',
-      dateTime : '2024-11-04T11:44:45.704941',
+      dateTime : '2024-11-05T10:48:03.061505',
       cases : 'MobileCrane',
-      file : 'C:/Users/eis/Documents/Projects/Simulation_Model_Assurance/case_study/tests/data/MobileCrane/MobileCrane.cases',
-      casesDate : '2024-11-03T07:06:17.942318',
+      file : 'C:/Users/JORMEN/Documents/SeaCo/case_study/tests/data/MobileCrane/MobileCrane.cases',
+      casesDate : '2024-11-05T10:44:47.724849',
       timeUnit : 'second',
       timeFactor : 1000000000.0},
 

@@ -2,7 +2,7 @@ import time
 from pathlib import Path
 
 import pytest
-from case_study.json5 import Json5
+from sim_explorer.json5 import Json5
 
 
 @pytest.fixture(scope="session")

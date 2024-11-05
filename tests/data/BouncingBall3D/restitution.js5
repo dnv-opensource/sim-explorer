@@ -1,10 +1,10 @@
 {
 header : {
       case : 'restitution',
-      dateTime : '2024-11-04T11:44:08.628354',
+      dateTime : '2024-11-05T10:47:32.452404',
       cases : 'BouncingBall3D',
-      file : 'C:/Users/eis/Documents/Projects/Simulation_Model_Assurance/case_study/tests/data/BouncingBall3D/BouncingBall3D.cases',
-      casesDate : '2024-11-03T21:49:56.360601',
+      file : 'C:/Users/JORMEN/Documents/SeaCo/case_study/tests/data/BouncingBall3D/BouncingBall3D.cases',
+      casesDate : '2024-11-05T10:44:47.724849',
       timeUnit : 'second',
       timeFactor : 1000000000.0},
 

@@ -2,14 +2,14 @@ from math import sqrt
 from pathlib import Path
 
 import pytest
-from case_study.case import Cases
-from case_study.json5 import Json5
-from case_study.simulator_interface import SimulatorInterface
 from libcosimpy.CosimEnums import CosimExecutionState
 from libcosimpy.CosimExecution import CosimExecution
 from libcosimpy.CosimManipulator import CosimManipulator
 from libcosimpy.CosimObserver import CosimObserver
 from libcosimpy.CosimSlave import CosimLocalSlave
+from sim_explorer.case import Cases
+from sim_explorer.json5 import Json5
+from sim_explorer.simulator_interface import SimulatorInterface
 
 
 def is_nearly_equal(x: float | list, expected: float | list, eps: float = 1e-10) -> int:

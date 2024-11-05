@@ -1,7 +1,7 @@
 {
 header : {
    name : 'Testing',
-   description : 'Simple Case Study for testing purposes',
+   description : 'Simple sim explorer for testing purposes',
    timeUnit : 'second',
    variables : {
          x : ['tab','outs','Outputs (3-dim)'],
