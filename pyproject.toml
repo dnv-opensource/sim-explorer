@@ -75,11 +75,11 @@ editor = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/dnv-innersource/my-package"
-Documentation = "https://dnv-innersource.github.io/my-package/README.html"
-Repository = "https://github.com/dnv-innersource/my-package.git"
-Issues = "https://github.com/dnv-innersource/my-package/issues"
-Changelog = "https://github.com/dnv-innersource/my-package/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/dnv-innersource/sim-explorer"
+Documentation = "https://dnv-innersource.github.io/sim-explorer/README.html"
+Repository = "https://github.com/dnv-innersource/sim-explorer.git"
+Issues = "https://github.com/dnv-innersource/sim-explorer/issues"
+Changelog = "https://github.com/dnv-innersource/sim-explorer/blob/main/CHANGELOG.md"
 
 
 [tool.uv]

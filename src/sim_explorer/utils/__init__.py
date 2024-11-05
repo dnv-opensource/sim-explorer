@@ -1,1 +1,1 @@
-"""Utilities for my_package."""
+"""Utilities for sim_explorer."""
