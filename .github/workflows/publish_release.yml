@@ -9,10 +9,10 @@ on:
 jobs:
   build_package:
     uses: ./.github/workflows/_build_package.yml
-  # publish_package:
-  #   needs:
-  #     - build_package
-  #   uses: ./.github/workflows/_publish_package.yml
+  publish_package:
+    needs:
+      - build_package
+    uses: ./.github/workflows/_publish_package.yml
   # publish_package_test:
   #   needs:
   #     - build_package
