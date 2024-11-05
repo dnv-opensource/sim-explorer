@@ -102,7 +102,7 @@ native-tls = true
 
 
 [project.scripts]
-sim_explorer = "sim_explorer.cli:cli_main"
+sim-explorer = "sim_explorer.cli.sim_explorer:main"
 
 
 [tool.mypy]
