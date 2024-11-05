@@ -12,7 +12,7 @@ build-backend = "setuptools.build_meta"
     readme = "README.rst"
     requires-python = ">= 3.9,<3.12" # developed under 3.10.10!
     keywords = ["simulation","model","FMI","OSP"]
-    license = {file = "BSD-3-Clause"}
+    license = {text = "MIT"}
     classifiers = [
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
