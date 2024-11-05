@@ -7,6 +7,7 @@ from typing import TypeAlias
 from zipfile import BadZipFile, ZipFile, is_zipfile
 
 from libcosimpy.CosimEnums import CosimVariableCausality, CosimVariableType, CosimVariableVariability  # type: ignore
+from libcosimpy.CosimLogging import log_output_level, CosimLogLevel
 from libcosimpy.CosimExecution import CosimExecution  # type: ignore
 from libcosimpy.CosimManipulator import CosimManipulator  # type: ignore
 from libcosimpy.CosimObserver import CosimObserver  # type: ignore
@@ -65,6 +66,8 @@ class SimulatorInterface:
         description (str)="": Optional possibility to provide a system description
         simulator (CosimExecution)=None: Optional possibility to insert an existing simulator object.
            Otherwise this is generated through CosimExecution.from_osp_config_file().
+        log_level (CosimLogLevel): Per default the level is set to FATAL,
+           but it can be set to TRACE, DEBUG, INFO, WARNING, ERROR or FATAL (e.g. for debugging purposes)
     """
 
     simulator: CosimExecution
@@ -75,6 +78,7 @@ class SimulatorInterface:
         name: str | None = None,
         description: str = "",
         simulator: CosimExecution | None = None,
+        log_level: CosimLogLevel = CosimLogLevel.FATAL,
     ):
         self.name = name  # overwrite if the system includes that
         self.description = description  # overwrite if the system includes that
@@ -87,6 +91,7 @@ class SimulatorInterface:
             self.simulator = self._simulator_from_config(self.sysconfig)
         else:
             self.simulator = simulator
+        log_output_level( log_level)
         self.components = self.get_components()  # dict of {component name : modelId}
         # Instantiate a suitable manipulator for changing variables.
         self.manipulator = CosimManipulator.create_override()
