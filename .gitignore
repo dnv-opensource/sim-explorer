@@ -139,3 +139,5 @@ dmypy.json
 !.vscode/extensions.json
 !.vscode/*.code-snippets
 
+# Json5 results files
+tests/data/*/*.js5

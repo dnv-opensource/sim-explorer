@@ -7,7 +7,7 @@ from sim_explorer.case import Cases, Results
 
 def test_init():
     # init through existing results file
-    file = Path(__file__).parent / "data" / "BouncingBall3D" / "test_results.js5"
+    file = Path(__file__).parent / "data" / "BouncingBall3D" / "test_results"
     print("FILE", file)
     res = Results(file=file)
     # assert res.res.jspath("$.header.file", Path, True).exists()
@@ -34,7 +34,7 @@ def test_add():
 
 
 def test_plot_time_series(show):
-    file = Path(__file__).parent / "data" / "BouncingBall3D" / "test_results.js5"
+    file = Path(__file__).parent / "data" / "BouncingBall3D" / "test_results"
     assert file.exists(), f"File {file} not found"
     res = Results(file=file)
     if show:
@@ -42,7 +42,7 @@ def test_plot_time_series(show):
 
 
 def test_inspect():
-    file = Path.cwd().parent / "data" / "BouncingBall3D" / "test_case.js5"
+    file = Path.cwd().parent / "data" / "BouncingBall3D" / "test_case"
     res = Results(file=file)
     cont = res.inspect()
     assert cont["bb.e"]["len"] == 1, "Not a scalar??"

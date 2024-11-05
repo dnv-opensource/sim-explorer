@@ -8,6 +8,7 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Callable
 
+from libcosimpy.CosimLogging import log_output_level, CosimLogLevel
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -530,7 +531,7 @@ class Cases:
         self.file = Path(spec)  # everything relative to the folder of this file!
         assert self.file.exists(), f"Cases spec file {spec} not found"
         self.js = Json5(spec)
-        #        self.spec = self.js.js_py
+        log_level = CosimLogLevel[self.js.jspath("$.header.logLevel") or "FATAL"]
         if simulator is None:
             modelfile = self.js.jspath("$.header.modelFile", str) or "OspSystemStructure.xml"
             path = self.file.parent / modelfile
@@ -540,11 +541,13 @@ class Cases:
                     system=path,
                     name=self.js.jspath("$.header.name", str) or "",
                     description=self.js.jspath("$.header.description", str) or "",
+                    log_level = log_level,
                 )
             except Exception as err:
                 raise AssertionError(f"'modelFile' needed from spec: {err}") from err
         else:
             self.simulator = simulator  # SimulatorInterface( simulator = simulator)
+            log_output_level( log_level)
 
         self.timefac = self._get_time_unit() * 1e9  # internally OSP uses pico-seconds as integer!
         # read the 'variables' section and generate dict { alias : { (instances), (variables)}}:

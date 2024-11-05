@@ -54,6 +54,9 @@ The following header section elements (denoted as `header-lines` above) are defi
     * If no `CosimExecution` object is provided, but a `OspSystemStructure.xml` file is found in the same folder as the `.cases` file,
       this file is assumed as the system definition file and a `CosimExecution` object is instantiated internally.
     * A system structure file can be explicitly specified and will be used to generate a `CosimExecution` object.
+*logLevel* (optional)
+    Log level of the simulator. Per default the level is set to FATAL,
+    but it can be set to TRACE, DEBUG, INFO, WARNING, ERROR or FATAL (e.g. for debugging purposes)
 *timeUnit* (optional)
     The unit of time the independent variable relates to, e.g. "second"
 *variables* (mandatory)
