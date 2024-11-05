@@ -1,7 +1,7 @@
 
 # Style Guide
 
-All code shall be [black](https://pypi.org/project/black/) formatted.
+All code shall be [Ruff](https://docs.astral.sh/ruff) formatted.
 
 References, details as well as examples of bad/good styles and their respective reasoning can be found below.
 
@@ -13,13 +13,12 @@ References, details as well as examples of bad/good styles and their respective 
 * [Documenting Python Code: A Complete Guide](https://realpython.com/documenting-python-code)
 * [Jupyter](https://jupyter.readthedocs.io/en/latest/contributing/ipython-dev-guide/coding_style.html) style guide
 * Python style guide on [learnpython.com](https://learnpython.com/blog/python-coding-best-practices-and-style-guidelines/)
-* [flake8](https://flake8.pycqa.org/en/latest/)
-* [black](https://pypi.org/project/black/)
+* [Ruff](https://docs.astral.sh/ruff)
 
 ## Code Layout
 
 * Use 4 spaces instead of tabs
-* Maximum line length is 88 characters (not 79 as proposed in [PEP-8](https://www.python.org/dev/peps/pep-0008/))
+* Maximum line length is 120 characters (not 79 as proposed in [PEP-8](https://www.python.org/dev/peps/pep-0008/))
 * 2 blank lines between classes and functions
 * 1 blank line within class, between class methods
 * Use blank lines for logic separation of functionality within functions/methods wherever it is justified
@@ -229,7 +228,7 @@ Long module names can have words separated by underscores (`really_long_module_n
 ```
 
 * Never use mutable objects as default arguments in Python. If an attribute in a class or a named parameter in a function is of a mutable data type (e.g. a list or dict), never set its default value in the declaration of an object but always set it to None first, and then only later assign the default value in the class's constructor, or the functions body, respectively. Sounds complicated? If you prefer the shortcut, the examples below are your friend.
-If your are interested in the long story including the why‘s, read these discussions on [Reddit](https://old.reddit.com/r/Python/comments/opb7hm/do_not_use_mutable_objects_as_default_arguments/) and [Twitter](https://twitter.com/willmcgugan/status/1419616480971399171).
+If you are interested in the long story including the why‘s, read these discussions on [Reddit](https://old.reddit.com/r/Python/comments/opb7hm/do_not_use_mutable_objects_as_default_arguments/) and [Twitter](https://twitter.com/willmcgugan/status/1419616480971399171).
 
 ```py
     # Bad
