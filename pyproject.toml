@@ -112,7 +112,7 @@ plugins = [
 mypy_path = "stubs"
 files = [
     "src",
-    # "tests",
+    "tests",
     # "demos",
 ]
 exclude = [
