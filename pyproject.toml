@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sim-explorer"
-version = "0.0.2b3"
+version = "0.0.2b4"
 description = "Experimentation tools on top of OSP simulation models."
 authors = [
     { name = "Siegfried Eisinger", email = "Siegfried.Eisinger@DNV.com" },
@@ -49,6 +49,9 @@ rest = [
 editor = [
     "thonny>=4.0.2",
 ]
+
+[project.scripts]
+sim_explorer = "sim_explorer.__main__:cli_main"
 
 [tool.setuptools.packages.find]
 where = [
