@@ -25,7 +25,7 @@ copyright = "2024, DNV AS. Released as OpenSource."
 author = "Siegfried Eisinger, DNV Simulation Technology Team, SEACo project team"
 
 # The full version, including alpha/beta/rc tags
-release = "0.0.2b5"
+release = "0.0.2b6"
 
 # -- General configuration ---------------------------------------------------
 
