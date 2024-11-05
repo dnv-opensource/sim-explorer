@@ -29,7 +29,7 @@ def test_add():
     case = cases.case_by_name("base")
     res = Results(case=case)
     res._header_transform(tostring=True)
-    res.add(0.0, 0, 0, (6,), (9.81,))
+    res.add(time=0.0, comp=0, typ=0, refs=[6], values=(9.81,))
     # print( res.res.write( pretty_print=True))
     assert res.res.jspath("$['0.0'].bb.g") == 9.81
 
@@ -39,7 +39,7 @@ def test_plot_time_series(show):
     assert file.exists(), f"File {file} not found"
     res = Results(file=file)
     if show:
-        res.plot_time_series(("bb.x[2]", "bb.v[2]"), "Test plot")
+        res.plot_time_series(variables=["bb.x[2]", "bb.v[2]"], title="Test plot")
 
 
 def test_inspect():

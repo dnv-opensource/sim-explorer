@@ -366,6 +366,7 @@ class Json5:
 
     def _value(self):
         """Read and return a value at the current position, i.e. expect ,'...', "...",}."""
+        v: str | dict[str, Any] | list[Any]
         q1, q2 = self._quoted()
         if q2 < 0:  # no quotation found. Include also [ and { in search
             m = re.search(r"[\[,\{\}\]]", self.js5[self.pos :])

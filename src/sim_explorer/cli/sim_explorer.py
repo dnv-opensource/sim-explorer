@@ -131,10 +131,11 @@ def main() -> None:
         logger.error(f"sim-explorer.py: File {cases_file} not found.")
         return
     cases = Cases(args.cases)
-    print("ARGS", args)
+    logger.info(f"ARGS: {args}")
 
     if not isinstance(cases, Cases):
-        print(f"Instantiation of {args.cases} not successfull")
+        logger.error(f"Instantiation of {args.cases} not successfull")
+        return
 
     log_msg_stub: str = f"Start sim-explorer.py with following arguments:\n" f"\t cases_file: \t{cases_file}\n"
 
@@ -145,16 +146,18 @@ def main() -> None:
 
     elif args.run is not None:
         case = cases.case_by_name(args.run)
-        if not isinstance(case, Case):
-            print(f"Case {args.run} not found in {args.cases}")
+        if case is None:
+            logger.error(f"Case {args.run} not found in {args.cases}")
+            return
         logger.info(f"{log_msg_stub}\t option: run \t\t\t{args.run}\n")
         # Invoke API
         case.run()
 
     elif args.Run is not None:
         case = cases.case_by_name(args.Run)
-        if not isinstance(case, Case):
-            print(f"Case {args.Run} not found in {args.cases}")
+        if case is None:
+            logger.error(f"Case {args.Run} not found in {args.cases}")
+            return
         logger.info(f"{log_msg_stub}\t --Run \t\t\t{args.Run}\n")
         # Invoke API
         for _case in case.iter():

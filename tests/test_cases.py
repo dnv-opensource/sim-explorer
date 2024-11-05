@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from sim_explorer.case import Cases
+from sim_explorer.case import Case, Cases
 from sim_explorer.simulator_interface import SimulatorInterface
 
 # def test_tuple_iter():
@@ -37,6 +37,7 @@ def test_cases():
     sim = SimulatorInterface(str(Path(__file__).parent / "data" / "BouncingBall0" / "OspSystemStructure.xml"))
     cases = Cases(Path(__file__).parent / "data" / "BouncingBall0" / "BouncingBall.cases", sim)
 
+    c: str | Case
     print(cases.info())
     # cases.spec
     assert cases.js.jspath("$.header.name", str, True) == "BouncingBall", "BouncingBall expected as cases name"
@@ -50,7 +51,10 @@ def test_cases():
     assert cases.js.jspath("$.header.variables.g[2]") == "Gravity acting on the ball"
     # find_by_name
     for c in cases.base.list_cases(as_name=False, flat=True):
-        assert cases.case_by_name(c.name).name == c.name, f"Case {c.name} not found in hierarchy"
+        assert isinstance(c, Case)
+        case_by_name = cases.case_by_name(c.name)
+        assert case_by_name is not None
+        assert case_by_name.name == c.name, f"Case {c.name} not found in hierarchy"
     assert cases.case_by_name("case99") is None, "Case99 was not expected to be found"
     c_gravity = cases.case_by_name("gravity")
     assert c_gravity is not None and c_gravity.name == "gravity", "'gravity' is expected to exist"

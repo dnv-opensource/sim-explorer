@@ -3,7 +3,7 @@ import re
 import xml.etree.ElementTree as ET  # noqa: N817
 from enum import Enum
 from pathlib import Path
-from typing import TypeAlias
+from typing import TypeAlias, cast
 from zipfile import BadZipFile, ZipFile, is_zipfile
 
 from libcosimpy.CosimEnums import CosimVariableCausality, CosimVariableType, CosimVariableVariability  # type: ignore
@@ -70,8 +70,6 @@ class SimulatorInterface:
            but it can be set to TRACE, DEBUG, INFO, WARNING, ERROR or FATAL (e.g. for debugging purposes)
     """
 
-    simulator: CosimExecution
-
     def __init__(
         self,
         system: Path | str = "",
@@ -83,12 +81,13 @@ class SimulatorInterface:
         self.name = name  # overwrite if the system includes that
         self.description = description  # overwrite if the system includes that
         self.sysconfig: Path | None = None
+        self.simulator: CosimExecution
         if simulator is None:  # instantiate the simulator through the system config file
             self.sysconfig = Path(system)
             assert self.sysconfig.exists(), f"File {self.sysconfig.name} not found"
             ck, msg = self._check_system_structure(self.sysconfig)
             assert ck, msg
-            self.simulator = self._simulator_from_config(self.sysconfig)
+            self.simulator = cast(CosimExecution, self._simulator_from_config(self.sysconfig))
         else:
             self.simulator = simulator
         log_output_level(log_level)
@@ -413,7 +412,7 @@ class SimulatorInterface:
         else:
             raise CaseUseError(f"Unknown type {typ}") from None
 
-    def get_variable_value(self, instance: int, typ: int, var_refs: tuple[int]):
+    def get_variable_value(self, instance: int, typ: int, var_refs: tuple[int, ...]):
         """Provide an observer function which gets the 'variable' value (of the given 'instance' model) at the time when called.
 
         Args:

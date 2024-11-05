@@ -53,20 +53,20 @@ def test_component_variable_name():
 
 def test_default_initial():
     print("DIR", dir(SimulatorInterface))
-    assert SimulatorInterface.default_initial(0, 0) == 3, f"Found {SimulatorInterface._default_initial( 0, 0)}"
-    assert SimulatorInterface.default_initial(1, 0) == 3, f"Found {SimulatorInterface._default_initial( 1, 0)}"
-    assert SimulatorInterface.default_initial(2, 0) == 0, f"Found {SimulatorInterface._default_initial( 2, 0)}"
-    assert SimulatorInterface.default_initial(3, 0) == 3, f"Found {SimulatorInterface._default_initial( 3, 0)}"
-    assert SimulatorInterface.default_initial(4, 0) == 0, f"Found {SimulatorInterface._default_initial( 4, 0)}"
-    assert SimulatorInterface.default_initial(5, 0) == 3, f"Found {SimulatorInterface._default_initial( 5, 0)}"
-    assert SimulatorInterface.default_initial(1, 1) == 0, f"Found {SimulatorInterface._default_initial( 1, 1)}"
-    assert SimulatorInterface.default_initial(1, 2) == 0, f"Found {SimulatorInterface._default_initial( 1, 1)}"
-    assert SimulatorInterface.default_initial(1, 3) == 3, f"Found {SimulatorInterface._default_initial( 1, 1)}"
-    assert SimulatorInterface.default_initial(1, 4) == 3, f"Found {SimulatorInterface._default_initial( 1, 1)}"
-    assert SimulatorInterface.default_initial(2, 0) == 0, f"Found {SimulatorInterface._default_initial( 2, 0)}"
-    assert SimulatorInterface.default_initial(5, 4) == 3, f"Found {SimulatorInterface._default_initial( 5, 4)}"
-    assert SimulatorInterface.default_initial(3, 2) == 2, f"Found {SimulatorInterface._default_initial( 3, 2)}"
-    assert SimulatorInterface.default_initial(4, 2) == 2, f"Found {SimulatorInterface._default_initial( 4, 2)}"
+    assert SimulatorInterface.default_initial(0, 0) == 3, f"Found {SimulatorInterface.default_initial( 0, 0)}"
+    assert SimulatorInterface.default_initial(1, 0) == 3, f"Found {SimulatorInterface.default_initial( 1, 0)}"
+    assert SimulatorInterface.default_initial(2, 0) == 0, f"Found {SimulatorInterface.default_initial( 2, 0)}"
+    assert SimulatorInterface.default_initial(3, 0) == 3, f"Found {SimulatorInterface.default_initial( 3, 0)}"
+    assert SimulatorInterface.default_initial(4, 0) == 0, f"Found {SimulatorInterface.default_initial( 4, 0)}"
+    assert SimulatorInterface.default_initial(5, 0) == 3, f"Found {SimulatorInterface.default_initial( 5, 0)}"
+    assert SimulatorInterface.default_initial(1, 1) == 0, f"Found {SimulatorInterface.default_initial( 1, 1)}"
+    assert SimulatorInterface.default_initial(1, 2) == 0, f"Found {SimulatorInterface.default_initial( 1, 1)}"
+    assert SimulatorInterface.default_initial(1, 3) == 3, f"Found {SimulatorInterface.default_initial( 1, 1)}"
+    assert SimulatorInterface.default_initial(1, 4) == 3, f"Found {SimulatorInterface.default_initial( 1, 1)}"
+    assert SimulatorInterface.default_initial(2, 0) == 0, f"Found {SimulatorInterface.default_initial( 2, 0)}"
+    assert SimulatorInterface.default_initial(5, 4) == 3, f"Found {SimulatorInterface.default_initial( 5, 4)}"
+    assert SimulatorInterface.default_initial(3, 2) == 2, f"Found {SimulatorInterface.default_initial( 3, 2)}"
+    assert SimulatorInterface.default_initial(4, 2) == 2, f"Found {SimulatorInterface.default_initial( 4, 2)}"
 
 
 def test_simulator_from_system_structure():

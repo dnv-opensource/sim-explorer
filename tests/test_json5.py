@@ -162,6 +162,7 @@ def test_update(ex):
 
 
 def test_json5_syntax():
+    js: Json5 | str
     assert Json5("Hello World", False).js5 == "{ Hello World }", "Automatic addition of '{}' did not work"
     js = Json5("Hello\nWorld\rHei\n\rHo\r\nHi", auto=False)
     assert js.lines[6] == 24, f"Line 6 should start at {js.lines[6]}"
