@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pytest
+
 from sim_explorer.case import Cases
 from sim_explorer.simulator_interface import SimulatorInterface
 

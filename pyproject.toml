@@ -25,7 +25,7 @@ name = "sim-explorer"
 version = "0.0.2b7"
 description = "Experimentation tools on top of OSP simulation models."
 readme = "README.rst"
-requires-python = ">= 3.10"
+requires-python = ">= 3.10.10" # TODO @CLAROS: Change to '3.10' as soon as component-model 0.0.2 is published on PyPI
 license = { file = "LICENSE" }
 authors = [
     { name = "Siegfried Eisinger", email = "Siegfried.Eisinger@dnv.com" },

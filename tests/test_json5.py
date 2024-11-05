@@ -2,6 +2,7 @@ import time
 from pathlib import Path
 
 import pytest
+
 from sim_explorer.json5 import Json5
 
 

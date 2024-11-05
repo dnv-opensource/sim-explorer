@@ -136,11 +136,7 @@ def main() -> None:
     if not isinstance(cases, Cases):
         print(f"Instantiation of {args.cases} not successfull")
 
-    log_msg_stub: str = (
-        f"Start sim-explorer.py with following arguments:\n"
-        f"\t cases_file: \t{cases_file}\n"
-        f"\t option: \t\t\t{run}\n"
-    )
+    log_msg_stub: str = f"Start sim-explorer.py with following arguments:\n" f"\t cases_file: \t{cases_file}\n"
 
     case: Case | None = None
 

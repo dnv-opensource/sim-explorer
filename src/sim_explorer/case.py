@@ -8,9 +8,9 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Callable
 
-from libcosimpy.CosimLogging import log_output_level, CosimLogLevel
 import matplotlib.pyplot as plt
 import numpy as np
+from libcosimpy.CosimLogging import CosimLogLevel, log_output_level
 
 from .json5 import Json5
 from .simulator_interface import SimulatorInterface, from_xml
@@ -541,13 +541,13 @@ class Cases:
                     system=path,
                     name=self.js.jspath("$.header.name", str) or "",
                     description=self.js.jspath("$.header.description", str) or "",
-                    log_level = log_level,
+                    log_level=log_level,
                 )
             except Exception as err:
                 raise AssertionError(f"'modelFile' needed from spec: {err}") from err
         else:
             self.simulator = simulator  # SimulatorInterface( simulator = simulator)
-            log_output_level( log_level)
+            log_output_level(log_level)
 
         self.timefac = self._get_time_unit() * 1e9  # internally OSP uses pico-seconds as integer!
         # read the 'variables' section and generate dict { alias : { (instances), (variables)}}:

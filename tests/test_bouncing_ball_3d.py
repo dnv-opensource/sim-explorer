@@ -2,6 +2,7 @@ from math import sqrt
 from pathlib import Path
 
 from fmpy import plot_result, simulate_fmu
+
 from sim_explorer.case import Case, Cases
 
 

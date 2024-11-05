@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 from libcosimpy.CosimExecution import CosimExecution
+
 from sim_explorer.simulator_interface import SimulatorInterface, match_with_wildcard
 
 
@@ -22,10 +23,10 @@ def test_pytype():
     with pytest.raises(ValueError) as err:
         SimulatorInterface.pytype("Real", "fmi2False")
     assert str(err.value).startswith("could not convert string to float:"), "No error raised as expected"
-    assert SimulatorInterface.pytype(0) == float
-    assert SimulatorInterface.pytype(1) == int
-    assert SimulatorInterface.pytype(2) == str
-    assert SimulatorInterface.pytype(3) == bool
+    assert SimulatorInterface.pytype(0) is float
+    assert SimulatorInterface.pytype(1) is int
+    assert SimulatorInterface.pytype(2) is str
+    assert SimulatorInterface.pytype(3) is bool
     assert SimulatorInterface.pytype(1, 2.3) == 2
 
 

@@ -7,8 +7,8 @@ from typing import TypeAlias
 from zipfile import BadZipFile, ZipFile, is_zipfile
 
 from libcosimpy.CosimEnums import CosimVariableCausality, CosimVariableType, CosimVariableVariability  # type: ignore
-from libcosimpy.CosimLogging import log_output_level, CosimLogLevel
 from libcosimpy.CosimExecution import CosimExecution  # type: ignore
+from libcosimpy.CosimLogging import CosimLogLevel, log_output_level
 from libcosimpy.CosimManipulator import CosimManipulator  # type: ignore
 from libcosimpy.CosimObserver import CosimObserver  # type: ignore
 
@@ -91,7 +91,7 @@ class SimulatorInterface:
             self.simulator = self._simulator_from_config(self.sysconfig)
         else:
             self.simulator = simulator
-        log_output_level( log_level)
+        log_output_level(log_level)
         self.components = self.get_components()  # dict of {component name : modelId}
         # Instantiate a suitable manipulator for changing variables.
         self.manipulator = CosimManipulator.create_override()
@@ -441,7 +441,7 @@ class SimulatorInterface:
 
         if val is None:
             return typ
-        elif typ == bool:
+        elif typ is bool:
             if isinstance(val, str):
                 return "true" in val.lower()  # should be fmi2True and fmi2False
             elif isinstance(val, int):
