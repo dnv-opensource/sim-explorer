@@ -1,13 +1,12 @@
 [build-system]
 requires = [
-    "setuptools",
-    "wheel",
+    "setuptools>=61.0",
 ]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "sim-explorer"
-version = "0.0.2b2"
+version = "0.0.2b1"
 description = "Experimentation tools on top of OSP simulation models."
 authors = [
     { name = "Siegfried Eisinger", email = "Siegfried.Eisinger@DNV.com" },
@@ -48,14 +47,6 @@ rest = [
 ]
 editor = [
     "thonny>=4.0.2",
-]
-
-[tool.setuptools.packages.find]
-where = [
-    "src",
-]
-exclude = [
-    "test*",
 ]
 
 [tool.black]
