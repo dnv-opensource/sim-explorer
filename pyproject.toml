@@ -1,112 +1,144 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = [
+    "setuptools",
+    "wheel",
+]
 build-backend = "setuptools.build_meta"
 
 [project]
-    name = "sim_explorer"
-    version = "0.0.1"
-    description = "Experimentation tools on top of OSP simulation models."
-    authors = [
-        {name = "Siegfried Eisinger", email = "Siegfried.Eisinger@DNV.com"},
-    ]
-    readme = "README.rst"
-    requires-python = ">= 3.9,<3.12" # developed under 3.10.10!
-    keywords = ["simulation","model","FMI","OSP"]
-    license = {text = "MIT"}
-    classifiers = [
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
-    ]
-    dependencies = [
-        "numpy>=1.24.2",
-        "libcosimpy>=0.0.2",
-        "fmpy>=0.3.21",
-        "matplotlib>=3.7.1",
-        "pint>=0.24.3",
-        "sympy>=1.13.3",
-        "component-model>=0.0.1",
-        "jsonpath-ng>=1.7.0"
-    ]
-    #dynamic = ["version"]
+name = "sim-explorer"
+version = "0.0.2b6"
+description = "Experimentation tools on top of OSP simulation models."
+authors = [
+    { name = "Siegfried Eisinger", email = "Siegfried.Eisinger@DNV.com" },
+]
+readme = "README.rst"
+requires-python = ">= 3.10,<3.12" # developed under 3.10.10!
+keywords = [
+    "simulation",
+    "model",
+    "FMI",
+    "OSP",
+]
+license = { text = "MIT" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "numpy>=1.24.2",
+    "libcosimpy>=0.0.2",
+    "fmpy>=0.3.21",
+    "matplotlib>=3.7.1",
+    "pint>=0.24.3",
+    "sympy>=1.13.3",
+    "component-model>=0.0.1",
+    "jsonpath-ng>=1.7.0",
+]
+#dynamic = ["version"]
 
-    [project.optional-dependencies]
-        modelTest = ["FMPy>=0.3.20", "matplotlib>=3.7.1"]
-        rest = ["docutils>=0.20.1"]
-        editor = ["thonny>=4.0.2"]
+[project.optional-dependencies]
+modelTest = [
+    "FMPy>=0.3.20",
+    "matplotlib>=3.7.1",
+]
+rest = [
+    "docutils>=0.20.1",
+]
+editor = [
+    "thonny>=4.0.2",
+]
+
+[project.scripts]
+sim_explorer = "sim_explorer.cli:cli_main"
+
+[tool.setuptools]
+packages = [
+    "sim_explorer",
+]
+include-package-data = true
 
 [tool.black]
-    line-length = 120
-    target-version = ["py310"]
+line-length = 120
+target-version = [
+    "py310",
+]
 
 [tool.ruff]
-    exclude = [
-        ".git",
-        ".venv",
-        ".tox",
-        "build",
-        "dist",
-        "__pycache__",
-        "./doc/source/conf.py",
-        "./tests/data",
-    ]
-    src = ["sim_explorer"]
-    lint.ignore = [
-        "E501",  # Line length too long
-        "D100",  # Missing docstring in public module
-        "D101",  # Missing docstring in public class
-        "D102",  # Missing docstring in public method
-        "D103",  # Missing docstring in public function
-        "D104",  # Missing docstring in public package
-        "D105",  # Missing docstring in magic method
-        "D107",  # Missing docstring in __init__
-        "D202",  # No blank lines allowed after function docstring
-        "D203",  # 1 blank line required before class docstring
-        "D205",  # 1 blank line required between summary line and description
-        "D212",  # Multi-line docstring summary should start at the first line
-        "D213",  # Multi-line docstring summary should start at the second line
-        # "N802",  # Function name should be lowercase  (uncomment if you want to allow Uppercase function names)
-        "N803",  # Argument name should be lowercase  (uncommented. Lower-camelCase is accepted for variables related to XML and FMI standard)
-        "N806",  # Variable in function should be lowercase  (uncomment if you want to allow Uppercase variable names in functions)
-        # "N815",  # Variable in class scope should not be mixedCase  (uncomment if you want to allow mixedCase variable names in class scope)
-        # "N816",  # Variable in global scope should not be mixedCase  (uncomment if you want to allow mixedCase variable names in global scope)
-        ]
+exclude = [
+    ".git",
+    ".venv",
+    ".tox",
+    "build",
+    "dist",
+    "__pycache__",
+    "./doc/source/conf.py",
+    "./tests/data",
+]
+src = [
+    "sim_explorer",
+]
+lint.ignore = [
+    "E501", # Line length too long
+    "D100", # Missing docstring in public module
+    "D101", # Missing docstring in public class
+    "D102", # Missing docstring in public method
+    "D103", # Missing docstring in public function
+    "D104", # Missing docstring in public package
+    "D105", # Missing docstring in magic method
+    "D107", # Missing docstring in __init__
+    "D202", # No blank lines allowed after function docstring
+    "D203", # 1 blank line required before class docstring
+    "D205", # 1 blank line required between summary line and description
+    "D212", # Multi-line docstring summary should start at the first line
+    "D213", # Multi-line docstring summary should start at the second line
+    # "N802",  # Function name should be lowercase  (uncomment if you want to allow Uppercase function names)
+    "N803", # Argument name should be lowercase  (uncommented. Lower-camelCase is accepted for variables related to XML and FMI standard)
+    "N806", # Variable in function should be lowercase  (uncomment if you want to allow Uppercase variable names in functions)
+    # "N815",  # Variable in class scope should not be mixedCase  (uncomment if you want to allow mixedCase variable names in class scope)
+    # "N816",  # Variable in global scope should not be mixedCase  (uncomment if you want to allow mixedCase variable names in global scope)
+]
 
-    line-length = 120
-    lint.select = [
-        "E",
-        "D",
-        "F",
-        "N",
-        "W",
-        "I",
-        "B",
-    ]
-    target-version = "py310"
+line-length = 120
+lint.select = [
+    "E",
+    "D",
+    "F",
+    "N",
+    "W",
+    "I",
+    "B",
+]
+target-version = "py310"
 
-    [tool.ruff.lint.pep8-naming]
-    ignore-names = [
-        "test_*",
-        "setUp",
-        "tearDown",
-    ]
+[tool.ruff.lint.pep8-naming]
+ignore-names = [
+    "test_*",
+    "setUp",
+    "tearDown",
+]
 
-    [tool.ruff.lint.pydocstyle]
-    convention = "numpy"
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
 
-    [tool.ruff.lint.per-file-ignores]
-    "__init__.py" = ["I001"]
-    "./tests/*" = ["D"]
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = [
+    "I001",
+]
+"./tests/*" = [
+    "D",
+]
 
 
 [tool.mypy]
-    exclude = [
-        ".git",
-        ".venv",
-        ".tox",
-        "build",
-        "dist",
-        "**/__pycache__",
-        "./doc/source/conf.py",
-        "./tests/data",
-    ]
+exclude = [
+    ".git",
+    ".venv",
+    ".tox",
+    "build",
+    "dist",
+    "**/__pycache__",
+    "./doc/source/conf.py",
+    "./tests/data",
+]
