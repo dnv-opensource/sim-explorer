@@ -83,6 +83,7 @@ class SimulatorInterface:
         self.name = name  # overwrite if the system includes that
         self.description = description  # overwrite if the system includes that
         self.sysconfig: Path | None = None
+        log_output_level( log_level)
         if simulator is None:  # instantiate the simulator through the system config file
             self.sysconfig = Path(system)
             assert self.sysconfig.exists(), f"File {self.sysconfig.name} not found"
@@ -91,7 +92,6 @@ class SimulatorInterface:
             self.simulator = self._simulator_from_config(self.sysconfig)
         else:
             self.simulator = simulator
-        log_output_level( log_level)
         self.components = self.get_components()  # dict of {component name : modelId}
         # Instantiate a suitable manipulator for changing variables.
         self.manipulator = CosimManipulator.create_override()

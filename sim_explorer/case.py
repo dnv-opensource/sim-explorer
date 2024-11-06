@@ -14,6 +14,7 @@ import numpy as np
 
 from .json5 import Json5
 from .simulator_interface import SimulatorInterface, from_xml
+from .utils import relative_path, get_path
 
 """
 sim_explorer module for definition and execution of simulation experiments
@@ -878,7 +879,7 @@ class Results:
                 "case": self.case.name,
                 "dateTime": datetime.today().isoformat(),
                 "cases": self.case.cases.js.jspath("$.header.name", str, True),
-                "file": Path(self.case.cases.file).as_posix(),
+                "file": relative_path( Path(self.case.cases.file), self.file),
                 "casesDate": datetime.fromtimestamp(os.path.getmtime(self.case.cases.file)).isoformat(),
                 "timeUnit": self.case.cases.js.jspath("$.header.timeUnit", str) or "sec",
                 "timeFactor": self.case.cases.timefac,
@@ -894,11 +895,11 @@ class Results:
         if tostring:
             res.update("$.header.dateTime", res.jspath("$.header.dateTime", datetime, True).isoformat())
             res.update("$.header.casesDate", res.jspath("$.header.casesDate", datetime, True).isoformat())
-            res.update("$.header.file", res.jspath("$.header.file", Path, True).as_posix())
+            res.update("$.header.file", relative_path( res.jspath("$.header.file", Path, True), self.file))
         else:
             res.update("$.header.dateTime", datetime.fromisoformat(res.jspath("$.header.dateTime", str, True)))
             res.update("$.header.casesDate", datetime.fromisoformat(res.jspath("$.header.casesDate", str, True)))
-            res.update("$.header.file", Path(res.jspath("$.header.file", str, True)))
+            res.update("$.header.file", get_path( res.jspath("$.header.file", str, True), self.file.parent))
 
     def add(self, time: float, comp: int, typ: int, refs: int | list[int], values: tuple):
         """Add the results of a get action to the results dict for the case.
@@ -1001,7 +1002,7 @@ class Results:
                 if isinstance(found, list):
                     raise NotImplementedError("So far not implemented for multi-dimensional plots") from None
                 else:
-                    times.append(key)
+                    times.append(float(key))
                     values.append(found)
         return (times, values)
 

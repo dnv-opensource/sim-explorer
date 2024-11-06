@@ -15,7 +15,7 @@ def test_init():
     assert res.res.jspath("$.header.dateTime", datetime, True).isoformat() == "1924-01-14T00:00:00"
     assert res.res.jspath("$.header.casesDate", datetime, True).isoformat() == "1924-01-13T00:00:00"
     # init making a new file
-    cases = Cases(Path.cwd().parent / "data" / "BouncingBall3D" / "BouncingBall3D.cases")
+    cases = Cases(Path(__file__).parent / "data" / "BouncingBall3D" / "BouncingBall3D.cases")
     case = cases.case_by_name("base")
     res = Results(case=case)
     # assert res.res.jspath("$.header.file", Path, True).exists()
@@ -42,7 +42,7 @@ def test_plot_time_series(show):
 
 
 def test_inspect():
-    file = Path.cwd().parent / "data" / "BouncingBall3D" / "test_case"
+    file = Path(__file__).parent / "data" / "BouncingBall3D" / "test_case"
     res = Results(file=file)
     cont = res.inspect()
     assert cont["bb.e"]["len"] == 1, "Not a scalar??"

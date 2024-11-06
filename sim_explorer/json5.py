@@ -56,9 +56,12 @@ class Json5:
         else:  # instantiation from file
             try:
                 if Path(js5).exists():
-                    with open(Path(js5), "r") as file:  # read file into string
-                        self.js5 = file.read()
-            except Exception:
+                    path = Path(js5)
+                elif Path(js5).name.exists():
+                    path = Path(js5).name
+                with open(path, "r") as file:  # read file into string
+                    self.js5 = file.read()
+            except Exception as err:
                 pass
             if not hasattr(self, "js5"):  # file reading not succesfull
                 if isinstance(js5, str):
