@@ -100,7 +100,6 @@ def _argparser() -> argparse.ArgumentParser:
         "--version",
         action="version",
         version=__version__,
-        required=False,
     )
 
     return parser
