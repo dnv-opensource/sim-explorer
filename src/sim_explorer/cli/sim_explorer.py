@@ -136,11 +136,13 @@ def main() -> None:
         logger.error(f"Instantiation of {args.cases} not successfull")
         return
 
-    log_msg_stub: str = f"Start sim-explorer.py with following arguments:\n" f"\t cases: \t{cases}\n"
+    log_msg_stub: str = (
+        f"Start sim-explorer.py with following arguments:\n" f"\t cases: \t{cases}\n"
+    )
 
     case: Case | None = None
 
-    if args.info is not None:
+    if args.info is not None and args.info:
         print(cases.info())
 
     elif args.run is not None:
@@ -159,8 +161,7 @@ def main() -> None:
             return
         logger.info(f"{log_msg_stub}\t --Run \t\t\t{args.Run}\n")
         # Invoke API
-        for _case in case.iter():
-            _case.run()
+        cases.run_case(case, run_subs=True)
 
 
 if __name__ == "__main__":
