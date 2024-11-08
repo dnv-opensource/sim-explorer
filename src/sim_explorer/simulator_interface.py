@@ -4,7 +4,6 @@ import xml.etree.ElementTree as ET  # noqa: N817
 from enum import Enum
 from pathlib import Path
 from typing import TypeAlias, cast
-from zipfile import BadZipFile, ZipFile, is_zipfile
 from sim_explorer.utils.misc import match_with_wildcard, from_xml
 
 from libcosimpy.CosimEnums import CosimVariableCausality, CosimVariableType, CosimVariableVariability  # type: ignore

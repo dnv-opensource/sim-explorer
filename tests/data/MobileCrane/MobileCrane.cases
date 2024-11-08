@@ -2,6 +2,7 @@
    name        : 'MobileCrane',
    description : 'sim explorer with the MobileCrane FMU (standalone)',
    modelFile : "OspSystemStructure.xml",
+   logLevel : "TRACE",
    timeUnit  : "second",
    variables : {
       p     : ['mobileCrane', 'pedestal_boom', "Length and angle of pedestal. Use p[2] to set pedestal azimuth [degrees]"],
@@ -24,7 +25,7 @@ base : {
       stopTime : 1.0,
       stepSize : 0.1,
       p[0,2]   : [3.0, 0.0],
-      b[0,1]   : [8.0, 1.570796], # 90 deg polar (horizontal)
+      b[0,1]   : [8.0, 90], #1.570796], # 90 deg polar (horizontal)
       r[0]     : 1e-6, # very short rope
       df_dt    : [0.0, 0.0],
       dp_dt    : 0.0,
