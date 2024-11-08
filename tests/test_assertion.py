@@ -1,5 +1,4 @@
 from math import cos, sin
-from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pytest
