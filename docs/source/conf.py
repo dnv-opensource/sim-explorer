@@ -63,7 +63,7 @@ exclude_patterns = []
 html_title = f"sim-explorer {release}"
 html_theme = "furo"
 html_static_path = ["_static"]
-html_logo = "_static/sim_explorer.svg"
+html_logo = "_static/sim-explorer.svg"
 autodoc_default_options = {
     "member-order": "groupwise",
     "undoc-members": True,
