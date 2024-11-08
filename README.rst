@@ -23,15 +23,14 @@ Such sweeps should be performed with separate tools.
 The package might be compared with navigating through a huge house, where the cases represent the various rooms,
 while searching for object in a given room is left to separate tools.
 
-The package is designed as support tool for Assurance of Simulation Models, see DNV-RP-0513.
+The package is designed as support tool for Assurance of Simulation Models, see `DNV-RP-0513 <https://standards.dnv.com/explorer/document/6A4F5922251B496B9216572C23730D33/2>`_.
 
 The package is currently under development. More instructions and documentation will be added.
 
-Installation:
--------------
-1.	Install the `sim-explorer` package: ``pip install sim-explorer``
-2.	Software dependencies: `matplotlib`, `numpy`, `libcosimpy`, `jsonpath-ng`
-3.	Latest release: Version 0.1, based on libcosimpy 0.0.2
+Installation
+------------
+
+``pip install sim-explorer``
 
 
 Development Setup
