@@ -1459,7 +1459,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "component-model", specifier = ">=0.0.1" },
+    { name = "component-model", specifier = ">=0.1.0" },
     { name = "docutils", marker = "extra == 'rest'", specifier = ">=0.21" },
     { name = "fmpy", specifier = ">=0.3.21" },
     { name = "fmpy", marker = "extra == 'modeltest'", specifier = ">=0.3.21" },
