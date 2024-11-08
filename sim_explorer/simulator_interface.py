@@ -8,7 +8,7 @@ from zipfile import BadZipFile, ZipFile, is_zipfile
 
 from libcosimpy.CosimEnums import CosimVariableCausality, CosimVariableType, CosimVariableVariability  # type: ignore
 from libcosimpy.CosimExecution import CosimExecution  # type: ignore
-from libcosimpy.CosimLogging import CosimLogLevel, log_output_level # type: ignore
+from libcosimpy.CosimLogging import CosimLogLevel, log_output_level  # type: ignore
 from libcosimpy.CosimManipulator import CosimManipulator  # type: ignore
 from libcosimpy.CosimObserver import CosimObserver  # type: ignore
 

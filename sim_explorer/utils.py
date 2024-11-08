@@ -3,7 +3,7 @@ from pathlib import Path
 
 def relative_path(p1: Path, p2: Path) -> str:
     """Identify the path of p1 relative to the file p2."""
-    assert p1.exists() # Note: the second path does not need to exist
+    assert p1.exists()  # Note: the second path does not need to exist
     if p1.parent == p2.parent:
         return "./" + p1.name
     else:
@@ -13,7 +13,7 @@ def relative_path(p1: Path, p2: Path) -> str:
             if _p1[:i] == _p2[:i]:
                 return f"{ '../..' +''.join('/'+p for p in _p1[i:])}"
                 break
-    return ''
+    return ""
 
 
 def get_path(p1: str, base: Path | None = None) -> Path:

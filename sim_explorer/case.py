@@ -10,7 +10,7 @@ from typing import Any, Callable
 
 import matplotlib.pyplot as plt
 import numpy as np
-from libcosimpy.CosimLogging import CosimLogLevel, log_output_level # type: ignore
+from libcosimpy.CosimLogging import CosimLogLevel, log_output_level  # type: ignore
 
 from .json5 import Json5
 from .simulator_interface import SimulatorInterface, from_xml

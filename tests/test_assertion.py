@@ -1,4 +1,5 @@
 from math import cos, sin
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pytest
@@ -84,6 +85,8 @@ def test_vector():
 if __name__ == "__main__":
     retcode = pytest.main(["-rA", "-v", __file__])
     assert retcode == 0, f"Non-zero return code {retcode}"
+    # import os
+    # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
     # test_init()
     # test_assertion()
     # test_vector()
