@@ -3,18 +3,19 @@ from __future__ import annotations
 
 import math
 import os
+from collections.abc import Callable
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
-from libcosimpy.CosimLogging import CosimLogLevel, log_output_level  # type: ignore
+from libcosimpy.CosimLogging import CosimLogLevel, log_output_level
 
-from .json5 import Json5
-from .simulator_interface import SimulatorInterface, from_xml
-from .utils import get_path, relative_path
+from sim_explorer.json5 import Json5
+from sim_explorer.simulator_interface import SimulatorInterface, from_xml
+from sim_explorer.utils.paths import get_path, relative_path
 
 """
 sim_explorer module for definition and execution of simulation experiments
@@ -369,9 +370,10 @@ class Case:
                             at_time_arg * self.cases.timefac,
                         )
 
-    def list_cases(self, as_name=True, flat=False) -> list:
+    def list_cases(self, as_name: bool = True, flat: bool = False) -> list[str] | list[Case]:
         """List this case and all sub-cases recursively, as name or case objects."""
-        lst = [self.name if as_name else self]
+        lst: list[str] | list[Case]
+        lst = [self.name] if as_name else [self]  # type: ignore[list-item]
         for s in self.subs:
             if flat:
                 lst.extend(s.list_cases(as_name, flat))
@@ -850,7 +852,7 @@ class Results:
             cases = Cases(Path(case))
         except ValueError:
             raise CaseInitError(f"Cases {Path(case)} instantiation error") from ValueError
-        self.case = cases.case_by_name(self.res.jspath("$.header.case", str, True))
+        self.case: Case | None = cases.case_by_name(name=self.res.jspath(path="$.header.case", typ=str, errorMsg=True))
         assert isinstance(self.case, Case), f"Case {self.res.jspath( '$.header.case', str, True)} not found"
         assert isinstance(self.case.cases, Cases), "Cases object not defined"
         self._header_transform(False)
@@ -873,6 +875,7 @@ class Results:
         """Make a standard header for the results of 'case' as dict.
         This function is used as starting point when a new results file is created.
         """
+        assert self.case is not None, "Case object not defined"
         _ = self.case.cases.js.jspath("$.header.name", str, True)
         results = {
             "header": {

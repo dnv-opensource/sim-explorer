@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+
 from sim_explorer.case import Case, Cases
 from sim_explorer.json5 import Json5
 from sim_explorer.simulator_interface import SimulatorInterface
