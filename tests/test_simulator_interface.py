@@ -3,7 +3,8 @@ from pathlib import Path
 import pytest
 from libcosimpy.CosimExecution import CosimExecution
 
-from sim_explorer.simulator_interface import SimulatorInterface, match_with_wildcard
+from sim_explorer.simulator_interface import SimulatorInterface
+from sim_explorer.utils.misc import match_with_wildcard
 
 
 def test_match_with_wildcard():
@@ -11,18 +12,28 @@ def test_match_with_wildcard():
     assert not match_with_wildcard("Hello World", "Helo World"), "No match expected"
     assert match_with_wildcard("*o World", "Hello World"), "Match expected"
     assert not match_with_wildcard("*o W*ld", "Hello Word"), "No match expected"
-    assert match_with_wildcard("*o W*ld", "Hello World"), "Two wildcard matches expected"
+    assert match_with_wildcard(
+        "*o W*ld", "Hello World"
+    ), "Two wildcard matches expected"
 
 
 def test_pytype():
     assert SimulatorInterface.pytype("REAL", "2.3") == 2.3, "Expected 2.3 as float type"
     assert SimulatorInterface.pytype("Integer", "99") == 99, "Expected 99 as int type"
-    assert SimulatorInterface.pytype("Boolean", "fmi2True"), "Expected True as bool type"
-    assert not SimulatorInterface.pytype("Boolean", "fmi2false"), "Expected True as bool type"
-    assert SimulatorInterface.pytype("String", "fmi2False") == "fmi2False", "Expected fmi2False as str type"
+    assert SimulatorInterface.pytype(
+        "Boolean", "fmi2True"
+    ), "Expected True as bool type"
+    assert not SimulatorInterface.pytype(
+        "Boolean", "fmi2false"
+    ), "Expected True as bool type"
+    assert (
+        SimulatorInterface.pytype("String", "fmi2False") == "fmi2False"
+    ), "Expected fmi2False as str type"
     with pytest.raises(ValueError) as err:
         SimulatorInterface.pytype("Real", "fmi2False")
-    assert str(err.value).startswith("could not convert string to float:"), "No error raised as expected"
+    assert str(err.value).startswith(
+        "could not convert string to float:"
+    ), "No error raised as expected"
     assert SimulatorInterface.pytype(0) is float
     assert SimulatorInterface.pytype(1) is int
     assert SimulatorInterface.pytype(2) is str
@@ -53,28 +64,60 @@ def test_component_variable_name():
 
 def test_default_initial():
     print("DIR", dir(SimulatorInterface))
-    assert SimulatorInterface.default_initial(0, 0) == 3, f"Found {SimulatorInterface.default_initial( 0, 0)}"
-    assert SimulatorInterface.default_initial(1, 0) == 3, f"Found {SimulatorInterface.default_initial( 1, 0)}"
-    assert SimulatorInterface.default_initial(2, 0) == 0, f"Found {SimulatorInterface.default_initial( 2, 0)}"
-    assert SimulatorInterface.default_initial(3, 0) == 3, f"Found {SimulatorInterface.default_initial( 3, 0)}"
-    assert SimulatorInterface.default_initial(4, 0) == 0, f"Found {SimulatorInterface.default_initial( 4, 0)}"
-    assert SimulatorInterface.default_initial(5, 0) == 3, f"Found {SimulatorInterface.default_initial( 5, 0)}"
-    assert SimulatorInterface.default_initial(1, 1) == 0, f"Found {SimulatorInterface.default_initial( 1, 1)}"
-    assert SimulatorInterface.default_initial(1, 2) == 0, f"Found {SimulatorInterface.default_initial( 1, 1)}"
-    assert SimulatorInterface.default_initial(1, 3) == 3, f"Found {SimulatorInterface.default_initial( 1, 1)}"
-    assert SimulatorInterface.default_initial(1, 4) == 3, f"Found {SimulatorInterface.default_initial( 1, 1)}"
-    assert SimulatorInterface.default_initial(2, 0) == 0, f"Found {SimulatorInterface.default_initial( 2, 0)}"
-    assert SimulatorInterface.default_initial(5, 4) == 3, f"Found {SimulatorInterface.default_initial( 5, 4)}"
-    assert SimulatorInterface.default_initial(3, 2) == 2, f"Found {SimulatorInterface.default_initial( 3, 2)}"
-    assert SimulatorInterface.default_initial(4, 2) == 2, f"Found {SimulatorInterface.default_initial( 4, 2)}"
+    assert (
+        SimulatorInterface.default_initial(0, 0) == 3
+    ), f"Found {SimulatorInterface.default_initial( 0, 0)}"
+    assert (
+        SimulatorInterface.default_initial(1, 0) == 3
+    ), f"Found {SimulatorInterface.default_initial( 1, 0)}"
+    assert (
+        SimulatorInterface.default_initial(2, 0) == 0
+    ), f"Found {SimulatorInterface.default_initial( 2, 0)}"
+    assert (
+        SimulatorInterface.default_initial(3, 0) == 3
+    ), f"Found {SimulatorInterface.default_initial( 3, 0)}"
+    assert (
+        SimulatorInterface.default_initial(4, 0) == 0
+    ), f"Found {SimulatorInterface.default_initial( 4, 0)}"
+    assert (
+        SimulatorInterface.default_initial(5, 0) == 3
+    ), f"Found {SimulatorInterface.default_initial( 5, 0)}"
+    assert (
+        SimulatorInterface.default_initial(1, 1) == 0
+    ), f"Found {SimulatorInterface.default_initial( 1, 1)}"
+    assert (
+        SimulatorInterface.default_initial(1, 2) == 0
+    ), f"Found {SimulatorInterface.default_initial( 1, 1)}"
+    assert (
+        SimulatorInterface.default_initial(1, 3) == 3
+    ), f"Found {SimulatorInterface.default_initial( 1, 1)}"
+    assert (
+        SimulatorInterface.default_initial(1, 4) == 3
+    ), f"Found {SimulatorInterface.default_initial( 1, 1)}"
+    assert (
+        SimulatorInterface.default_initial(2, 0) == 0
+    ), f"Found {SimulatorInterface.default_initial( 2, 0)}"
+    assert (
+        SimulatorInterface.default_initial(5, 4) == 3
+    ), f"Found {SimulatorInterface.default_initial( 5, 4)}"
+    assert (
+        SimulatorInterface.default_initial(3, 2) == 2
+    ), f"Found {SimulatorInterface.default_initial( 3, 2)}"
+    assert (
+        SimulatorInterface.default_initial(4, 2) == 2
+    ), f"Found {SimulatorInterface.default_initial( 4, 2)}"
 
 
 def test_simulator_from_system_structure():
     """SimulatorInterface from OspSystemStructure.xml"""
     path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
     system = SimulatorInterface(str(path), name="BouncingBall")
-    assert system.name == "BouncingBall", f"System.name should be BouncingBall. Found {system.name}"
-    assert "bb" in system.components, f"Instance name 'bb' expected. Found instances {system.components}"
+    assert (
+        system.name == "BouncingBall"
+    ), f"System.name should be BouncingBall. Found {system.name}"
+    assert (
+        "bb" in system.components
+    ), f"Instance name 'bb' expected. Found instances {system.components}"
     # assert system.get_models()[0] == 0, f"Component model {system.get_models()[0]}"
     assert "bb" in system.get_components()
 
@@ -104,7 +147,12 @@ def test_simulator_instantiated():
     #    simulator.check_instances_variables()
     assert len(simulator.components) == 3, "Three instantiated (identical) components"
     variables = simulator.get_variables("bb")
-    assert variables["g"] == {"reference": 5, "type": 0, "causality": 1, "variability": 1}
+    assert variables["g"] == {
+        "reference": 5,
+        "type": 0,
+        "causality": 1,
+        "variability": 1,
+    }
     assert simulator.allowed_action("set", "bb", "g", 0)
     assert not simulator.allowed_action("set", "bb", "g", 100)
     assert simulator.message.startswith("Variable g, causality PARAMETER,")
@@ -118,8 +166,12 @@ def test_simulator_instantiated():
     assert simulator.allowed_action("set", "bb", "der(v)", 0), simulator.message
     assert not simulator.allowed_action("set", "bb", "der(v)", 100), simulator.message
     assert not simulator.allowed_action("set", "bb", "v_min", 0), simulator.message
-    assert simulator.allowed_action("set", "bb", (1, 3), 0), simulator.message  # combination of h,v
-    assert not simulator.allowed_action("set", "bb", (1, 3), 100), simulator.message  # combination of h,v
+    assert simulator.allowed_action(
+        "set", "bb", (1, 3), 0
+    ), simulator.message  # combination of h,v
+    assert not simulator.allowed_action(
+        "set", "bb", (1, 3), 100
+    ), simulator.message  # combination of h,v
 
 
 if __name__ == "__main__":

@@ -16,6 +16,7 @@ from libcosimpy.CosimLogging import CosimLogLevel, log_output_level
 from sim_explorer.json5 import Json5
 from sim_explorer.simulator_interface import SimulatorInterface, from_xml
 from sim_explorer.utils.paths import get_path, relative_path
+from sim_explorer.utils.misc import from_xml
 
 """
 sim_explorer module for definition and execution of simulation experiments
