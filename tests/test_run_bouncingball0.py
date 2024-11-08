@@ -3,6 +3,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
 from sim_explorer.case import Case, Cases
 from sim_explorer.json5 import Json5
 from sim_explorer.simulator_interface import SimulatorInterface
@@ -29,11 +30,11 @@ def expected_actions(case: Case, act: dict, expect: dict):
                 if isinstance(action.args[k], tuple):
                     args[k] = action.args[k]
                 else:
-                    args[k] = (action.args[k],)
+                    args[k] = (action.args[k],)  # type: ignore[call-overload]
             arg = [
                 sim.component_name_from_id(action.args[0]),
                 SimulatorInterface.pytype(action.args[1]),
-                tuple(sim.variable_name_from_ref(action.args[0], ref) for ref in args[2]),
+                tuple(sim.variable_name_from_ref(comp=action.args[0], ref=ref) for ref in args[2]),  # type: ignore[attr-defined]
             ]
             for k in range(1, len(action.args)):
                 if k == 3:
@@ -93,24 +94,25 @@ def test_step_by_step_interface():
     sim.set_initial(0, 0, 6, 0.35)
     for t in np.linspace(1, 1e9, 1):
         sim.simulator.simulate_until(t)
-        print(sim.get_variable_value(0, 0, (0, 1, 6)))
+        print(sim.get_variable_value(instance=0, typ=0, var_refs=(0, 1, 6)))
         if t == int(0.11 * 1e9):
-            assert sim.get_variable_value(0, 0, (0, 1, 6)) == [0.11, 0.9411890500000001, 0.35]
+            assert sim.get_variable_value(instance=0, typ=0, var_refs=(0, 1, 6)) == [0.11, 0.9411890500000001, 0.35]
 
 
 def test_run_cases():
     path = Path(Path(__file__).parent, "data/BouncingBall0/BouncingBall.cases")
     assert path.exists(), "BouncingBall cases file not found"
     cases = Cases(path)
+    case: Case | None
     base = cases.case_by_name("base")
     restitution = cases.case_by_name("restitution")
     restitutionAndGravity = cases.case_by_name("restitutionAndGravity")
     gravity = cases.case_by_name("gravity")
     assert gravity
     expected_actions(
-        gravity,
-        gravity.act_get,
-        {
+        case=gravity,
+        act=gravity.act_get,
+        expect={
             -1: [("get", "bb", float, ("h",))],
             0.0: [("get", "bb", float, ("e",)), ("get", "bb", float, ("g",)), ("get", "bb", float, ("h",))],
             1e9: [("get", "bb", float, ("v",))],
@@ -119,9 +121,9 @@ def test_run_cases():
 
     assert base
     expected_actions(
-        base,
-        base.act_set,
-        {
+        case=base,
+        act=base.act_set,
+        expect={
             0: [
                 ("set0", "bb", float, ("g",), (-9.81,)),
                 ("set0", "bb", float, ("e",), (1.0,)),
@@ -131,9 +133,9 @@ def test_run_cases():
     )
     assert restitution
     expected_actions(
-        restitution,
-        restitution.act_set,
-        {
+        case=restitution,
+        act=restitution.act_set,
+        expect={
             0: [
                 ("set0", "bb", float, ("g",), (-9.81,)),
                 ("set0", "bb", float, ("e",), (0.5,)),
@@ -144,9 +146,9 @@ def test_run_cases():
 
     assert restitutionAndGravity
     expected_actions(
-        restitutionAndGravity,
-        restitutionAndGravity.act_set,
-        {
+        case=restitutionAndGravity,
+        act=restitutionAndGravity.act_set,
+        expect={
             0: [
                 ("set0", "bb", float, ("g",), (-1.5,)),
                 ("set0", "bb", float, ("e",), (0.5,)),
@@ -155,9 +157,9 @@ def test_run_cases():
         },
     )
     expected_actions(
-        gravity,
-        gravity.act_set,
-        {
+        case=gravity,
+        act=gravity.act_set,
+        expect={
             0: [
                 ("set0", "bb", float, ("g",), (-1.5,)),
                 ("set0", "bb", float, ("e",), (1.0,)),
@@ -167,10 +169,13 @@ def test_run_cases():
     )
     print("Actions checked")
     case = cases.case_by_name("base")
+    assert case is not None, "Case 'base' not found"
     print(f"Run {case.name}")
     assert case.special == {"startTime": 0.0, "stopTime": 3, "stepSize": 0.01}
-    case.run("results_base")
-    res = cases.case_by_name("base").res.res
+    case.run("base")
+    _case = cases.case_by_name("base")
+    assert _case is not None
+    res = _case.res.res
     """
         Cannot be tested in CI as order of variables and models are not guaranteed in different OSs
         inspect = cases.case_by_name("base").res.inspect()
@@ -194,14 +199,16 @@ def test_run_cases():
     v_max = sqrt(2 * h0 * 9.81)  # speed when hitting bottom
     # h_v = lambda v, g: 0.5 * v**2 / g  # calculate height
     assert abs(h0 - 1.0) < 1e-2
-    assert expect_bounce_at(res, t0, eps=0.02), f"Bounce: {t0} != {sqrt(2*h0/9.81)}"
-    assert expect_bounce_at(res, 2 * t0, eps=0.02), f"No top point at {2*sqrt(2*h0/9.81)}"
+    assert expect_bounce_at(results=res, time=t0, eps=0.02), f"Bounce: {t0} != {sqrt(2*h0/9.81)}"
+    assert expect_bounce_at(results=res, time=2 * t0, eps=0.02), f"No top point at {2*sqrt(2*h0/9.81)}"
 
     cases.simulator.reset()
     print("Run restitution")
-    cases.run_case("restitution", "results_restitution")
-    res = cases.case_by_name("restitution").res.res
-    assert expect_bounce_at(res, sqrt(2 * h0 / 9.81), eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
+    cases.run_case(name="restitution", dump="results_restitution")
+    _case = cases.case_by_name("restitution")
+    assert _case is not None
+    res = _case.res.res
+    assert expect_bounce_at(results=res, time=sqrt(2 * h0 / 9.81), eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
     assert expect_bounce_at(
         res, sqrt(2 * h0 / 9.81) + 0.5 * v_max / 9.81, eps=0.02
     )  # restitution is a factor on speed at bounce

@@ -3,17 +3,19 @@ from __future__ import annotations
 
 import math
 import os
+from collections.abc import Callable
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
-from libcosimpy.CosimLogging import log_output_level, CosimLogLevel
 import matplotlib.pyplot as plt
 import numpy as np
+from libcosimpy.CosimLogging import CosimLogLevel, log_output_level
 
-from .json5 import Json5
-from .simulator_interface import SimulatorInterface, from_xml
+from sim_explorer.json5 import Json5
+from sim_explorer.simulator_interface import SimulatorInterface, from_xml
+from sim_explorer.utils.paths import get_path, relative_path
 
 """
 sim_explorer module for definition and execution of simulation experiments
@@ -368,9 +370,10 @@ class Case:
                             at_time_arg * self.cases.timefac,
                         )
 
-    def list_cases(self, as_name=True, flat=False) -> list:
+    def list_cases(self, as_name: bool = True, flat: bool = False) -> list[str] | list[Case]:
         """List this case and all sub-cases recursively, as name or case objects."""
-        lst = [self.name if as_name else self]
+        lst: list[str] | list[Case]
+        lst = [self.name] if as_name else [self]  # type: ignore[list-item]
         for s in self.subs:
             if flat:
                 lst.extend(s.list_cases(as_name, flat))
@@ -541,13 +544,13 @@ class Cases:
                     system=path,
                     name=self.js.jspath("$.header.name", str) or "",
                     description=self.js.jspath("$.header.description", str) or "",
-                    log_level = log_level,
+                    log_level=log_level,
                 )
             except Exception as err:
                 raise AssertionError(f"'modelFile' needed from spec: {err}") from err
         else:
             self.simulator = simulator  # SimulatorInterface( simulator = simulator)
-            log_output_level( log_level)
+            log_output_level(log_level)
 
         self.timefac = self._get_time_unit() * 1e9  # internally OSP uses pico-seconds as integer!
         # read the 'variables' section and generate dict { alias : { (instances), (variables)}}:
@@ -849,7 +852,7 @@ class Results:
             cases = Cases(Path(case))
         except ValueError:
             raise CaseInitError(f"Cases {Path(case)} instantiation error") from ValueError
-        self.case = cases.case_by_name(self.res.jspath("$.header.case", str, True))
+        self.case: Case | None = cases.case_by_name(name=self.res.jspath(path="$.header.case", typ=str, errorMsg=True))
         assert isinstance(self.case, Case), f"Case {self.res.jspath( '$.header.case', str, True)} not found"
         assert isinstance(self.case.cases, Cases), "Cases object not defined"
         self._header_transform(False)
@@ -868,17 +871,19 @@ class Results:
         self.res = Json5(str(self._header_make()))  # instantiate the results object
         self._header_transform(tostring=False)
 
-    def _header_make(self):
+    def _header_make(self) -> dict[str, dict[str, Any]]:
         """Make a standard header for the results of 'case' as dict.
         This function is used as starting point when a new results file is created.
         """
+        assert self.case is not None, "Case object not defined"
+        assert self.file is not None, "File name not defined"
         _ = self.case.cases.js.jspath("$.header.name", str, True)
-        results = {
+        results: dict[str, dict[str, Any]] = {
             "header": {
                 "case": self.case.name,
                 "dateTime": datetime.today().isoformat(),
                 "cases": self.case.cases.js.jspath("$.header.name", str, True),
-                "file": Path(self.case.cases.file).as_posix(),
+                "file": relative_path(Path(self.case.cases.file), self.file),
                 "casesDate": datetime.fromtimestamp(os.path.getmtime(self.case.cases.file)).isoformat(),
                 "timeUnit": self.case.cases.js.jspath("$.header.timeUnit", str) or "sec",
                 "timeFactor": self.case.cases.timefac,
@@ -890,15 +895,16 @@ class Results:
         """Transform the header back- and forth between python types and string.
         tostring=True is used when saving to file and =False is used when reading from file.
         """
+        assert isinstance(self.file, Path), f"Need a proper file at this point. Found {self.file}"
         res = self.res
         if tostring:
             res.update("$.header.dateTime", res.jspath("$.header.dateTime", datetime, True).isoformat())
             res.update("$.header.casesDate", res.jspath("$.header.casesDate", datetime, True).isoformat())
-            res.update("$.header.file", res.jspath("$.header.file", Path, True).as_posix())
+            res.update("$.header.file", relative_path(res.jspath("$.header.file", Path, True), self.file))
         else:
             res.update("$.header.dateTime", datetime.fromisoformat(res.jspath("$.header.dateTime", str, True)))
             res.update("$.header.casesDate", datetime.fromisoformat(res.jspath("$.header.casesDate", str, True)))
-            res.update("$.header.file", Path(res.jspath("$.header.file", str, True)))
+            res.update("$.header.file", get_path(res.jspath("$.header.file", str, True), self.file.parent))
 
     def add(self, time: float, comp: int, typ: int, refs: int | list[int], values: tuple):
         """Add the results of a get action to the results dict for the case.
@@ -1001,7 +1007,7 @@ class Results:
                 if isinstance(found, list):
                     raise NotImplementedError("So far not implemented for multi-dimensional plots") from None
                 else:
-                    times.append(key)
+                    times.append(float(key))
                     values.append(found)
         return (times, values)
 

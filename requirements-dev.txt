@@ -1,7 +1,0 @@
-Sphinx>=7.3
-sphinx-argparse-cli>=1.16
-myst-parser>=3.0
-furo>=2024.5
-sourcery==1.21
-
--r requirements.txt

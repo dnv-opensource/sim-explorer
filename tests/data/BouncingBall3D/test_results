@@ -3,7 +3,7 @@ header : {
       case : 'restitution',
       dateTime : '1924-01-14T00:00:00',
       cases : 'BouncingBall3D',
-      file : 'C:/Users/eis/Documents/Projects/Simulation_Model_Assurance/sim_explorer/tests/data/BouncingBall3D/BouncingBall3D.cases',
+      file : 'BouncingBall3D.cases',
       casesDate : '1924-01-13T00:00:00',
       timeUnit : 'second',
       timeFactor : 1000000000.0},

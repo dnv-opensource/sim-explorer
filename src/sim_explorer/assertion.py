@@ -1,5 +1,5 @@
-from sympy import Symbol, sympify
-from sympy.vector import CoordSys3D
+from sympy import Symbol, sympify  # type: ignore
+from sympy.vector import CoordSys3D  # type: ignore
 
 
 class Assertion:

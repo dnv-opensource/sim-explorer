@@ -1,0 +1,13 @@
+[paths]
+source =
+    src/sim_explorer
+    */site-packages/sim_explorer
+
+[run]
+source = sim_explorer
+branch = True
+
+[report]
+# fail_under = 10.0
+show_missing = True
+skip_covered = True

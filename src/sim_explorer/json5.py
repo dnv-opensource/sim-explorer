@@ -56,8 +56,11 @@ class Json5:
         else:  # instantiation from file
             try:
                 if Path(js5).exists():
-                    with open(Path(js5), "r") as file:  # read file into string
-                        self.js5 = file.read()
+                    path = Path(js5)
+                elif Path(Path(js5).name).exists():
+                    path = Path(Path(js5).name)
+                with open(path, "r") as file:  # read file into string
+                    self.js5 = file.read()
             except Exception:
                 pass
             if not hasattr(self, "js5"):  # file reading not succesfull
@@ -366,6 +369,7 @@ class Json5:
 
     def _value(self):
         """Read and return a value at the current position, i.e. expect ,'...', "...",}."""
+        v: str | dict[str, Any] | list[Any]
         q1, q2 = self._quoted()
         if q2 < 0:  # no quotation found. Include also [ and { in search
             m = re.search(r"[\[,\{\}\]]", self.js5[self.pos :])

@@ -2,9 +2,10 @@ from math import cos, sin
 
 import matplotlib.pyplot as plt
 import pytest
-from sim_explorer.assertion import Assertion
 from sympy import symbols
 from sympy.vector import CoordSys3D
+
+from sim_explorer.assertion import Assertion
 
 _t = [0.1 * float(x) for x in range(100)]
 _x = [0.3 * sin(t) for t in _t]
@@ -84,6 +85,8 @@ def test_vector():
 if __name__ == "__main__":
     retcode = pytest.main(["-rA", "-v", __file__])
     assert retcode == 0, f"Non-zero return code {retcode}"
+    # import os
+    # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
     # test_init()
     # test_assertion()
     # test_vector()

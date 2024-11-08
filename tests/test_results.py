@@ -2,6 +2,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
+
 from sim_explorer.case import Cases, Results
 
 
@@ -15,7 +16,7 @@ def test_init():
     assert res.res.jspath("$.header.dateTime", datetime, True).isoformat() == "1924-01-14T00:00:00"
     assert res.res.jspath("$.header.casesDate", datetime, True).isoformat() == "1924-01-13T00:00:00"
     # init making a new file
-    cases = Cases(Path.cwd().parent / "data" / "BouncingBall3D" / "BouncingBall3D.cases")
+    cases = Cases(Path(__file__).parent / "data" / "BouncingBall3D" / "BouncingBall3D.cases")
     case = cases.case_by_name("base")
     res = Results(case=case)
     # assert res.res.jspath("$.header.file", Path, True).exists()
@@ -24,11 +25,11 @@ def test_init():
 
 
 def test_add():
-    cases = Cases(Path.cwd().parent / "data" / "BouncingBall3D" / "BouncingBall3D.cases")
+    cases = Cases(Path(__file__).parent / "data" / "BouncingBall3D" / "BouncingBall3D.cases")
     case = cases.case_by_name("base")
     res = Results(case=case)
     res._header_transform(tostring=True)
-    res.add(0.0, 0, 0, (6,), (9.81,))
+    res.add(time=0.0, comp=0, typ=0, refs=[6], values=(9.81,))
     # print( res.res.write( pretty_print=True))
     assert res.res.jspath("$['0.0'].bb.g") == 9.81
 
@@ -38,11 +39,11 @@ def test_plot_time_series(show):
     assert file.exists(), f"File {file} not found"
     res = Results(file=file)
     if show:
-        res.plot_time_series(("bb.x[2]", "bb.v[2]"), "Test plot")
+        res.plot_time_series(variables=["bb.x[2]", "bb.v[2]"], title="Test plot")
 
 
 def test_inspect():
-    file = Path.cwd().parent / "data" / "BouncingBall3D" / "test_case"
+    file = Path(__file__).parent / "data" / "BouncingBall3D" / "test_case"
     res = Results(file=file)
     cont = res.inspect()
     assert cont["bb.e"]["len"] == 1, "Not a scalar??"

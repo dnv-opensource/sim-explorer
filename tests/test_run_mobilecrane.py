@@ -7,18 +7,21 @@ from libcosimpy.CosimExecution import CosimExecution
 from libcosimpy.CosimManipulator import CosimManipulator
 from libcosimpy.CosimObserver import CosimObserver
 from libcosimpy.CosimSlave import CosimLocalSlave
-from sim_explorer.case import Cases
+
+from sim_explorer.case import Case, Cases
 from sim_explorer.json5 import Json5
 from sim_explorer.simulator_interface import SimulatorInterface
 
 
 def is_nearly_equal(x: float | list, expected: float | list, eps: float = 1e-10) -> int:
     if isinstance(x, float):
+        assert isinstance(expected, float), f"Argument `expected` is not a float. Found: {expected}"
         if abs(x - expected) < eps:
             return True
         else:
             raise AssertionError(f"{x} is not nealry equal to {expected}") from None
     else:
+        assert isinstance(expected, list), f"Argument `expected` is not a list. Found: {expected}"
         for i, y in enumerate(x):
             if not abs(y - expected[i]) < eps:
                 raise AssertionError(f"{x}[{i}] is not as expected: {expected}")
@@ -100,15 +103,18 @@ def test_step_by_step_cosim():
 
 # @pytest.mark.skip("Alternative step-by step, using SimulatorInterface and Cases")
 def test_step_by_step_cases():
+    sim: SimulatorInterface
+    cosim: CosimExecution
+
     def get_ref(name: str):
         variable = cases.simulator.get_variables(0, name)
         assert len(variable), f"Variable {name} not found"
         return next(iter(variable.values()))["reference"]
 
     def set_initial(name: str, value: float, slave: int = 0):
-        for idx in range(sim.num_slave_variables(slave)):
-            if sim.slave_variables(slave)[idx].name.decode() == name:
-                return sim.real_initial_value(slave, idx, value)
+        for idx in range(cosim.num_slave_variables(slave_index=slave)):
+            if cosim.slave_variables(slave_index=slave)[idx].name.decode() == name:
+                return cosim.real_initial_value(slave_index=slave, variable_reference=idx, value=value)
 
     def initial_settings():
         cases.simulator.set_initial(0, 0, get_ref("pedestal_boom[0]"), 3.0)
@@ -138,6 +144,7 @@ def test_step_by_step_cases():
     cases = Cases(path, sim)
     print("INFO", cases.info())
     static = cases.case_by_name("static")
+    assert static is not None
     assert static.js.jspath("$.spec", dict) == {"p[2]": 1.570796, "b[1]": 0.785398, "r[0]": 7.657, "load": 1000}
     assert static.act_get[-1][0].args == (0, 0, (10, 11, 12)), f"Step action arguments {static.act_get[-1][0].args}"
     assert sim.get_variable_value(0, 0, (10, 11, 12)) == [0.0, 0.0, 0.0], "Initial value of T"
@@ -156,23 +163,24 @@ def test_step_by_step_cases():
         print(f"   Time {t}: ")
         for a in static.act_get[t]:
             print("      ", static.str_act(a))
-    sim = cases.simulator.simulator
-    slave = sim.slave_index_from_instance_name("mobileCrane")
+
+    cosim = cases.simulator.simulator
+    slave = cosim.slave_index_from_instance_name("mobileCrane")
     assert slave == 0, f"Slave index should be '0', found {slave}"
 
     expected_names = ("boom_angularVelocity[0]", "pedestal_boom[0]", "boom_boom[1]", "rope_boom[2]", "dLoad")
     found_expected = [-1] * len(expected_names)
-    for i in range(len(sim.slave_variables(slave))):
+    for i in range(len(cosim.slave_variables(slave))):
         for k, name in enumerate(expected_names):
-            if sim.slave_variables(slave)[i].name.decode() == name:
-                assert sim.slave_variables(slave)[i].reference == i
-                assert sim.slave_variables(slave)[i].type == 0
+            if cosim.slave_variables(slave)[i].name.decode() == name:
+                assert cosim.slave_variables(slave)[i].reference == i
+                assert cosim.slave_variables(slave)[i].type == 0
                 found_expected[k] = True
     assert -1 not in found_expected, f"Not all expected names were found: {expected_names[found_expected.index(-1)]}"
     i_bav = found_expected[0]
 
-    #    for idx in range( sim.num_slave_variables(slave)):
-    #        print(f"{sim.slave_variables(slave)[idx].name.decode()}: {observer.last_real_values(slave, [idx])}")
+    #    for idx in range( cosim.num_slave_variables(slave)):
+    #        print(f"{cosim.slave_variables(slave)[idx].name.decode()}: {observer.last_real_values(slave, [idx])}")
     initial_settings()
     manipulator = cases.simulator.manipulator
     assert isinstance(manipulator, CosimManipulator)
@@ -181,7 +189,7 @@ def test_step_by_step_cases():
     step_count = 0
     while True:
         step_count += 1
-        status = sim.status()
+        status = cosim.status()
         if status.current_time > 1e9:
             break
         if status.state == CosimExecutionState.ERROR.value:
@@ -191,7 +199,7 @@ def test_step_by_step_cases():
         elif step_count == 8:
             manipulator.slave_real_values(slave, [i_bav], [0.1])
         print(f"Step {step_count}, time {status.current_time}, state: {status.state}")
-        sim.step()
+        cosim.step()
 
     # initial_settings()
 
@@ -221,9 +229,11 @@ def test_run_cases():
     # system_structure = Path(Path(__file__).parent, "data/MobileCrane/OspSystemStructure.xml")
     assert path.exists(), "MobileCrane cases file not found"
     cases = Cases(path)
+    case: Case | None
     # for v, info in cases.variables.items():
     #     print(v, info)
     static = cases.case_by_name("static")
+    assert static is not None
     assert static.act_get[-1][0].func.__name__ == "get_variable_value"
     assert static.act_get[-1][0].args == (0, 0, (10, 11, 12))
     assert static.act_get[-1][1].args == (0, 0, (21, 22, 23))
@@ -232,7 +242,9 @@ def test_run_cases():
 
     print("Running case 'base'...")
     cases.run_case("base", dump="results_base")
-    res = cases.case_by_name("base").res.res
+    case = cases.case_by_name("base")
+    assert case is not None
+    res = case.res.res
     # ToDo: expected Torque?
     assert is_nearly_equal(res.jspath("$['1.0'].mobileCrane.x_pedestal"), [0.0, 0.0, 3.0])
     # assert is_nearly_equal(res[1.0]["mobileCrane"]["x_boom"], [8, 0.0, 3], 1e-5)
@@ -240,7 +252,9 @@ def test_run_cases():
 
     cases = Cases(path)
     cases.run_case("static", dump="results_static")
-    res = cases.case_by_name("static").res.res
+    case = cases.case_by_name("static")
+    assert case is not None
+    res = case.res.res
     print("RES(1.0)", res.jspath("$['1.0'].mobileCrane"))
     assert is_nearly_equal(res.jspath("$['1.0'].mobileCrane.x_pedestal"), [0.0, 0.0, 3.0])
     x_load = res.jspath("$['1.0'].mobileCrane.x_load")
