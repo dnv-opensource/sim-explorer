@@ -124,10 +124,10 @@ def main() -> None:
     log_level_file: str = args.log_level
     configure_logging(log_level_console, log_file, log_level_file)
 
-    cases: Path = Path(args.cases)
+    cases_path: Path = Path(args.cases)
     # Check whether sim-explorer cases file exists
-    if not cases.is_file():
-        logger.error(f"sim-explorer.py: File {cases} not found.")
+    if not cases_path.is_file():
+        logger.error(f"sim-explorer.py: File {cases_path} not found.")
         return
     cases = Cases(args.cases)
     logger.info(f"ARGS: {args}")
