@@ -59,7 +59,7 @@ dependencies = [
     "jsonpath-ng>=1.7.0",
     "libcosimpy>=0.0.2",
     "fmpy>=0.3.21",
-    "component-model>=0.0.1",
+    "component-model>=0.1.0",
 ]
 
 [project.optional-dependencies]
