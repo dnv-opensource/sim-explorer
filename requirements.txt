@@ -1,7 +1,0 @@
-numpy>=1.24.2
-libcosimpy>=0.0.1
-FMPy>=0.3.20
-matplotlib>=3.7.1
-docutils>=0.20.1
-sympy>=1.13.3
-component-model>=0.0.1

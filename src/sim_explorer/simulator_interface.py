@@ -3,12 +3,12 @@ import re
 import xml.etree.ElementTree as ET  # noqa: N817
 from enum import Enum
 from pathlib import Path
-from typing import TypeAlias
+from typing import TypeAlias, cast
 from zipfile import BadZipFile, ZipFile, is_zipfile
 
 from libcosimpy.CosimEnums import CosimVariableCausality, CosimVariableType, CosimVariableVariability  # type: ignore
 from libcosimpy.CosimExecution import CosimExecution  # type: ignore
-from libcosimpy.CosimLogging import CosimLogLevel, log_output_level  # type: ignore
+from libcosimpy.CosimLogging import CosimLogLevel, log_output_level
 from libcosimpy.CosimManipulator import CosimManipulator  # type: ignore
 from libcosimpy.CosimObserver import CosimObserver  # type: ignore
 
@@ -70,8 +70,6 @@ class SimulatorInterface:
            but it can be set to TRACE, DEBUG, INFO, WARNING, ERROR or FATAL (e.g. for debugging purposes)
     """
 
-    simulator: CosimExecution
-
     def __init__(
         self,
         system: Path | str = "",
@@ -84,12 +82,13 @@ class SimulatorInterface:
         self.description = description  # overwrite if the system includes that
         self.sysconfig: Path | None = None
         log_output_level(log_level)
+        self.simulator: CosimExecution
         if simulator is None:  # instantiate the simulator through the system config file
             self.sysconfig = Path(system)
             assert self.sysconfig.exists(), f"File {self.sysconfig.name} not found"
             ck, msg = self._check_system_structure(self.sysconfig)
             assert ck, msg
-            self.simulator = self._simulator_from_config(self.sysconfig)
+            self.simulator = cast(CosimExecution, self._simulator_from_config(self.sysconfig))
         else:
             self.simulator = simulator
         self.components = self.get_components()  # dict of {component name : modelId}
@@ -413,7 +412,7 @@ class SimulatorInterface:
         else:
             raise CaseUseError(f"Unknown type {typ}") from None
 
-    def get_variable_value(self, instance: int, typ: int, var_refs: tuple[int]):
+    def get_variable_value(self, instance: int, typ: int, var_refs: tuple[int, ...]):
         """Provide an observer function which gets the 'variable' value (of the given 'instance' model) at the time when called.
 
         Args:
@@ -441,7 +440,7 @@ class SimulatorInterface:
 
         if val is None:
             return typ
-        elif typ == bool:
+        elif typ is bool:
             if isinstance(val, str):
                 return "true" in val.lower()  # should be fmi2True and fmi2False
             elif isinstance(val, int):

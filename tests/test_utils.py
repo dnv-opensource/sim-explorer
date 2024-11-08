@@ -1,7 +1,8 @@
 from pathlib import Path
 
 import pytest
-from sim_explorer.utils import get_path, relative_path
+
+from sim_explorer.utils.paths import get_path, relative_path
 
 
 @pytest.fixture
