@@ -13,8 +13,10 @@ sim-explorer: Python Package to manage Simulation Experiments
    README
    CHANGELOG
    LICENSE
-   cases_specification
    api
+   cli
+   fileFormat
+
 
 
 Indices and tables
