@@ -7,8 +7,8 @@ from typing import TypeAlias
 from zipfile import BadZipFile, ZipFile, is_zipfile
 
 from libcosimpy.CosimEnums import CosimVariableCausality, CosimVariableType, CosimVariableVariability  # type: ignore
-from libcosimpy.CosimLogging import log_output_level, CosimLogLevel
 from libcosimpy.CosimExecution import CosimExecution  # type: ignore
+from libcosimpy.CosimLogging import CosimLogLevel, log_output_level # type: ignore
 from libcosimpy.CosimManipulator import CosimManipulator  # type: ignore
 from libcosimpy.CosimObserver import CosimObserver  # type: ignore
 
@@ -83,7 +83,7 @@ class SimulatorInterface:
         self.name = name  # overwrite if the system includes that
         self.description = description  # overwrite if the system includes that
         self.sysconfig: Path | None = None
-        log_output_level( log_level)
+        log_output_level(log_level)
         if simulator is None:  # instantiate the simulator through the system config file
             self.sysconfig = Path(system)
             assert self.sysconfig.exists(), f"File {self.sysconfig.name} not found"

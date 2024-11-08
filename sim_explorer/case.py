@@ -8,13 +8,13 @@ from functools import partial
 from pathlib import Path
 from typing import Any, Callable
 
-from libcosimpy.CosimLogging import log_output_level, CosimLogLevel
 import matplotlib.pyplot as plt
 import numpy as np
+from libcosimpy.CosimLogging import CosimLogLevel, log_output_level # type: ignore
 
 from .json5 import Json5
 from .simulator_interface import SimulatorInterface, from_xml
-from .utils import relative_path, get_path
+from .utils import get_path, relative_path
 
 """
 sim_explorer module for definition and execution of simulation experiments
@@ -542,13 +542,13 @@ class Cases:
                     system=path,
                     name=self.js.jspath("$.header.name", str) or "",
                     description=self.js.jspath("$.header.description", str) or "",
-                    log_level = log_level,
+                    log_level=log_level,
                 )
             except Exception as err:
                 raise AssertionError(f"'modelFile' needed from spec: {err}") from err
         else:
             self.simulator = simulator  # SimulatorInterface( simulator = simulator)
-            log_output_level( log_level)
+            log_output_level(log_level)
 
         self.timefac = self._get_time_unit() * 1e9  # internally OSP uses pico-seconds as integer!
         # read the 'variables' section and generate dict { alias : { (instances), (variables)}}:
@@ -879,7 +879,7 @@ class Results:
                 "case": self.case.name,
                 "dateTime": datetime.today().isoformat(),
                 "cases": self.case.cases.js.jspath("$.header.name", str, True),
-                "file": relative_path( Path(self.case.cases.file), self.file),
+                "file": relative_path(Path(self.case.cases.file), self.file),
                 "casesDate": datetime.fromtimestamp(os.path.getmtime(self.case.cases.file)).isoformat(),
                 "timeUnit": self.case.cases.js.jspath("$.header.timeUnit", str) or "sec",
                 "timeFactor": self.case.cases.timefac,
@@ -891,15 +891,16 @@ class Results:
         """Transform the header back- and forth between python types and string.
         tostring=True is used when saving to file and =False is used when reading from file.
         """
+        assert isinstance(self.file, Path), f"Need a proper file at this point. Found {self.file}"
         res = self.res
         if tostring:
             res.update("$.header.dateTime", res.jspath("$.header.dateTime", datetime, True).isoformat())
             res.update("$.header.casesDate", res.jspath("$.header.casesDate", datetime, True).isoformat())
-            res.update("$.header.file", relative_path( res.jspath("$.header.file", Path, True), self.file))
+            res.update("$.header.file", relative_path(res.jspath("$.header.file", Path, True), self.file))
         else:
             res.update("$.header.dateTime", datetime.fromisoformat(res.jspath("$.header.dateTime", str, True)))
             res.update("$.header.casesDate", datetime.fromisoformat(res.jspath("$.header.casesDate", str, True)))
-            res.update("$.header.file", get_path( res.jspath("$.header.file", str, True), self.file.parent))
+            res.update("$.header.file", get_path(res.jspath("$.header.file", str, True), self.file.parent))
 
     def add(self, time: float, comp: int, typ: int, refs: int | list[int], values: tuple):
         """Add the results of a get action to the results dict for the case.

@@ -24,7 +24,7 @@ def test_init():
 
 
 def test_add():
-    cases = Cases(Path.cwd().parent / "data" / "BouncingBall3D" / "BouncingBall3D.cases")
+    cases = Cases(Path(__file__).parent / "data" / "BouncingBall3D" / "BouncingBall3D.cases")
     case = cases.case_by_name("base")
     res = Results(case=case)
     res._header_transform(tostring=True)

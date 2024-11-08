@@ -169,7 +169,7 @@ def test_run_cases():
     case = cases.case_by_name("base")
     print(f"Run {case.name}")
     assert case.special == {"startTime": 0.0, "stopTime": 3, "stepSize": 0.01}
-    case.run("results_base")
+    case.run("base")
     res = cases.case_by_name("base").res.res
     """
         Cannot be tested in CI as order of variables and models are not guaranteed in different OSs
@@ -216,6 +216,6 @@ def test_run_cases():
 
 
 if __name__ == "__main__":
-    retcode = pytest.main(["-rA", "-v", __file__])
-    assert retcode == 0, f"Non-zero return code {retcode}"
-    # test_run_cases()
+    #retcode = pytest.main(["-rA", "-v", __file__])
+    #assert retcode == 0, f"Non-zero return code {retcode}"
+    test_run_cases()

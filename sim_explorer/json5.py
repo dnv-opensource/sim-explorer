@@ -57,11 +57,11 @@ class Json5:
             try:
                 if Path(js5).exists():
                     path = Path(js5)
-                elif Path(js5).name.exists():
-                    path = Path(js5).name
+                elif Path(Path(js5).name).exists():
+                    path = Path(Path(js5).name)
                 with open(path, "r") as file:  # read file into string
                     self.js5 = file.read()
-            except Exception as err:
+            except Exception:
                 pass
             if not hasattr(self, "js5"):  # file reading not succesfull
                 if isinstance(js5, str):

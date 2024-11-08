@@ -21,7 +21,7 @@ def cli_main():
     print("ARGS", args)
     if not isinstance(cases, Cases):
         print(f"Instantiation of {args.cases} not successfull")
-    if args.info is not None:
+    if args.info is not None and args.info:
         print(cases.info())
     elif args.run is not None:
         case = cases.case_by_name(args.run)
