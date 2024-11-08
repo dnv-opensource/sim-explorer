@@ -871,13 +871,14 @@ class Results:
         self.res = Json5(str(self._header_make()))  # instantiate the results object
         self._header_transform(tostring=False)
 
-    def _header_make(self):
+    def _header_make(self) -> dict[str, dict[str, Any]]:
         """Make a standard header for the results of 'case' as dict.
         This function is used as starting point when a new results file is created.
         """
         assert self.case is not None, "Case object not defined"
+        assert self.file is not None, "File name not defined"
         _ = self.case.cases.js.jspath("$.header.name", str, True)
-        results = {
+        results: dict[str, dict[str, Any]] = {
             "header": {
                 "case": self.case.name,
                 "dateTime": datetime.today().isoformat(),

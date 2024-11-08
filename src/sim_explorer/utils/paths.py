@@ -1,10 +1,9 @@
 from pathlib import Path
 
 
-def relative_path(p1: Path, p2: Path | None) -> str:
+def relative_path(p1: Path, p2: Path) -> str:
     """Identify the path of p1 relative to the file p2."""
     assert p1.exists()  # Note: the second path does not need to exist
-    assert isinstance(p2, Path)
     if p1.parent == p2.parent:
         return "./" + p1.name
     else:
