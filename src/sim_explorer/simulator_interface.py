@@ -1,16 +1,16 @@
 # pyright: reportMissingImports=false, reportGeneralTypeIssues=false
-import re
 import xml.etree.ElementTree as ET  # noqa: N817
 from enum import Enum
 from pathlib import Path
 from typing import TypeAlias, cast
-from sim_explorer.utils.misc import match_with_wildcard, from_xml
 
 from libcosimpy.CosimEnums import CosimVariableCausality, CosimVariableType, CosimVariableVariability  # type: ignore
 from libcosimpy.CosimExecution import CosimExecution  # type: ignore
 from libcosimpy.CosimLogging import CosimLogLevel, log_output_level
 from libcosimpy.CosimManipulator import CosimManipulator  # type: ignore
 from libcosimpy.CosimObserver import CosimObserver  # type: ignore
+
+from sim_explorer.utils.misc import from_xml, match_with_wildcard
 
 # type definitions
 PyVal: TypeAlias = str | float | int | bool  # simple python types / Json5 atom

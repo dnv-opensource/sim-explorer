@@ -1,7 +1,9 @@
-from pathlib import Path
 import re
 import xml.etree.ElementTree as ET  # noqa: N817
+from pathlib import Path
 from zipfile import BadZipFile, ZipFile, is_zipfile
+
+from sim_explorer.case import CaseInitError
 
 
 def match_with_wildcard(findtxt: str, matchtxt: str) -> bool:
