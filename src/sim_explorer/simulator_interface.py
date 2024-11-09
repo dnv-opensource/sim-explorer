@@ -83,30 +83,22 @@ class SimulatorInterface:
         self.sysconfig: Path | None = None
         log_output_level(log_level)
         self.simulator: CosimExecution
-        if (
-            simulator is None
-        ):  # instantiate the simulator through the system config file
+        if simulator is None:  # instantiate the simulator through the system config file
             self.sysconfig = Path(system)
             assert self.sysconfig.exists(), f"File {self.sysconfig.name} not found"
             ck, msg = self._check_system_structure(self.sysconfig)
             assert ck, msg
-            self.simulator = cast(
-                CosimExecution, self._simulator_from_config(self.sysconfig)
-            )
+            self.simulator = cast(CosimExecution, self._simulator_from_config(self.sysconfig))
         else:
             self.simulator = simulator
         self.components = self.get_components()  # dict of {component name : modelId}
         # Instantiate a suitable manipulator for changing variables.
         self.manipulator = CosimManipulator.create_override()
-        assert self.simulator.add_manipulator(
-            manipulator=self.manipulator
-        ), "Could not add manipulator object"
+        assert self.simulator.add_manipulator(manipulator=self.manipulator), "Could not add manipulator object"
 
         # Instantiate a suitable observer for collecting results.
         self.observer = CosimObserver.create_last_value()
-        assert self.simulator.add_observer(
-            observer=self.observer
-        ), "Could not add observer object"
+        assert self.simulator.add_observer(observer=self.observer), "Could not add observer object"
         self.message = ""  # possibility to save additional message for (optional) retrieval by client
 
     @property
@@ -126,22 +118,14 @@ class SimulatorInterface:
 
     def reset(self):  # , cases:Cases):
         """Reset the simulator interface, so that a new simulation can be run."""
-        assert isinstance(
-            self.sysconfig, Path
-        ), "Simulator resetting does not work with explicitly supplied simulator."
-        assert (
-            self.sysconfig.exists()
-        ), "Simulator resetting does not work with explicitly supplied simulator."
+        assert isinstance(self.sysconfig, Path), "Simulator resetting does not work with explicitly supplied simulator."
+        assert self.sysconfig.exists(), "Simulator resetting does not work with explicitly supplied simulator."
         assert isinstance(self.manipulator, CosimManipulator)
         assert isinstance(self.observer, CosimObserver)
         # self.simulator = self._simulator_from_config(self.sysconfig)
         self.simulator = CosimExecution.from_osp_config_file(str(self.sysconfig))
-        assert self.simulator.add_manipulator(
-            manipulator=self.manipulator
-        ), "Could not add manipulator object"
-        assert self.simulator.add_observer(
-            observer=self.observer
-        ), "Could not add observer object"
+        assert self.simulator.add_manipulator(manipulator=self.manipulator), "Could not add manipulator object"
+        assert self.simulator.add_observer(observer=self.observer), "Could not add observer object"
         # for case in cases:
 
     def _simulator_from_config(self, file: Path):
@@ -178,9 +162,7 @@ class SimulatorInterface:
         if self.simulator is None:
             pass  # nothing to do we return an empty dict
 
-        elif (
-            model >= 0
-        ):  # use self.components to extract only components related to the provided model
+        elif model >= 0:  # use self.components to extract only components related to the provided model
             for comp, mod in self.components.items():
                 if mod == model:
                     comps.update({comp: self.components[comp]})
@@ -247,9 +229,7 @@ class SimulatorInterface:
             return False
 
         var = []
-        assert len(
-            self.components
-        ), "Need the dictionary of components before maching variables"
+        assert len(self.components), "Need the dictionary of components before maching variables"
 
         accepted = None
         variables = self.get_variables(component)
@@ -283,9 +263,7 @@ class SimulatorInterface:
                 return struct.causality == 2
         return False
 
-    def get_variables(
-        self, comp: str | int, single: int | str | None = None, as_numbers: bool = True
-    ) -> dict:
+    def get_variables(self, comp: str | int, single: int | str | None = None, as_numbers: bool = True) -> dict:
         """Get the registered variables for a given component from the simulator.
 
         Args:
@@ -317,16 +295,8 @@ class SimulatorInterface:
                 or struct.name.decode() == single
             ):
                 typ = struct.type if as_numbers else CosimVariableType(struct.type).name
-                causality = (
-                    struct.causality
-                    if as_numbers
-                    else CosimVariableCausality(struct.causality).name
-                )
-                variability = (
-                    struct.variability
-                    if as_numbers
-                    else CosimVariableVariability(struct.variability).name
-                )
+                causality = struct.causality if as_numbers else CosimVariableCausality(struct.causality).name
+                variability = struct.variability if as_numbers else CosimVariableVariability(struct.variability).name
                 variables.update(
                     {
                         struct.name.decode(): {
@@ -414,25 +384,15 @@ class SimulatorInterface:
         only that variables are set individually and the type is added as argument.
         """
         if typ == CosimVariableType.REAL.value:
-            return self.simulator.real_initial_value(
-                instance, var_ref, self.pytype(typ, var_val)
-            )
+            return self.simulator.real_initial_value(instance, var_ref, self.pytype(typ, var_val))
         elif typ == CosimVariableType.INTEGER.value:
-            return self.simulator.integer_initial_value(
-                instance, var_ref, self.pytype(typ, var_val)
-            )
+            return self.simulator.integer_initial_value(instance, var_ref, self.pytype(typ, var_val))
         elif typ == CosimVariableType.STRING.value:
-            return self.simulator.string_initial_value(
-                instance, var_ref, self.pytype(typ, var_val)
-            )
+            return self.simulator.string_initial_value(instance, var_ref, self.pytype(typ, var_val))
         elif typ == CosimVariableType.BOOLEAN.value:
-            return self.simulator.boolean_initial_value(
-                instance, var_ref, self.pytype(typ, var_val)
-            )
+            return self.simulator.boolean_initial_value(instance, var_ref, self.pytype(typ, var_val))
 
-    def set_variable_value(
-        self, instance: int, typ: int, var_refs: tuple[int], var_vals: tuple[PyVal]
-    ) -> bool:
+    def set_variable_value(self, instance: int, typ: int, var_refs: tuple[int], var_vals: tuple[PyVal]) -> bool:
         """Provide a manipulator function which sets the 'variable' (of the given 'instance' model) to 'value'.
 
         Args:
@@ -444,13 +404,9 @@ class SimulatorInterface:
         if typ == CosimVariableType.REAL.value:
             return self.manipulator.slave_real_values(instance, list(var_refs), _vals)
         elif typ == CosimVariableType.INTEGER.value:
-            return self.manipulator.slave_integer_values(
-                instance, list(var_refs), _vals
-            )
+            return self.manipulator.slave_integer_values(instance, list(var_refs), _vals)
         elif typ == CosimVariableType.BOOLEAN.value:
-            return self.manipulator.slave_boolean_values(
-                instance, list(var_refs), _vals
-            )
+            return self.manipulator.slave_boolean_values(instance, list(var_refs), _vals)
         elif typ == CosimVariableType.STRING.value:
             return self.manipulator.slave_string_values(instance, list(var_refs), _vals)
         else:
@@ -479,9 +435,7 @@ class SimulatorInterface:
         """Return the python type of the FMU type provided as string or int (CosimEnums).
         If val is None, the python type object is returned. Else if boolean, true or false is returned.
         """
-        fmu_type_str = (
-            CosimVariableType(fmu_type).name if isinstance(fmu_type, int) else fmu_type
-        )
+        fmu_type_str = CosimVariableType(fmu_type).name if isinstance(fmu_type, int) else fmu_type
         typ = {
             "real": float,
             "integer": int,
@@ -498,16 +452,12 @@ class SimulatorInterface:
             elif isinstance(val, int):
                 return bool(val)
             else:
-                raise CaseInitError(
-                    f"The value {val} could not be converted to boolean"
-                )
+                raise CaseInitError(f"The value {val} could not be converted to boolean")
         else:
             return typ(val)
 
     @staticmethod
-    def default_initial(
-        causality: int, variability: int, max_possible: bool = False
-    ) -> int:
+    def default_initial(causality: int, variability: int, max_possible: bool = False) -> int:
         """Return default initial setting as int, as initial setting is not explicitly available in OSP. See p.50 FMI2.
         maxPossible = True chooses the the initial setting with maximum allowance.
 
@@ -526,9 +476,7 @@ class SimulatorInterface:
         else:
             return (0, 2, 2, 3)[code]  # default value in table
 
-    def allowed_action(
-        self, action: str, comp: int | str, var: int | str | tuple, time: float
-    ):
+    def allowed_action(self, action: str, comp: int | str, var: int | str | tuple, time: float):
         """Check whether the action would be allowed according to FMI2 rules, see FMI2.01, p.49.
 
         * Unfortunately, the OSP interface does not explicitly provide the 'initial' setting,
@@ -562,20 +510,14 @@ class SimulatorInterface:
             var = (var,)
         for v in var:
             variables = self.get_variables(comp, v)
-            if _check(
-                len(variables) != 1, f"Variable {v} of component {comp} was not found"
-            ):
+            if _check(len(variables) != 1, f"Variable {v} of component {comp} was not found"):
                 return False
             name, var_info = next(variables.items().__iter__())
-            if (
-                _type < 0 or _causality < 0 or _variability < 0
-            ):  # define the properties and check whether allowed
+            if _type < 0 or _causality < 0 or _variability < 0:  # define the properties and check whether allowed
                 _type = var_info["type"]
                 _causality = var_info["causality"]
                 _variability = var_info["variability"]
-                initial = SimulatorInterface.default_initial(
-                    _causality, _variability, True
-                )
+                initial = SimulatorInterface.default_initial(_causality, _variability, True)
 
                 if action == "get":  # no restrictions on get
                     pass
@@ -595,19 +537,14 @@ class SimulatorInterface:
                         # initial settings 'exact', 'approx' or 'input'
                         if _check(
                             not (initial in (0, 1) or _causality == 0),
-                            _description(name, var_info, initial)
-                            + " cannot be set before or during initialization.",
+                            _description(name, var_info, initial) + " cannot be set before or during initialization.",
                         ):
                             return False
                     else:  # at communication points
                         # 'parameter', 'tunable' or 'input
                         if _check(
-                            not (
-                                (_causality == 1 and _variability == 2)
-                                or _causality == 0
-                            ),
-                            _description(name, var_info, initial)
-                            + " cannot be set at communication points.",
+                            not ((_causality == 1 and _variability == 2) or _causality == 0),
+                            _description(name, var_info, initial) + " cannot be set at communication points.",
                         ):
                             return False
             else:  # check whether the properties are equal
@@ -618,14 +555,12 @@ class SimulatorInterface:
                     return False
                 if _check(
                     _causality != var_info["causality"],
-                    _description(name, var_info, initial)
-                    + f" != causality { _causality}",
+                    _description(name, var_info, initial) + f" != causality { _causality}",
                 ):
                     return False
                 if _check(
                     _variability != var_info["variability"],
-                    _description(name, var_info, initial)
-                    + f" != variability {_variability}",
+                    _description(name, var_info, initial) + f" != variability {_variability}",
                 ):
                     return False
         return True
@@ -647,4 +582,3 @@ class SimulatorInterface:
         """Get the component id from the name. -1 if not found."""
         id = self.simulator.slave_index_from_instance_name(name)
         return id if id is not None else -1
-

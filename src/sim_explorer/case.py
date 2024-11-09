@@ -90,27 +90,19 @@ class Case:
         else:  # all other cases need a parent
             parent_name = self.js.jspath("$.parent", str) or "base"
             parent_case = self.cases.case_by_name(parent_name)
-            assert isinstance(
-                parent_case, Case
-            ), f"Parent case for {self.name} required. Found {parent_name}"
+            assert isinstance(parent_case, Case), f"Parent case for {self.name} required. Found {parent_name}"
             self.parent = parent_case
             self.parent.append(self)
 
         if self.name == "results":
-            raise ValueError(
-                "'results' should not be used as case name. Add general results to 'base'"
-            )
+            raise ValueError("'results' should not be used as case name. Add general results to 'base'")
         elif self.name == "base":  # take over the results info and activities
-            assert (
-                special is not None
-            ), "startTime and stopTime settings needed for 'base'"
+            assert special is not None, "startTime and stopTime settings needed for 'base'"
             self.special = special
             self.act_get: dict = {}
             self.act_set: dict = {}  # no set actions during results collection
         else:
-            assert isinstance(
-                self.parent, Case
-            ), f"Parent case expected for case {self.name}"
+            assert isinstance(self.parent, Case), f"Parent case expected for case {self.name}"
             self.special = dict(self.parent.special)
             self.act_get = Case._actions_copy(self.parent.act_get)
             self.act_set = Case._actions_copy(self.parent.act_set)
@@ -123,9 +115,7 @@ class Case:
                 self.read_spec_item(_res)
 
         if self.name == "base":
-            self.special = self._ensure_specials(
-                self.special
-            )  # must specify for base case
+            self.special = self._ensure_specials(self.special)  # must specify for base case
         self.act_get = dict(sorted(self.act_get.items()))
         self.act_set = dict(sorted(self.act_set.items()))
         # self.res represents the Results object and is added when collecting results or when evaluating results
@@ -183,25 +173,17 @@ class Case:
             dct = self.act_set
         else:
             raise AssertionError(f"Unknown typ {typ} in _add_action")
-        assert isinstance(
-            at_time, (float, int)
-        ), f"Actions require a defined time as float. Found {at_time}"
+        assert isinstance(at_time, (float, int)), f"Actions require a defined time as float. Found {at_time}"
         if at_time in dct:
             for i, act in enumerate(dct[at_time]):
-                if act.func.__name__ == action.__name__ and all(
-                    act.args[k] == args[k] for k in range(2)
-                ):
+                if act.func.__name__ == action.__name__ and all(act.args[k] == args[k] for k in range(2)):
                     # the type of action, the model id and the variable type match
-                    if isinstance(
-                        args[2], int
-                    ):  # single variable (used for initial set actions)
+                    if isinstance(args[2], int):  # single variable (used for initial set actions)
                         if args[2] == act.args[2]:
                             if typ == "set":
                                 dct[at_time][i] = partial(action, *args)  # replace
                             return
-                    elif all(
-                        r in act.args[2] for r in args[2]
-                    ):  # refs are a subset or equal
+                    elif all(r in act.args[2] for r in args[2]):  # refs are a subset or equal
                         if typ == "set":  # Need to (partially) replace value(s)
                             values = list(act.args[3])  # copy of existing values
                             for k, r in enumerate(act.args[2]):  # go through refs
@@ -228,9 +210,7 @@ class Case:
         else:
             return 1
 
-    def _disect_at_time(
-        self, txt: str, value: Any | None = None
-    ) -> tuple[str, str, float]:
+    def _disect_at_time(self, txt: str, value: Any | None = None) -> tuple[str, str, float]:
         """Disect the @txt argument into 'at_time_type' and 'at_time_arg'.
 
         Args:
@@ -270,9 +250,7 @@ class Case:
                     except Exception:
                         return (pre, "step", -1)  # this means 'all macro steps'
                 else:
-                    raise AssertionError(
-                        f"Unknown @time instruction {txt}. Case:{self.name}, value:'{value}'"
-                    )
+                    raise AssertionError(f"Unknown @time instruction {txt}. Case:{self.name}, value:'{value}'")
             else:
                 return (pre, "set" if Case._num_elements(value) else "get", arg_float)
 
@@ -334,9 +312,7 @@ class Case:
             key, cvar_info, rng = self.cases.disect_variable(key)
             key = key.strip()
             if value is not None:  # check also the number of supplied values
-                if isinstance(
-                    value, (str, float, int, bool)
-                ):  # make sure that there are always lists
+                if isinstance(value, (str, float, int, bool)):  # make sure that there are always lists
                     value = [value]
                 _assert(
                     sum(1 for _ in rng) == Case._num_elements(value),
@@ -350,26 +326,16 @@ class Case:
                     var_vals.append(value[i])
             # print(f"CASE.read_spec, {key}@{at_time_arg}({at_time_type}):{value}[{rng}], alias={cvar_info}")
             if at_time_type in ("get", "step"):  # get actions
-                for inst in cvar_info[
-                    "instances"
-                ]:  # ask simulator to provide function to set variables:
+                for inst in cvar_info["instances"]:  # ask simulator to provide function to set variables:
                     _inst = self.cases.simulator.component_id_from_name(inst)
-                    if not self.cases.simulator.allowed_action(
-                        "get", _inst, tuple(var_refs), 0
-                    ):
+                    if not self.cases.simulator.allowed_action("get", _inst, tuple(var_refs), 0):
                         raise AssertionError(self.cases.simulator.message) from None
-                    elif (
-                        at_time_type == "get" or at_time_arg == -1
-                    ):  # normal get or step without time spec
+                    elif at_time_type == "get" or at_time_arg == -1:  # normal get or step without time spec
                         self._add_action(
                             "get",
                             self.cases.simulator.get_variable_value,
                             (_inst, cvar_info["type"], tuple(var_refs)),
-                            (
-                                at_time_arg
-                                if at_time_arg <= 0
-                                else at_time_arg * self.cases.timefac
-                            ),
+                            (at_time_arg if at_time_arg <= 0 else at_time_arg * self.cases.timefac),
                         )
                     else:  # step actions with specified interval
                         for time in np.arange(
@@ -384,26 +350,14 @@ class Case:
                                 at_time_arg * self.cases.timefac,
                             )
             else:  # set actions
-                assert (
-                    value is not None
-                ), f"Variable {key}: Value needed for 'set' actions."
-                assert at_time_type in (
-                    "set"
-                ), f"Unknown @time type {at_time_type} for case '{self.name}'"
-                if (
-                    at_time_arg <= self.special["startTime"]
-                ):  # False: #?? set_initial() does so far not work??#
+                assert value is not None, f"Variable {key}: Value needed for 'set' actions."
+                assert at_time_type in ("set"), f"Unknown @time type {at_time_type} for case '{self.name}'"
+                if at_time_arg <= self.special["startTime"]:  # False: #?? set_initial() does so far not work??#
                     #  SimulatorInterface.default_initial(cvar_info["causality"], cvar_info["variability"]) < 3:
-                    assert (
-                        at_time_arg <= self.special["startTime"]
-                    ), f"Initial settings at time {at_time_arg}?"
-                    for inst in cvar_info[
-                        "instances"
-                    ]:  # ask simulator to provide function to set variables:
+                    assert at_time_arg <= self.special["startTime"], f"Initial settings at time {at_time_arg}?"
+                    for inst in cvar_info["instances"]:  # ask simulator to provide function to set variables:
                         _inst = self.cases.simulator.component_id_from_name(inst)
-                        if not self.cases.simulator.allowed_action(
-                            "set", _inst, tuple(var_refs), 0
-                        ):
+                        if not self.cases.simulator.allowed_action("set", _inst, tuple(var_refs), 0):
                             raise AssertionError(self.cases.simulator.message) from None
                         for ref, val in zip(var_refs, var_vals, strict=False):
                             self._add_action(
@@ -413,13 +367,9 @@ class Case:
                                 at_time_arg * self.cases.timefac,
                             )
                 else:
-                    for inst in cvar_info[
-                        "instances"
-                    ]:  # ask simulator to provide function to set variables:
+                    for inst in cvar_info["instances"]:  # ask simulator to provide function to set variables:
                         _inst = self.cases.simulator.component_id_from_name(inst)
-                        if not self.cases.simulator.allowed_action(
-                            "set", _inst, tuple(var_refs), at_time_arg
-                        ):
+                        if not self.cases.simulator.allowed_action("set", _inst, tuple(var_refs), at_time_arg):
                             raise AssertionError(self.cases.simulator.message) from None
                         self._add_action(
                             at_time_type,
@@ -433,9 +383,7 @@ class Case:
                             at_time_arg * self.cases.timefac,
                         )
 
-    def list_cases(
-        self, as_name: bool = True, flat: bool = False
-    ) -> list[str] | list[Case]:
+    def list_cases(self, as_name: bool = True, flat: bool = False) -> list[str] | list[Case]:
         """List this case and all sub-cases recursively, as name or case objects."""
         lst: list[str] | list[Case]
         lst = [self.name] if as_name else [self]  # type: ignore[list-item]
@@ -455,9 +403,7 @@ class Case:
 
         def get_from_config(element: str, default: float | None = None):
             if isinstance(self.cases.simulator.sysconfig, Path):
-                info = from_xml(
-                    self.cases.simulator.sysconfig, sub=None, xpath=".//{*}" + element
-                )
+                info = from_xml(self.cases.simulator.sysconfig, sub=None, xpath=".//{*}" + element)
                 if not len(info):
                     return default
                 txt = info[0].text
@@ -470,17 +416,13 @@ class Case:
 
         if "startTime" not in special:
             special.update({"startTime": get_from_config("StartTime", 0.0)})
-        assert (
-            "stopTime" in special
-        ), "'stopTime' should be specified as part of the 'base' specification."
+        assert "stopTime" in special, "'stopTime' should be specified as part of the 'base' specification."
         if "stepSize" not in special:
             step_size = get_from_config("BaseStepSize", None)
             if step_size is not None:
                 special.update({"stepSize": step_size})
             else:
-                raise CaseInitError(
-                    "'stepSize' should be specified as part of the 'base' specification."
-                ) from None
+                raise CaseInitError("'stepSize' should be specified as part of the 'base' specification.") from None
         return special
 
     def run(self, dump: str | None = ""):
@@ -518,16 +460,12 @@ class Case:
         tstop: int = int(self.special["stopTime"] * self.cases.timefac)
         tstep: int = int(self.special["stepSize"] * self.cases.timefac)
 
-        set_iter = (
-            self.act_set.items().__iter__()
-        )  # iterator over set actions => time, action_list
+        set_iter = self.act_set.items().__iter__()  # iterator over set actions => time, action_list
         try:
             t_set, a_set = next(set_iter)
         except StopIteration:
             t_set, a_set = (float("inf"), [])  # satisfy linter
-        get_iter = (
-            self.act_get.items().__iter__()
-        )  # iterator over get actions => time, action_list
+        get_iter = self.act_get.items().__iter__()  # iterator over get actions => time, action_list
         act_step = None
         self.add_results_object(Results(self))
 
@@ -541,11 +479,7 @@ class Case:
             else:
                 break
 
-        for (
-            a
-        ) in (
-            a_set
-        ):  # since there is no hook to get initial values we report it this way
+        for a in a_set:  # since there is no hook to get initial values we report it this way
             self.res.add(tstart, *a.args)
 
         while True:  # main simulation loop
@@ -555,15 +489,11 @@ class Case:
             if time > tstop:
                 break
             self.cases.simulator.simulator.simulate_until(time)
-            t_get, a_get = do_actions(
-                t_get, a_get, get_iter, time
-            )  # issue the current get actions
+            t_get, a_get = do_actions(t_get, a_get, get_iter, time)  # issue the current get actions
 
             if act_step is not None:  # there are step-always actions
                 for a in act_step:
-                    self.res.add(
-                        time / self.cases.timefac, a.args[0], a.args[1], a.args[2], a()
-                    )
+                    self.res.add(time / self.cases.timefac, a.args[0], a.args[1], a.args[2], a())
 
         self.cases.simulator.reset()
         if dump is not None:
@@ -625,9 +555,7 @@ class Cases:
         self.js = Json5(spec)
         log_level = CosimLogLevel[self.js.jspath("$.header.logLevel") or "FATAL"]
         if simulator is None:
-            modelfile = (
-                self.js.jspath("$.header.modelFile", str) or "OspSystemStructure.xml"
-            )
+            modelfile = self.js.jspath("$.header.modelFile", str) or "OspSystemStructure.xml"
             path = self.file.parent / modelfile
             assert path.exists(), f"OSP system structure file {path} not found"
             try:
@@ -643,9 +571,7 @@ class Cases:
             self.simulator = simulator  # SimulatorInterface( simulator = simulator)
             log_output_level(log_level)
 
-        self.timefac = (
-            self._get_time_unit() * 1e9
-        )  # internally OSP uses pico-seconds as integer!
+        self.timefac = self._get_time_unit() * 1e9  # internally OSP uses pico-seconds as integer!
         # read the 'variables' section and generate dict { alias : { (instances), (variables)}}:
         self.variables = self.get_case_variables()
         self._comp_refs_to_case_var_cache: dict = (
@@ -668,9 +594,7 @@ class Cases:
         variables = {}
         for k, v in self.js.jspath("$.header.variables", dict, True).items():
             if not isinstance(v, list):
-                raise CaseInitError(
-                    f"List of 'component(s)' and 'variable(s)' expected. Found {v}"
-                ) from None
+                raise CaseInitError(f"List of 'component(s)' and 'variable(s)' expected. Found {v}") from None
             _assert(
                 len(v) in (2, 3),
                 f"Variable spec should be: instance(s), variables[, description]. Found {v}.",
@@ -685,12 +609,8 @@ class Cases:
                 len(comp) > 0,
                 f"No component model instances '{v[0]}' found for alias variable '{k}'",
             )
-            assert isinstance(
-                v[1], str
-            ), f"Variable name(s) expected as second argument in variable spec. Found {v[1]}"
-            _vars = self.simulator.match_variables(
-                comp[0], v[1]
-            )  # tuple of matching var refs
+            assert isinstance(v[1], str), f"Variable name(s) expected as second argument in variable spec. Found {v[1]}"
+            _vars = self.simulator.match_variables(comp[0], v[1])  # tuple of matching var refs
             var: dict = {
                 "model": model,
                 "instances": comp,
@@ -706,13 +626,9 @@ class Cases:
             # The type, causality and variability shall be equal for all variables.
             # The 'reference' element is the same as 'variables'.
             # next( iter( ...)) is used to get the first dict value
-            var0 = next(
-                iter(self.simulator.get_variables(model, _vars[0]).values())
-            )  # prototype
+            var0 = next(iter(self.simulator.get_variables(model, _vars[0]).values()))  # prototype
             for i in range(1, len(var["variables"])):
-                var_i = next(
-                    iter(self.simulator.get_variables(model, _vars[i]).values())
-                )
+                var_i = next(iter(self.simulator.get_variables(model, _vars[i]).values()))
                 for test in ["type", "causality", "variability"]:
                     _assert(
                         var_i[test] == var0[test],
@@ -767,19 +683,14 @@ class Cases:
         The others are linked as sub-cases in their parent cases.
         The 'header' is treated elsewhere.
         """
-        if (
-            self.js.jspath("$.base", dict) is not None
-            and self.js.jspath("$.base.spec", dict) is not None
-        ):
+        if self.js.jspath("$.base", dict) is not None and self.js.jspath("$.base.spec", dict) is not None:
             # we need to peek into the base case where startTime and stopTime should be defined
             special: dict[str, float] = {
                 "startTime": self.js.jspath("$.base.spec.startTime", float) or 0.0,
                 "stopTime": self.js.jspath("$.base.spec.stopTime", float, True),
             }
             # all case definitions are top-level objects in self.spec. 'base' is mandatory
-            self.base = Case(
-                self, "base", spec=self.js.jspath("$.base", dict, True), special=special
-            )
+            self.base = Case(self, "base", spec=self.js.jspath("$.base", dict, True), special=special)
             for k in self.js.js_py:
                 if k not in ("header", "base"):
                     _ = Case(self, k, spec=self.js.jspath(f"$.{k}", dict, True))
@@ -797,9 +708,7 @@ class Cases:
             The case object or None
         """
         if name == "header":
-            raise ValueError(
-                "The name 'header' is reserved and not allowed as case name"
-            ) from None
+            raise ValueError("The name 'header' is reserved and not allowed as case name") from None
         elif name == "base":
             return self.base
         else:
@@ -808,34 +717,22 @@ class Cases:
                 return found
         return None
 
-    def case_var_by_ref(
-        self, comp: int | str, ref: int | tuple[int, ...]
-    ) -> tuple[str, tuple]:
+    def case_var_by_ref(self, comp: int | str, ref: int | tuple[int, ...]) -> tuple[str, tuple]:
         """Get the case variable name related to the component model `comp` and the reference `ref`
         Returns a tuple of case variable name and an index (if composit variable).
         """
-        component = (
-            self.simulator.component_name_from_id(comp)
-            if isinstance(comp, int)
-            else comp
-        )
+        component = self.simulator.component_name_from_id(comp) if isinstance(comp, int) else comp
         refs = (ref,) if isinstance(ref, int) else ref
 
         for var, info in self.variables.items():
-            if component in info["instances"] and all(
-                r in info["variables"] for r in refs
-            ):
-                if len(refs) == len(
-                    info["variables"]
-                ):  # the whole variable is addressed
+            if component in info["instances"] and all(r in info["variables"] for r in refs):
+                if len(refs) == len(info["variables"]):  # the whole variable is addressed
                     return (var, ())
                 else:
                     return (var, tuple([info["variables"].index(r) for r in refs]))
         return ("", ())
 
-    def disect_variable(
-        self, key: str, err_level: int = 2
-    ) -> tuple[str, dict, list | range]:
+    def disect_variable(self, key: str, err_level: int = 2) -> tuple[str, dict, list | range]:
         """Extract the variable name, definition and explicit variable range, if relevant
         (multi-valued variables, where only some elements are addressed).
         ToDo: handle multi-dimensional arrays (tables, ...).
@@ -902,24 +799,18 @@ class Cases:
                         len(parts_ellipses) == 2,
                         f"RangeError: Exactly two indices expected in {p} of {pre}",
                     )
-                    parts_ellipses[1] = parts_ellipses[1].lstrip(
-                        "."
-                    )  # facilitates the option to use '...' or '..'
+                    parts_ellipses[1] = parts_ellipses[1].lstrip(".")  # facilitates the option to use '...' or '..'
                     try:
                         if len(parts_ellipses[0]) == 0:
                             idx0 = 0
                         else:
                             idx0 = int(parts_ellipses[0])
-                        assert (
-                            0 <= idx0 <= cvar_len
-                        ), f"Index {idx0} of variable {pre} out of range"
+                        assert 0 <= idx0 <= cvar_len, f"Index {idx0} of variable {pre} out of range"
                         if len(parts_ellipses[1]) == 0:
                             idx1 = cvar_len
                         else:
                             idx1 = int(parts_ellipses[1])
-                        assert (
-                            idx0 <= idx1 <= cvar_len
-                        ), f"Index {idx1} of variable {pre} out of range"
+                        assert idx0 <= idx1 <= cvar_len, f"Index {idx1} of variable {pre} out of range"
                     except ValueError as err:
                         return handle_error(
                             "Unhandled ellipses '{parts_comma}' for variable {pre}",
@@ -945,18 +836,14 @@ class Cases:
             modelfile = self.js.jspath("$.header.modelFile", str)
             if modelfile is not None:
                 txt += f"System spec '{modelfile}'.\n"
-            assert isinstance(
-                case, Case
-            ), "At this point a Case object is expected as variable 'case'"
+            assert isinstance(case, Case), "At this point a Case object is expected as variable 'case'"
             txt += self.info(case=case, level=level)
         elif isinstance(case, Case):
             txt += "  " * level + case.name + "\n"
             for c in case.subs:
                 txt += self.info(case=c, level=level + 1)
         else:
-            raise ValueError(
-                f"The argument 'case' shall be a Case object or None. Type {type(case)} found."
-            )
+            raise ValueError(f"The argument 'case' shall be a Case object or None. Type {type(case)} found.")
         return txt
 
     def comp_refs_to_case_var(self, comp: int, refs: tuple[int, ...]):
@@ -1011,17 +898,11 @@ class Results:
             If "" default file name is used, if None, results are not stored.
     """
 
-    def __init__(
-        self, case: Case | str | Path | None = None, file: str | Path | None = None
-    ):
+    def __init__(self, case: Case | str | Path | None = None, file: str | Path | None = None):
         self.file: Path | None  # None denotes that results are not automatically saved
         if (case is None or isinstance(case, (str, Path))) and file is not None:
-            self._init_from_existing(
-                file
-            )  # instantiating from existing results file (work with data)
-        elif isinstance(
-            case, Case
-        ):  # instantiating from cases file (for data collection)
+            self._init_from_existing(file)  # instantiating from existing results file (work with data)
+        elif isinstance(case, Case):  # instantiating from cases file (for data collection)
             self._init_new(case)
         else:
             raise ValueError(f"Inconsistent init arguments case:{case}, file:{file}")
@@ -1030,29 +911,19 @@ class Results:
         self.file = Path(file)
         assert self.file.exists(), f"File {file} is expected to exist."
         self.res = Json5(self.file)
-        case = Path(
-            self.file.parent / (self.res.jspath("$.header.cases", str, True) + ".cases")
-        )
+        case = Path(self.file.parent / (self.res.jspath("$.header.cases", str, True) + ".cases"))
         try:
             cases = Cases(Path(case))
         except ValueError:
-            raise CaseInitError(
-                f"Cases {Path(case)} instantiation error"
-            ) from ValueError
-        self.case: Case | None = cases.case_by_name(
-            name=self.res.jspath(path="$.header.case", typ=str, errorMsg=True)
-        )
-        assert isinstance(
-            self.case, Case
-        ), f"Case {self.res.jspath( '$.header.case', str, True)} not found"
+            raise CaseInitError(f"Cases {Path(case)} instantiation error") from ValueError
+        self.case: Case | None = cases.case_by_name(name=self.res.jspath(path="$.header.case", typ=str, errorMsg=True))
+        assert isinstance(self.case, Case), f"Case {self.res.jspath( '$.header.case', str, True)} not found"
         assert isinstance(self.case.cases, Cases), "Cases object not defined"
         self._header_transform(False)
         self.case.add_results_object(self)  # make Results object known to self.case
 
     def _init_new(self, case: Case, file: str | Path | None = ""):
-        assert isinstance(
-            case, Case
-        ), f"Case object expected as 'case' in Results. Found {type(case)}"
+        assert isinstance(case, Case), f"Case object expected as 'case' in Results. Found {type(case)}"
         self.case = case
         if file is not None:  # use that for storing results data as Json5
             if file == "":  # use default file name (can be changed through self.save():
@@ -1077,11 +948,8 @@ class Results:
                 "dateTime": datetime.today().isoformat(),
                 "cases": self.case.cases.js.jspath("$.header.name", str, True),
                 "file": relative_path(Path(self.case.cases.file), self.file),
-                "casesDate": datetime.fromtimestamp(
-                    os.path.getmtime(self.case.cases.file)
-                ).isoformat(),
-                "timeUnit": self.case.cases.js.jspath("$.header.timeUnit", str)
-                or "sec",
+                "casesDate": datetime.fromtimestamp(os.path.getmtime(self.case.cases.file)).isoformat(),
+                "timeUnit": self.case.cases.js.jspath("$.header.timeUnit", str) or "sec",
                 "timeFactor": self.case.cases.timefac,
             }
         }
@@ -1091,9 +959,7 @@ class Results:
         """Transform the header back- and forth between python types and string.
         tostring=True is used when saving to file and =False is used when reading from file.
         """
-        assert isinstance(
-            self.file, Path
-        ), f"Need a proper file at this point. Found {self.file}"
+        assert isinstance(self.file, Path), f"Need a proper file at this point. Found {self.file}"
         res = self.res
         if tostring:
             res.update(
@@ -1122,9 +988,7 @@ class Results:
                 get_path(res.jspath("$.header.file", str, True), self.file.parent),
             )
 
-    def add(
-        self, time: float, comp: int, typ: int, refs: int | list[int], values: tuple
-    ):
+    def add(self, time: float, comp: int, typ: int, refs: int | list[int], values: tuple):
         """Add the results of a get action to the results dict for the case.
 
         Args:
@@ -1189,12 +1053,8 @@ class Results:
                                     cont[ident]["range"][1] = time  # update upper bound
                                     cont[ident]["len"] += 1  # update length
                                 else:  # new entry
-                                    v_name, v_info, v_range = (
-                                        self.case.cases.disect_variable(v, err_level=0)
-                                    )
-                                    assert len(
-                                        v_name
-                                    ), f"Variable {v} not found in cases spec {self.case.cases.file}"
+                                    v_name, v_info, v_range = self.case.cases.disect_variable(v, err_level=0)
+                                    assert len(v_name), f"Variable {v} not found in cases spec {self.case.cases.file}"
                                     cont.update(
                                         {
                                             ident: {
@@ -1227,9 +1087,7 @@ class Results:
             found = self.res.jspath("$['" + str(key) + "']." + variable)
             if found is not None:
                 if isinstance(found, list):
-                    raise NotImplementedError(
-                        "So far not implemented for multi-dimensional plots"
-                    ) from None
+                    raise NotImplementedError("So far not implemented for multi-dimensional plots") from None
                 else:
                     times.append(float(key))
                     values.append(found)
