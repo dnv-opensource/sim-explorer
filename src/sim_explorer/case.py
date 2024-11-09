@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from libcosimpy.CosimLogging import CosimLogLevel, log_output_level
 
+from sim_explorer.exceptions import CaseInitError
 from sim_explorer.json5 import Json5
 from sim_explorer.simulator_interface import SimulatorInterface
 from sim_explorer.utils.misc import from_xml
@@ -30,18 +31,6 @@ sim_explorer module for definition and execution of simulation experiments
 With respect to MVx in general, this module serves the preparation of start conditions for smart testing.
 Note: The classes Case and Cases should be kept together in this file to avoid circular references.
 """
-
-
-class CaseInitError(Exception):
-    """Special error indicating that something is wrong during initialization of cases."""
-
-    pass
-
-
-class CaseUseError(Exception):
-    """Special error indicating that something is wrong during usage of cases."""
-
-    pass
 
 
 def _assert(condition: bool, msg: str, crit: int = 4, typ=CaseInitError):
