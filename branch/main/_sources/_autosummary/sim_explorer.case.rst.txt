@@ -1,0 +1,25 @@
+﻿sim\_explorer.case
+==================
+
+.. automodule:: sim_explorer.case
+   :members:
+   :exclude-members: Case,Cases,Results,
+   
+
+
+   
+   .. rubric:: Classes
+   .. autosummary::
+      :toctree:
+      :template: custom-class.rst
+   
+      Case
+      Cases
+      Results
+   
+   .. rubric:: Exceptions
+   .. autosummary::
+   
+      CaseInitError
+      CaseUseError
+   
