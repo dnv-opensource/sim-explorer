@@ -145,7 +145,7 @@ def test_step_by_step_cases():
     print("INFO", cases.info())
     static = cases.case_by_name("static")
     assert static is not None
-    assert static.js.jspath("$.spec", dict) == {"p[2]": 1.570796, "b[1]": 0.785398, "r[0]": 7.657, "load": 1000}
+    assert static.js.jspath("$.spec", dict) == {"p[2]": 1.570796, "b[1]": 45, "r[0]": 7.657, "load": 1000}
     assert static.act_get[-1][0].args == (0, 0, (10, 11, 12)), f"Step action arguments {static.act_get[-1][0].args}"
     assert sim.get_variable_value(0, 0, (10, 11, 12)) == [0.0, 0.0, 0.0], "Initial value of T"
     # msg = f"SET actions argument: {static.act_set[0][0].args}"
@@ -274,9 +274,10 @@ def test_run_cases():
 
 
 if __name__ == "__main__":
-    retcode = pytest.main(["-rA", "-v", __file__])
-    assert retcode == 0, f"Return code {retcode}"
-    # test_step_by_step_cosim()
+    #retcode = pytest.main(["-rA", "-v", __file__])
+    #assert retcode == 0, f"Return code {retcode}"
     # test_read_cases()
+    # test_step_by_step_cosim()
+    test_step_by_step_cases()
+    # test_run_basic()
     # test_run_cases()
-    # test_step_by_step_cases()

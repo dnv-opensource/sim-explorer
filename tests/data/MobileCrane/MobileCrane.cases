@@ -44,7 +44,7 @@ static : {
     description : "Static end position. Represents a mobile crane during lifting (turned 90deg, boom lifted 45 deg, load lifted 1 m)",
     spec: {
       p[2]  : 1.570796, # 90 deg azimuth (turned in y-direction)
-      b[1]  : 0.785398, # 45 deg polar (turned 45 deg up)
+      b[1]  : 45, #0.785398, # 45 deg polar (turned 45 deg up)
       r[0]  : 7.657,  # length of rope such that load 1m over floor
       load  : 1000,   # load weight in kg
    }},   

@@ -668,26 +668,13 @@ class Cases:
         variables = {}
         for k, v in self.js.jspath("$.header.variables", dict, True).items():
             if not isinstance(v, list):
-                raise CaseInitError(
-                    f"List of 'component(s)' and 'variable(s)' expected. Found {v}"
-                ) from None
-            _assert(
-                len(v) in (2, 3),
-                f"Variable spec should be: instance(s), variables[, description]. Found {v}.",
-            )
-            _assert(
-                isinstance(v[0], (str | tuple)),
-                f"Component name(s) expected as first argument of variable spec. Found {v[0]}",
-            )
+                raise CaseInitError(f"List of 'component(s)' and 'variable(s)' expected. Found {v}") from None
+            assert len(v) in (2, 3), f"Variable spec should be: instance(s), variables[, description]. Found {v}."
+            assert isinstance(v[0], (str | tuple)), f"First argument of variable spec: Component(s)! Found {v[0]}"
             assert isinstance(v[0], str), f"String expected as model name. Found {v[0]}"
             model, comp = self.simulator.match_components(v[0])
-            _assert(
-                len(comp) > 0,
-                f"No component model instances '{v[0]}' found for alias variable '{k}'",
-            )
-            assert isinstance(
-                v[1], str
-            ), f"Variable name(s) expected as second argument in variable spec. Found {v[1]}"
+            assert len(comp) > 0, f"No component model instances '{v[0]}' found for alias variable '{k}'"
+            assert isinstance(v[1], str), f"Second argument of variable sped: Variable name(s)! Found {v[1]}"
             _vars = self.simulator.match_variables(
                 comp[0], v[1]
             )  # tuple of matching var refs
@@ -696,10 +683,7 @@ class Cases:
                 "instances": comp,
                 "variables": _vars,  # variables from same model!
             }
-            _assert(
-                len(var["variables"]) > 0,
-                f"No matching variables found for alias {k}:{v}, component '{comp}'",
-            )
+            assert len(var["variables"]) > 0, f"No matching variables found for alias {k}:{v}, component '{comp}'"
             if len(v) > 2:
                 var.update({"description": v[2]})
             # We add also the more detailed variable info from the simulator (the FMU)
@@ -1235,7 +1219,7 @@ class Results:
                     values.append(found)
         return (times, values)
 
-    def plot_time_series(self, variables: list[str], title: str = ""):
+    def plot_time_series(self, variables: str | list[str], title: str = ""):
         """Extract the provided alias variables and plot the data found in the same plot.
 
         Args:
@@ -1244,6 +1228,8 @@ class Results:
                For example 'bb.v[2]' identifies the z-velocity of the component 'bb'
             title (str): optional title of the plot
         """
+        if not isinstance( variables, list):
+            variables = [variables,]
         for var in variables:
             times, values = self.time_series(var)
 

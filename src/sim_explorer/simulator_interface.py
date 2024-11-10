@@ -150,14 +150,22 @@ class SimulatorInterface:
         """
         if file.is_file():
             _type = "ssp" if file.name.endswith(".ssp") else "osp"
-            file = file.parent
+#            file = file.parent
         else:  # a directory. Find type
-            for child in file.iterdir():
-                if child.is_file() and child.name.endswith(".ssp"):
-                    _type = "ssp"
-                    break
             _type = "osp"
+            for child in file.iterdir():
+                if child.is_file():
+                    if child.name.endswith(".ssp"):
+                        _type = "ssp"
+                        file = file / child
+                        break
+                    elif child.name.endswith(".xml"):
+                        file = file / child
+                        xml = from_xml(file)
+                        if xml.tag.endswith("OspSystemStructure"):
+                            break
         if _type == "osp":
+            assert from_xml(file).tag.endswith("OspSystemStructure"), f"File {file} not an OSP structure file"
             return CosimExecution.from_osp_config_file(str(file))
         else:
             return CosimExecution.from_ssp_file(str(file))
@@ -247,9 +255,7 @@ class SimulatorInterface:
             return False
 
         var = []
-        assert len(
-            self.components
-        ), "Need the dictionary of components before maching variables"
+        assert len(self.components), "Need the dictionary of components before maching variables"
 
         accepted = None
         variables = self.get_variables(component)
