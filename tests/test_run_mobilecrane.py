@@ -140,7 +140,14 @@ def test_step_by_step_cases():
         "static",
         "dynamic",
     ]
-    assert list(js.jspath("$.header", dict).keys()) == ["name", "description", "modelFile", "logLevel", "timeUnit", "variables"]
+    assert list(js.jspath("$.header", dict).keys()) == [
+        "name",
+        "description",
+        "modelFile",
+        "logLevel",
+        "timeUnit",
+        "variables",
+    ]
     cases = Cases(path, sim)
     print("INFO", cases.info())
     static = cases.case_by_name("static")

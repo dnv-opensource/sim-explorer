@@ -6,9 +6,7 @@ import pytest
 
 
 def check_command(cmd: str, expected: str | None = None):
-    ret = subprocess.check_output(
-        cmd, shell=True, text=True
-    ).strip()
+    ret = subprocess.check_output(cmd, shell=True, text=True).strip()
     if expected is None:
         print("OUTPUT:", ret)
     else:
