@@ -243,6 +243,19 @@ def test_run_osp_system_structure(system_structure, show):
                 }
             }
         )
+
+    for idx in range(simulator.num_slave_variables(1)):
+        struct = simulator.slave_variables(1)[idx]
+        variables.update(
+            {
+                struct.name.decode(): {
+                    "reference": struct.reference,
+                    "type": struct.type,
+                    "causality": struct.causality,
+                    "variability": struct.variability,
+                }
+            }
+        )
     assert variables["c"]["type"] == 0
     assert variables["c"]["causality"] == 1
     assert variables["c"]["variability"] == 1
