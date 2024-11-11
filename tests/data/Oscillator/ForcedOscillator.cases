@@ -1,0 +1,43 @@
+{header : {
+   name        : 'ForcedOscillator',
+   description : 'Test forced oscillator in various conditions',
+   modelFile : "ForcedOscillator.xml",
+   logLevel : 'FATAL', # possible levels: TRACE, DEBUG, INFO, WARNING, ERROR, FATAL
+   timeUnit  : "second", # possible units: ns, us, ms, sec, min, h, d, or extensions of that, like 'second'  
+   variables : {
+      k : ['osc', 'k', "The spring constant in N/m"],
+      c : ['osc', 'c', "The damping constant N.s/m"],
+      m : ['osc', 'm', "The mass connected to the system in kg. The spring mass is assumed negligible."],
+      x_z : ['osc', 'x[2]', "Output connector for the 3D position of the mass in m (z-direction)"],
+      v_z : ['osc', 'v[2]', "Output connector for the 3D speed of the mass in m/s (z-direction)"],
+      A : ['drv', 'ampl', "The amplitude of the force in N"],
+      f : ['drv', 'freq', "The frequency of the force in 1/s"],
+      }},
+base: {
+   description : "All basic initial settings and results specifications",
+   spec: {
+      stepSize : 0.01,
+      stopTime : 10.0,
+      k : 1.0,
+      c : 0.5,
+      m : 1.0,
+      x_z : 1.0,
+      v_z : 0.0,
+      A   : 1.0,
+      f   : 1.0,
+      x_z@step : 'res',
+   },
+#   assert: { # future results expectation feature
+#      1 : 'abs(c-0.5)<1e-9'
+#   }
+   },
+no_damping_no_force: {
+   spec: {
+      c : 1E-7, #0.0,
+      A : 0.0,
+   }},
+resonant: {
+   spec: {
+      f : 0.15915,
+   }},
+}
