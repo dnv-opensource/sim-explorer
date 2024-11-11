@@ -268,26 +268,26 @@ def test_run_osp_system_structure(system_structure, show):
     assert variables["v[2]"]["causality"] == 2
     assert variables["v[2]"]["variability"] == 4
 
-    # Instantiate a suitable manipulator for changing variables.
-    manipulator = CosimManipulator.create_override()
-    simulator.add_manipulator(manipulator=manipulator)
-    simulator.real_initial_value(0, 1, 0.5)
-    simulator.real_initial_value(0, 5, 1.0)
     # Instantiate a suitable observer for collecting results.
-    observer = CosimObserver.create_last_value()
-    simulator.add_observer(observer=observer)
-    times = []
-    pos = []
-    speed = []
-    for step in range(1, 1000):
-        time = step * 0.01
-        simulator.simulate_until(step * 1e8)
-        values = observer.last_real_values(0, [5, 8])
-        # print(f"Time {simulator.status().current_time*1e-9}: {values}")
-        times.append(time)
-        pos.append(values[0])
-        speed.append(values[1])
     if show:
+        # Instantiate a suitable manipulator for changing variables.
+        manipulator = CosimManipulator.create_override()
+        simulator.add_manipulator(manipulator=manipulator)
+        simulator.real_initial_value(0, 1, 0.5)
+        simulator.real_initial_value(0, 5, 1.0)
+        observer = CosimObserver.create_last_value()
+        simulator.add_observer(observer=observer)
+        times = []
+        pos = []
+        speed = []
+        for step in range(1, 1000):
+            time = step * 0.01
+            simulator.simulate_until(step * 1e8)
+            values = observer.last_real_values(0, [5, 8])
+            # print(f"Time {simulator.status().current_time*1e-9}: {values}")
+            times.append(time)
+            pos.append(values[0])
+            speed.append(values[1])
         do_show(times, pos, speed)
 
 
