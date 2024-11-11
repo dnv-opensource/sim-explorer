@@ -584,15 +584,16 @@ class Cases:
         for k, v in self.js.jspath("$.header.variables", dict, True).items():
             if not isinstance(v, list):
                 raise CaseInitError(f"List of 'component(s)' and 'variable(s)' expected. Found {v}") from None
-            assert len(v) in (2, 3), f"Variable spec should be: instance(s), variables[, description]. Found {v}."
+            assert len(v) in (
+                2,
+                3,
+            ), f"Variable spec should be: instance(s), variables[, description]. Found {v}."
             assert isinstance(v[0], (str | tuple)), f"First argument of variable spec: Component(s)! Found {v[0]}"
             assert isinstance(v[0], str), f"String expected as model name. Found {v[0]}"
             model, comp = self.simulator.match_components(v[0])
             assert len(comp) > 0, f"No component model instances '{v[0]}' found for alias variable '{k}'"
             assert isinstance(v[1], str), f"Second argument of variable sped: Variable name(s)! Found {v[1]}"
-            _vars = self.simulator.match_variables(
-                comp[0], v[1]
-            )  # tuple of matching var refs
+            _vars = self.simulator.match_variables(comp[0], v[1])  # tuple of matching var refs
             var: dict = {
                 "model": model,
                 "instances": comp,
@@ -1081,8 +1082,10 @@ class Results:
                For example 'bb.v[2]' identifies the z-velocity of the component 'bb'
             title (str): optional title of the plot
         """
-        if not isinstance( variables, list):
-            variables = [variables,]
+        if not isinstance(variables, list):
+            variables = [
+                variables,
+            ]
         for var in variables:
             times, values = self.time_series(var)
 

@@ -134,7 +134,7 @@ class SimulatorInterface:
         """
         if file.is_file():
             _type = "ssp" if file.name.endswith(".ssp") else "osp"
-#            file = file.parent
+        #            file = file.parent
         else:  # a directory. Find type
             _type = "osp"
             for child in file.iterdir():
@@ -146,10 +146,13 @@ class SimulatorInterface:
                     elif child.name.endswith(".xml"):
                         file = file / child
                         xml = from_xml(file)
+                        assert isinstance(xml, ET.Element), f"An ET.Element is ixpected here. Found {xml}"
                         if xml.tag.endswith("OspSystemStructure"):
                             break
         if _type == "osp":
-            assert from_xml(file).tag.endswith("OspSystemStructure"), f"File {file} not an OSP structure file"
+            xml = from_xml(file)
+            assert isinstance(xml, ET.Element), f"An ET.Element is ixpected here. Found {xml}"
+            assert xml.tag.endswith("OspSystemStructure"), f"File {file} not an OSP structure file"
             return CosimExecution.from_osp_config_file(str(file))
         else:
             return CosimExecution.from_ssp_file(str(file))

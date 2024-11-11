@@ -2,7 +2,7 @@
    name        : 'BouncingBall3D',
    description : 'Simple sim explorer with the 3D BouncingBall FMU (3D position and speed',
    modelFile : "OspSystemStructure.xml",
-   logLevel : FATAL,
+   logLevel : "FATAL",
    timeUnit  : "second",
    variables : {
       g : ['bb', 'g', "Gravity acting on the ball"],

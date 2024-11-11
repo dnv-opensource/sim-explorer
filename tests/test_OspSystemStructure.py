@@ -1,7 +1,11 @@
 from pathlib import Path
 
 import pytest
-from libcosimpy.CosimEnums import CosimVariableCausality, CosimVariableType, CosimVariableVariability
+from libcosimpy.CosimEnums import (
+    CosimVariableCausality,
+    CosimVariableType,
+    CosimVariableVariability,
+)
 from libcosimpy.CosimExecution import CosimExecution  # type: ignore
 
 

@@ -57,10 +57,21 @@ def test_jpath(ex):
         "J. R. R. Tolkien",
     ], f"The authors of all books in the store: {found}"
     found = ex.jspath("$..author", list)
-    assert found == ["Nigel Rees", "Evelyn Waugh", "Herman Melville", "J. R. R. Tolkien"], f"All authors: {found}"
+    assert found == [
+        "Nigel Rees",
+        "Evelyn Waugh",
+        "Herman Melville",
+        "J. R. R. Tolkien",
+    ], f"All authors: {found}"
     found = ex.jspath("$.store.*", list)
     assert isinstance(found[0], list) and isinstance(found[1], dict), "Everything ins store: books and a bike"
-    assert ex.jspath("$.store..price", list) == [8.95, 12.99, 8.99, 22.99, 399], "Price of all articles in the store"
+    assert ex.jspath("$.store..price", list) == [
+        8.95,
+        12.99,
+        8.99,
+        22.99,
+        399,
+    ], "Price of all articles in the store"
     found = ex.jspath("$..book[2]", typ=dict)
     expected = {
         "category": "fiction",
@@ -113,30 +124,56 @@ def test_jpath(ex):
     # print("FOUND", type(found), 0 if found is None else len(found), found)
 
     # run directly on dict:
-    js_py = {"header": {"case": "Test", "timeFactor": 1.0}, "0.0": {"bb": {"h": [0, 0, 1], "v": 2.3}}}
+    js_py = {
+        "header": {"case": "Test", "timeFactor": 1.0},
+        "0.0": {"bb": {"h": [0, 0, 1], "v": 2.3}},
+    }
     assert Json5(js_py).jspath("$['0.0']") == {"bb": {"h": [0, 0, 1], "v": 2.3}}
 
 
 def test_update(ex):
-    assert Json5._spath_to_keys("$.Hei[ho]Hi[ha]he.hu") == ["Hei", "ho", "Hi", "ha", "he", "hu"]
-    assert Json5._spath_to_keys("$.Hei[0.0]Hi[1.0]he.hu") == ["Hei", "0.0", "Hi", "1.0", "he", "hu"]
+    assert Json5._spath_to_keys("$.Hei[ho]Hi[ha]he.hu") == [
+        "Hei",
+        "ho",
+        "Hi",
+        "ha",
+        "he",
+        "hu",
+    ]
+    assert Json5._spath_to_keys("$.Hei[0.0]Hi[1.0]he.hu") == [
+        "Hei",
+        "0.0",
+        "Hi",
+        "1.0",
+        "he",
+        "hu",
+    ]
 
     # ex.js_py['store']['book'].append({'category':'crime','author':'noname'})
     # print(ex.js_py)
     # print("FOUND", type(found), 0 if found is None else len(found), found)
 
     ex.update("$.store.book", {"category": "crime", "author": "noname"})
-    assert ex.jspath("$..book[-1]", typ=dict) == {"category": "crime", "author": "noname"}, "Book added"
+    assert ex.jspath("$..book[-1]", typ=dict) == {
+        "category": "crime",
+        "author": "noname",
+    }, "Book added"
 
     # start with header and add the first data
     js = Json5("{header : { case : 'Test', timeFactor : 1.0}, ")
     js.update("$[0.0]bb", {"f": 9.9})
-    expected = {"header": {"case": "Test", "timeFactor": 1.0}, "0.0": {"bb": {"f": 9.9}}}
+    expected = {
+        "header": {"case": "Test", "timeFactor": 1.0},
+        "0.0": {"bb": {"f": 9.9}},
+    }
     assert js.js_py == expected
 
     js = Json5("{header : { case : 'Test', timeFactor : 1.0}, 0.0 : { bb: { h : [0,0,1], v : 2.3}}}")
     js.update("$[0.0]bb", {"f": 9.9})
-    expected = {"header": {"case": "Test", "timeFactor": 1.0}, "0.0": {"bb": {"h": [0, 0, 1], "v": 2.3, "f": 9.9}}}
+    expected = {
+        "header": {"case": "Test", "timeFactor": 1.0},
+        "0.0": {"bb": {"h": [0, 0, 1], "v": 2.3, "f": 9.9}},
+    }
     assert js.js_py == expected
 
     js = Json5("{header : { case : 'Test', timeFactor : 1.0}, 0.0 : { bb: { h : [0,0,1], v : 2.3}}}")
@@ -184,17 +221,26 @@ def test_json5_syntax():
            dr@0.9 : 10,  # "com2"
            }}"""
     js = Json5(raw)
-    assert js.comments == {28: "#'com1'", 61: '# "com2"'}, "Comments not extracted as expected"
+    assert js.comments == {
+        28: "#'com1'",
+        61: '# "com2"',
+    }, "Comments not extracted as expected"
     assert js.js_py["spec"]["dp"] == 1.5, "Comments not properly removed"
     js = Json5("Hello /*Line1\nLine2\n..*/..", 0)
     assert js.js5 == "{ Hello                   .. }", "Incorrect multi-line comment"
-    assert Json5("{'Hi':1, Ho:2}").js_py == {"Hi": 1.0, "Ho": 2.0}, "Simple dict expected. Second key without '"
+    assert Json5("{'Hi':1, Ho:2}").js_py == {
+        "Hi": 1.0,
+        "Ho": 2.0,
+    }, "Simple dict expected. Second key without '"
     assert Json5("{'Hello:@#%&/=?World':1}").to_py() == {
         "Hello:@#%&/=?World": 1
     }, "Literal string keys should handle any character, including':' and comments"
 
     js = Json5("{Start: {\n   'H':1,\n   99:{'e':11,'l':12}},\nLast:999}")
-    assert js.to_py() == {"Start": {"H": 1, "99": {"e": 11, "l": 12}}, "Last": 999}, "Dict of dict dict expected"
+    assert js.to_py() == {
+        "Start": {"H": 1, "99": {"e": 11, "l": 12}},
+        "Last": 999,
+    }, "Dict of dict dict expected"
 
     assert Json5("{'H':1, 99:['e','l','l','o']}").js_py == {
         "H": 1,
@@ -202,7 +248,11 @@ def test_json5_syntax():
     }, "List as value expected"
 
     js = Json5("{'H':1, 99:['e','l','l','o'], 'W':999}")
-    assert list(js.js_py.keys()) == ["H", "99", "W"], "Additional or missing main object elements"
+    assert list(js.js_py.keys()) == [
+        "H",
+        "99",
+        "W",
+    ], "Additional or missing main object elements"
     with pytest.raises(AssertionError) as err:
         Json5("{ H : 1,2}")
     assert str(err.value).startswith("Json5 read error at 1(10): No proper key:value:")
@@ -222,7 +272,11 @@ def test_json5_syntax():
 
 
 def test_write():
-    js1 = {"key1": 1.0, "key2": "a string", "key3": ["a", "list", "including", "numbers", 9.9, 1]}
+    js1 = {
+        "key1": 1.0,
+        "key2": "a string",
+        "key3": ["a", "list", "including", "numbers", 9.9, 1],
+    }
     expected = "{key1:1.0,key2:'a string',key3:['a','list','including','numbers',9.9,1]}"
     js = Json5(str(js1))
     assert js.write(pretty_print=False) == expected, "Simple JSON5 dict"
