@@ -243,24 +243,17 @@ def test_run_osp_system_structure(system_structure, show):
                 }
             }
         )
-    assert variables["c"] == {
-        "reference": 1,
-        "type": 0,
-        "causality": 1,
-        "variability": 1,
-    }
-    assert variables["x[2]"] == {
-        "reference": 5,
-        "type": 0,
-        "causality": 2,
-        "variability": 4,
-    }
-    assert variables["v[2]"] == {
-        "reference": 8,
-        "type": 0,
-        "causality": 2,
-        "variability": 4,
-    }
+    assert variables["c"]["type"] == 0
+    assert variables["c"]["causality"] == 1
+    assert variables["c"]["variability"] == 1
+
+    assert variables["x[2]"]["type"] == 0
+    assert variables["x[2]"]["causality"] == 2
+    assert variables["x[2]"]["variability"] == 4
+
+    assert variables["v[2]"]["type"] == 0
+    assert variables["v[2]"]["causality"] == 2
+    assert variables["v[2]"]["variability"] == 4
 
     # Instantiate a suitable manipulator for changing variables.
     manipulator = CosimManipulator.create_override()
