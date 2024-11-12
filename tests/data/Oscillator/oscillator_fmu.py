@@ -17,8 +17,11 @@ class HarmonicOscillator(Model):
 
     See also `Wikipedia <https://en.wikipedia.org/wiki/Harmonic_oscillator>`_
     """
-    def __init__(self, k:float=1.0, c:float=0.0, m:float=1.0, **kwargs):
-        super().__init__("Oscillator", "A simple harmonic oscillator", "Siegfried Eisinger", **kwargs)
+
+    def __init__(self, k: float = 1.0, c: float = 0.0, m: float = 1.0, **kwargs):
+        super().__init__(
+            "Oscillator", "A simple harmonic oscillator", "Siegfried Eisinger", **kwargs
+        )
         """self.k = k
         self.c = c
         self.m = m
@@ -26,30 +29,31 @@ class HarmonicOscillator(Model):
         self.v = np.array( (0,0,0), float)
         self.f = np.array( (0,0,0), float)
         """
-        self._interface(k,c,m)
+        self._interface(k, c, m)
 
-    def do_step(self, time:float, dt:float):
+    def do_step(self, time: float, dt: float):
         """Do one simulation step of size dt.
 
         We implement a very simplistic algoritm based on difference calculus.
         """
-        if not super().do_step( time, dt): # needed for FMU mechanism
+        if not super().do_step(time, dt):  # needed for FMU mechanism
             return False
-        a = (self.f - self.k*self.x - self.c*self.v)/self.m
-        self.x += self.v* dt #+ a* dt*dt
-        self.v +=  a* dt
+        a = (self.f - self.k * self.x - self.c * self.v) / self.m
+        self.x += self.v * dt  # + a* dt*dt
+        self.v += a * dt
         # print(f"@{time}: x={self.x}, v={self.v}, f={self.f}, a={a}")
-        return True # very important!
+        return True  # very important!
 
     def exit_initialization_mode(self):
         """Internal state settings after initial variables are set."""
-        print(f"Initial settings: k={self.k}, c={self.c}, m={self.m}, x={self.x}, v={self.v}, f={self.f}")
+        print(
+            f"Initial settings: k={self.k}, c={self.c}, m={self.m}, x={self.x}, v={self.v}, f={self.f}"
+        )
 
     # Note: The other FMU functions like .setup_experiment and  .exit_initialization_mode
-    #       do not need special attention here and can be left out 
+    #       do not need special attention here and can be left out
 
-
-    def _interface(self, k:float, c:float, m:float):
+    def _interface(self, k: float, c: float, m: float):
         """Define the FMU interface variables (parameters, inputs, outputs).
 
         Note: The variable object registrations like self._k provide access to the Variable meta-data
@@ -61,7 +65,7 @@ class HarmonicOscillator(Model):
             description="The spring constant in N/m",
             causality="parameter",
             variability="fixed",
-            typ=float, # can be automatically determined
+            typ=float,  # can be automatically determined
             start=k,
         )
         self._c = self._interpolate = Variable(
@@ -70,7 +74,7 @@ class HarmonicOscillator(Model):
             description="The damping constant N.s/m",
             causality="parameter",
             variability="fixed",
-            typ=float, # can be automatically determined
+            typ=float,  # can be automatically determined
             start=c,
         )
         self._m = self._interpolate = Variable(
@@ -79,7 +83,7 @@ class HarmonicOscillator(Model):
             description="The mass connected to the system in kg. The spring mass is assumed negligible.",
             causality="parameter",
             variability="fixed",
-            typ=float, # can be automatically determined
+            typ=float,  # can be automatically determined
             start=m,
         )
         self._x = Variable(
@@ -89,7 +93,7 @@ class HarmonicOscillator(Model):
             causality="output",
             variability="continuous",
             initial="exact",
-            start=np.array( (0,0,1.0), float),
+            start=np.array((0, 0, 1.0), float),
         )
         self._v = Variable(
             self,
@@ -98,7 +102,7 @@ class HarmonicOscillator(Model):
             causality="output",
             variability="continuous",
             initial="exact",
-            start=np.array( (0,0,0), float),
+            start=np.array((0, 0, 0), float),
         )
         self._f = Variable(
             self,
@@ -106,5 +110,5 @@ class HarmonicOscillator(Model):
             description="Input connector for the 3D external force acting on the mass in N",
             causality="input",
             variability="continuous",
-            start=np.array( (0,0,0), float),
+            start=np.array((0, 0, 0), float),
         )

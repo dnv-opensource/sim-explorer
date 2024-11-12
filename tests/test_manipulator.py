@@ -26,16 +26,24 @@ def test_from_override_set():
     boolean_values = [True]
     string_values = ["Hello World!"]
     assert manipulator.slave_real_values(
-        slave_index=slave_index, variable_references=variable_references, values=real_values
+        slave_index=slave_index,
+        variable_references=variable_references,
+        values=real_values,
     )
     assert manipulator.slave_integer_values(
-        slave_index=slave_index, variable_references=variable_references, values=integer_values
+        slave_index=slave_index,
+        variable_references=variable_references,
+        values=integer_values,
     )
     assert manipulator.slave_boolean_values(
-        slave_index=slave_index, variable_references=variable_references, values=boolean_values
+        slave_index=slave_index,
+        variable_references=variable_references,
+        values=boolean_values,
     )
     assert manipulator.slave_string_values(
-        slave_index=slave_index, variable_references=variable_references, values=string_values
+        slave_index=slave_index,
+        variable_references=variable_references,
+        values=string_values,
     )
     execution.step()
     print(f"STATUS: {execution.status()}")
@@ -51,16 +59,24 @@ def test_from_override_set():
     ]
 
     assert manipulator.reset_variables(
-        slave_index=slave_index, variable_type=CosimVariableType.REAL, variable_references=variable_references
+        slave_index=slave_index,
+        variable_type=CosimVariableType.REAL,
+        variable_references=variable_references,
     )
     assert manipulator.reset_variables(
-        slave_index=slave_index, variable_type=CosimVariableType.INTEGER, variable_references=variable_references
+        slave_index=slave_index,
+        variable_type=CosimVariableType.INTEGER,
+        variable_references=variable_references,
     )
     assert manipulator.reset_variables(
-        slave_index=slave_index, variable_type=CosimVariableType.BOOLEAN, variable_references=variable_references
+        slave_index=slave_index,
+        variable_type=CosimVariableType.BOOLEAN,
+        variable_references=variable_references,
     )
     assert manipulator.reset_variables(
-        slave_index=slave_index, variable_type=CosimVariableType.STRING, variable_references=variable_references
+        slave_index=slave_index,
+        variable_type=CosimVariableType.STRING,
+        variable_references=variable_references,
     )
     execution.step()
     print(f"STATUS: {execution.status()}")
@@ -89,7 +105,9 @@ def test_from_override_set_multiple(test_dir):
         real_variable_references = [30, 31, 32]
         real_values = [1.1, 2.2, 3.3]
         assert manipulator.slave_real_values(
-            slave_index=slave_index, variable_references=real_variable_references, values=real_values
+            slave_index=slave_index,
+            variable_references=real_variable_references,
+            values=real_values,
         )
         execution.step()
         assert (
@@ -97,7 +115,9 @@ def test_from_override_set_multiple(test_dir):
             == real_values
         )
         assert manipulator.reset_variables(
-            slave_index=slave_index, variable_type=CosimVariableType.REAL, variable_references=real_variable_references
+            slave_index=slave_index,
+            variable_type=CosimVariableType.REAL,
+            variable_references=real_variable_references,
         )
         execution.step()
         assert observer.last_real_values(slave_index=slave_index, variable_references=real_variable_references) == [
@@ -113,7 +133,8 @@ def test_load_scenario(test_dir):
         manipulator = CosimManipulator.create_scenario_manager()
         execution.add_manipulator(manipulator=manipulator)
         assert execution.load_scenario(
-            manipulator=manipulator, scenario_file=f"{test_dir}/data/dp-ship/scenarios/movenorth.json"
+            manipulator=manipulator,
+            scenario_file=f"{test_dir}/data/dp-ship/scenarios/movenorth.json",
         )
         observer = CosimObserver.create_last_value()
         execution.add_observer(observer=observer)

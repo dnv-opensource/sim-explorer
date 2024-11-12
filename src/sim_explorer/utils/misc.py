@@ -3,8 +3,6 @@ import xml.etree.ElementTree as ET  # noqa: N817
 from pathlib import Path
 from zipfile import BadZipFile, ZipFile, is_zipfile
 
-from sim_explorer.case import CaseInitError
-
 
 def match_with_wildcard(findtxt: str, matchtxt: str) -> bool:
     """Check whether 'findtxt' matches 'matchtxt'.
@@ -30,17 +28,17 @@ def from_xml(file: Path, sub: str | None = None, xpath: str | None = None) -> ET
             try:
                 xml = zp.read(sub).decode("utf-8")
             except BadZipFile as err:
-                raise CaseInitError(f"File '{sub}' not found in {file}: {err}") from err
+                raise Exception(f"File '{sub}' not found in {file}: {err}") from err
     elif not is_zipfile(file) and file.exists() and sub is None:  # expect an xml file
         with open(file, encoding="utf-8") as f:
             xml = f.read()
     else:
-        raise CaseInitError(f"It was not possible to read an XML from file {file}, sub {sub}")
+        raise Exception(f"It was not possible to read an XML from file {file}, sub {sub}") from None
 
     try:
         et = ET.fromstring(xml)
     except ET.ParseError as err:
-        raise CaseInitError(f"File '{file}' does not seem to be a proper xml file") from err
+        raise Exception(f"File '{file}' does not seem to be a proper xml file") from err
 
     if xpath is None:
         return et

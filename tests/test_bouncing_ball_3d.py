@@ -116,7 +116,11 @@ def check_case(
     x_bounce2 = x_bounce + 2 * v_bounce * e * 1.0 * e / g
     arrays_equal(
         res=results.res.jspath(path=f"$['{t_before+dt}'].bb.x"),
-        expected=(t_bounce * v[0] + v[0] * e * ddt, 0, (v_bounce * e * ddt - 0.5 * g * ddt**2) / hf),
+        expected=(
+            t_bounce * v[0] + v[0] * e * ddt,
+            0,
+            (v_bounce * e * ddt - 0.5 * g * ddt**2) / hf,
+        ),
     )
 
     arrays_equal(
@@ -125,7 +129,12 @@ def check_case(
     )
     assert abs(results.res.jspath(path=f"$['{t_before+dt}'].bb.['x_b[0]']") - x_bounce2) < 1e-9
     # from bounce to bounce
-    v_x, v_z, t_b, x_b = v[0], v_bounce, t_bounce, x_bounce  # set start values (first bounce)
+    v_x, v_z, t_b, x_b = (
+        v[0],
+        v_bounce,
+        t_bounce,
+        x_bounce,
+    )  # set start values (first bounce)
     # print(f"1.bounce time: {t_bounce} v_x:{v_x}, v_z:{v_z}, t_b:{t_b}, x_b:{x_b}")
     for n in range(2, 100):  # from bounce to bounce
         print(f"Case {casename}. Bounce {n}")

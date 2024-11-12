@@ -47,7 +47,10 @@ def test_assertion():
     assert res.index(True) == 81, f"Element {res.index(True)} is True"
     assert all(res[i] for i in range(81, 100)), "Assertion remains True"
     assert ass.assert_series([("t", _t)], "bool"), "There is at least one point where the assertion is True"
-    assert ass.assert_series([("t", _t)], "interval") == (81, 100), "Index-interval where the assertion is True"
+    assert ass.assert_series([("t", _t)], "interval") == (
+        81,
+        100,
+    ), "Index-interval where the assertion is True"
     ass = Assertion("(t>8) & (x>0.1)")
     res = ass.assert_series([("t", _t), ("x", _x)])
     assert res, "True at some point"
@@ -63,7 +66,8 @@ def test_assertion():
     assert ass.assert_single([("y", 4)])
     assert not ass.assert_series([("y", _y)], ret="bool")
     with pytest.raises(
-        ValueError, match="'==' cannot be used to check equivalence. Use 'a-b' and check against 0"
+        ValueError,
+        match="'==' cannot be used to check equivalence. Use 'a-b' and check against 0",
     ) as _:
         ass = Assertion("y==4")
     ass = Assertion("y-4")

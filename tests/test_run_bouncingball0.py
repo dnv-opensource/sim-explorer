@@ -20,9 +20,11 @@ def expected_actions(case: Case, act: dict, expect: dict):
         a_expect = expect[time]
         for i, action in enumerate(actions):
             msg = f"Case {case.name}({time})[{i}]"  # , expect: {a_expect[i]}")
-            aname = {"set_initial": "set0", "set_variable_value": "set", "get_variable_value": "get"}[
-                action.func.__name__
-            ]
+            aname = {
+                "set_initial": "set0",
+                "set_variable_value": "set",
+                "get_variable_value": "get",
+            }[action.func.__name__]
             assert aname == a_expect[i][0], f"{msg}. Erroneous action type {aname}"
             # make sure that arguments 2.. are tuples
             args = [None] * 5
@@ -79,7 +81,11 @@ def test_step_by_step():
         sim.simulator.simulate_until(t)
         print(sim.observer.last_real_values(0, [0, 1, 6]))
         if t == int(0.11 * 1e9):
-            assert sim.observer.last_real_values(0, [0, 1, 6]) == [0.11, 0.9411890500000001, 0.35]
+            assert sim.observer.last_real_values(0, [0, 1, 6]) == [
+                0.11,
+                0.9411890500000001,
+                0.35,
+            ]
 
 
 def test_step_by_step_interface():
@@ -96,7 +102,11 @@ def test_step_by_step_interface():
         sim.simulator.simulate_until(t)
         print(sim.get_variable_value(instance=0, typ=0, var_refs=(0, 1, 6)))
         if t == int(0.11 * 1e9):
-            assert sim.get_variable_value(instance=0, typ=0, var_refs=(0, 1, 6)) == [0.11, 0.9411890500000001, 0.35]
+            assert sim.get_variable_value(instance=0, typ=0, var_refs=(0, 1, 6)) == [
+                0.11,
+                0.9411890500000001,
+                0.35,
+            ]
 
 
 def test_run_cases():
@@ -114,7 +124,11 @@ def test_run_cases():
         act=gravity.act_get,
         expect={
             -1: [("get", "bb", float, ("h",))],
-            0.0: [("get", "bb", float, ("e",)), ("get", "bb", float, ("g",)), ("get", "bb", float, ("h",))],
+            0.0: [
+                ("get", "bb", float, ("e",)),
+                ("get", "bb", float, ("g",)),
+                ("get", "bb", float, ("h",)),
+            ],
             1e9: [("get", "bb", float, ("v",))],
         },
     )
@@ -216,7 +230,10 @@ def test_run_cases():
     print("Run gravity", cases.run_case("gravity", "results_gravity"))
     assert expect_bounce_at(res, sqrt(2 * h0 / 1.5), eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
     cases.simulator.reset()
-    print("Run restitutionAndGravity", cases.run_case("restitutionAndGravity", "results_restitutionAndGravity"))
+    print(
+        "Run restitutionAndGravity",
+        cases.run_case("restitutionAndGravity", "results_restitutionAndGravity"),
+    )
     assert expect_bounce_at(res, sqrt(2 * h0 / 1.5), eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
     assert expect_bounce_at(res, sqrt(2 * h0 / 1.5) + 0.5 * sqrt(2 * h0 / 1.5), eps=0.4)
     cases.simulator.reset()
