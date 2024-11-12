@@ -305,10 +305,10 @@ def test_run_cases():
 
 
 if __name__ == "__main__":
-    # retcode = pytest.main(["-rA", "-v", __file__])
-    # assert retcode == 0, f"Return code {retcode}"
+    retcode = pytest.main(["-rA", "-v", __file__])
+    assert retcode == 0, f"Return code {retcode}"
     # test_read_cases()
     # test_step_by_step_cosim()
-    test_step_by_step_cases()
+    # test_step_by_step_cases()
     # test_run_basic()
     # test_run_cases()
