@@ -15,7 +15,7 @@ def check_command(cmd: str, expected: str | None = None):
 
 def test_cli():
     os.chdir(str(Path(__file__).parent / "data" / "BouncingBall3D"))
-    check_command("sim-explorer -V", "0.1.1")
+    check_command("sim-explorer -V", "0.1.2")
     check_command(
         "sim-explorer BouncingBall3D.cases --info",
         "Cases BouncingBall3D. Simple sim explorer with the 3D BouncingBall FMU (3D position and",
