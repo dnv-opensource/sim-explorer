@@ -13,8 +13,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from libcosimpy.CosimLogging import CosimLogLevel, log_output_level
 
+from sim_explorer.exceptions import CaseInitError
 from sim_explorer.json5 import Json5
-from sim_explorer.simulator_interface import SimulatorInterface, from_xml
+from sim_explorer.simulator_interface import SimulatorInterface
+from sim_explorer.utils.misc import from_xml
 from sim_explorer.utils.paths import get_path, relative_path
 
 """
@@ -29,18 +31,6 @@ sim_explorer module for definition and execution of simulation experiments
 With respect to MVx in general, this module serves the preparation of start conditions for smart testing.
 Note: The classes Case and Cases should be kept together in this file to avoid circular references.
 """
-
-
-class CaseInitError(Exception):
-    """Special error indicating that something is wrong during initialization of cases."""
-
-    pass
-
-
-class CaseUseError(Exception):
-    """Special error indicating that something is wrong during usage of cases."""
-
-    pass
 
 
 def _assert(condition: bool, msg: str, crit: int = 4, typ=CaseInitError):
@@ -225,7 +215,10 @@ class Case:
         """
         pre, _, at = txt.partition("@")
         assert len(pre), f"'{txt}' is not allowed as basis for _disect_at_time"
-        if value in ("result", "res"):  # marking a normal variable specification as 'get' or 'step' action
+        if value in (
+            "result",
+            "res",
+        ):  # marking a normal variable specification as 'get' or 'step' action
             value = None
         if not len(at):  # no @time spec
             if value is None:
@@ -331,10 +324,14 @@ class Case:
                             "get",
                             self.cases.simulator.get_variable_value,
                             (_inst, cvar_info["type"], tuple(var_refs)),
-                            at_time_arg if at_time_arg <= 0 else at_time_arg * self.cases.timefac,
+                            (at_time_arg if at_time_arg <= 0 else at_time_arg * self.cases.timefac),
                         )
                     else:  # step actions with specified interval
-                        for time in np.arange(start=at_time_arg, stop=self.special["stopTime"], step=at_time_arg):
+                        for time in np.arange(
+                            start=at_time_arg,
+                            stop=self.special["stopTime"],
+                            step=at_time_arg,
+                        ):
                             self._add_action(
                                 time,
                                 self.cases.simulator.get_variable_value,
@@ -366,7 +363,12 @@ class Case:
                         self._add_action(
                             at_time_type,
                             self.cases.simulator.set_variable_value,
-                            (_inst, cvar_info["type"], tuple(var_refs), tuple(var_vals)),
+                            (
+                                _inst,
+                                cvar_info["type"],
+                                tuple(var_refs),
+                                tuple(var_vals),
+                            ),
                             at_time_arg * self.cases.timefac,
                         )
 
@@ -425,7 +427,13 @@ class Case:
                 if len(_a):
                     if record:
                         for a in _a:
-                            self.res.add(time / self.cases.timefac, a.args[0], a.args[1], a.args[2], a())
+                            self.res.add(
+                                time / self.cases.timefac,
+                                a.args[0],
+                                a.args[1],
+                                a.args[2],
+                                a(),
+                            )
                     else:  # do not record
                         for a in _a:
                             a()
@@ -576,22 +584,22 @@ class Cases:
         for k, v in self.js.jspath("$.header.variables", dict, True).items():
             if not isinstance(v, list):
                 raise CaseInitError(f"List of 'component(s)' and 'variable(s)' expected. Found {v}") from None
-            _assert(len(v) in (2, 3), f"Variable spec should be: instance(s), variables[, description]. Found {v}.")
-            _assert(
-                isinstance(v[0], (str | tuple)),
-                f"Component name(s) expected as first argument of variable spec. Found {v[0]}",
-            )
+            assert len(v) in (
+                2,
+                3,
+            ), f"Variable spec should be: instance(s), variables[, description]. Found {v}."
+            assert isinstance(v[0], (str | tuple)), f"First argument of variable spec: Component(s)! Found {v[0]}"
             assert isinstance(v[0], str), f"String expected as model name. Found {v[0]}"
             model, comp = self.simulator.match_components(v[0])
-            _assert(len(comp) > 0, f"No component model instances '{v[0]}' found for alias variable '{k}'")
-            assert isinstance(v[1], str), f"Variable name(s) expected as second argument in variable spec. Found {v[1]}"
+            assert len(comp) > 0, f"No component model instances '{v[0]}' found for alias variable '{k}'"
+            assert isinstance(v[1], str), f"Second argument of variable sped: Variable name(s)! Found {v[1]}"
             _vars = self.simulator.match_variables(comp[0], v[1])  # tuple of matching var refs
             var: dict = {
                 "model": model,
                 "instances": comp,
                 "variables": _vars,  # variables from same model!
             }
-            _assert(len(var["variables"]) > 0, f"No matching variables found for alias {k}:{v}, component '{comp}'")
+            assert len(var["variables"]) > 0, f"No matching variables found for alias {k}:{v}, component '{comp}'"
             if len(v) > 2:
                 var.update({"description": v[2]})
             # We add also the more detailed variable info from the simulator (the FMU)
@@ -606,7 +614,13 @@ class Cases:
                         var_i[test] == var0[test],
                         f"Variable with ref {var['variables'][i]} not same {test} as {var0} in model {model}",
                     )
-            var.update({"type": var0["type"], "causality": var0["causality"], "variability": var0["variability"]})
+            var.update(
+                {
+                    "type": var0["type"],
+                    "causality": var0["causality"],
+                    "variability": var0["variability"],
+                }
+            )
             variables.update({k: var})
         return variables
 
@@ -725,7 +739,11 @@ class Cases:
         try:
             cvar_info = self.variables[pre]
         except KeyError as err:
-            handle_error(f"Variable {pre} was not found in list of defined case variables", err, err_level)
+            handle_error(
+                f"Variable {pre} was not found in list of defined case variables",
+                err,
+                err_level,
+            )
 
         cvar_len = len(cvar_info["variables"])  # len of the tuple of refs
         if len(r):  # range among several variables
@@ -738,14 +756,29 @@ class Cases:
                     try:
                         idx = int(p)
                     except ValueError as err:
-                        return handle_error(f"Unhandled index {p}[{i}] for variable {pre}", err, err_level)
+                        return handle_error(
+                            f"Unhandled index {p}[{i}] for variable {pre}",
+                            err,
+                            err_level,
+                        )
                     if not 0 <= idx < cvar_len:
-                        return handle_error(f"Index {idx} of variable {pre} out of range", None, err_level)
+                        return handle_error(
+                            f"Index {idx} of variable {pre} out of range",
+                            None,
+                            err_level,
+                        )
                     if not isinstance(rng, list):
-                        return handle_error(f"A list was expected as range here. Found {rng}", None, err_level)
+                        return handle_error(
+                            f"A list was expected as range here. Found {rng}",
+                            None,
+                            err_level,
+                        )
                     rng.append(idx)
                 else:
-                    _assert(len(parts_ellipses) == 2, f"RangeError: Exactly two indices expected in {p} of {pre}")
+                    _assert(
+                        len(parts_ellipses) == 2,
+                        f"RangeError: Exactly two indices expected in {p} of {pre}",
+                    )
                     parts_ellipses[1] = parts_ellipses[1].lstrip(".")  # facilitates the option to use '...' or '..'
                     try:
                         if len(parts_ellipses[0]) == 0:
@@ -759,7 +792,11 @@ class Cases:
                             idx1 = int(parts_ellipses[1])
                         assert idx0 <= idx1 <= cvar_len, f"Index {idx1} of variable {pre} out of range"
                     except ValueError as err:
-                        return handle_error("Unhandled ellipses '{parts_comma}' for variable {pre}", err, err_level)
+                        return handle_error(
+                            "Unhandled ellipses '{parts_comma}' for variable {pre}",
+                            err,
+                            err_level,
+                        )
                     rng = range(idx0, idx1)
         else:  # no expicit range
             if cvar_len == 1:  # scalar variable
@@ -806,14 +843,21 @@ class Cases:
             self._comp_refs_to_case_var_cache[comp].update({refs: (component, var)})
         return component, var
 
-    def run_case(self, name: str | Case, dump: str | None = ""):
-        """Initiate case run. If done from here, the case name can be chosen."""
-        if isinstance(name, Case):
-            name.run(dump)
-        else:
+    def run_case(self, name: str | Case, dump: str | None = "", run_subs: bool = False):
+        """Initiate case run. If done from here, the case name can be chosen.
+        If run_subs = True, also the sub-cases are run.
+        """
+        if isinstance(name, str):
             c = self.case_by_name(name)
             assert isinstance(c, Case), f"Case {name} not found"
-            c.run(dump)
+        elif isinstance(name, Case):
+            c = name
+        else:
+            raise ValueError(f"Invalid argument name:{name}") from None
+
+        c.run(dump)
+        for _c in c.subs:
+            self.run_case(_c, dump)
 
 
 class Results:
@@ -898,13 +942,31 @@ class Results:
         assert isinstance(self.file, Path), f"Need a proper file at this point. Found {self.file}"
         res = self.res
         if tostring:
-            res.update("$.header.dateTime", res.jspath("$.header.dateTime", datetime, True).isoformat())
-            res.update("$.header.casesDate", res.jspath("$.header.casesDate", datetime, True).isoformat())
-            res.update("$.header.file", relative_path(res.jspath("$.header.file", Path, True), self.file))
+            res.update(
+                "$.header.dateTime",
+                res.jspath("$.header.dateTime", datetime, True).isoformat(),
+            )
+            res.update(
+                "$.header.casesDate",
+                res.jspath("$.header.casesDate", datetime, True).isoformat(),
+            )
+            res.update(
+                "$.header.file",
+                relative_path(res.jspath("$.header.file", Path, True), self.file),
+            )
         else:
-            res.update("$.header.dateTime", datetime.fromisoformat(res.jspath("$.header.dateTime", str, True)))
-            res.update("$.header.casesDate", datetime.fromisoformat(res.jspath("$.header.casesDate", str, True)))
-            res.update("$.header.file", get_path(res.jspath("$.header.file", str, True), self.file.parent))
+            res.update(
+                "$.header.dateTime",
+                datetime.fromisoformat(res.jspath("$.header.dateTime", str, True)),
+            )
+            res.update(
+                "$.header.casesDate",
+                datetime.fromisoformat(res.jspath("$.header.casesDate", str, True)),
+            )
+            res.update(
+                "$.header.file",
+                get_path(res.jspath("$.header.file", str, True), self.file.parent),
+            )
 
     def add(self, time: float, comp: int, typ: int, refs: int | list[int], values: tuple):
         """Add the results of a get action to the results dict for the case.
@@ -1011,7 +1073,7 @@ class Results:
                     values.append(found)
         return (times, values)
 
-    def plot_time_series(self, variables: list[str], title: str = ""):
+    def plot_time_series(self, variables: str | list[str], title: str = ""):
         """Extract the provided alias variables and plot the data found in the same plot.
 
         Args:
@@ -1020,6 +1082,10 @@ class Results:
                For example 'bb.v[2]' identifies the z-velocity of the component 'bb'
             title (str): optional title of the plot
         """
+        if not isinstance(variables, list):
+            variables = [
+                variables,
+            ]
         for var in variables:
             times, values = self.time_series(var)
 

@@ -60,6 +60,7 @@ dependencies = [
     "libcosimpy>=0.0.2",
     "fmpy>=0.3.21",
     "component-model>=0.1.0",
+    "plotly>=5.24.1",
 ]
 
 [project.optional-dependencies]

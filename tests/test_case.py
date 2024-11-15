@@ -28,7 +28,11 @@ def _make_cases():
     """Make an example cases file for use in the tests"""
 
     root = ET.Element(
-        "OspSystemStructure", {"xmlns": "http://opensimulationplatform.com/MSMI/OSPSystemStructure", "version": "0.1"}
+        "OspSystemStructure",
+        {
+            "xmlns": "http://opensimulationplatform.com/MSMI/OSPSystemStructure",
+            "version": "0.1",
+        },
     )
     simulators = ET.Element("Simulators")
     simulators.append(ET.Element("Simulator", {"name": "tab", "source": "SimpleTable.fmu", "stepSize": "0.1"}))
@@ -60,7 +64,11 @@ def _make_cases():
                 "i": True,
             },
         },
-        "caseX": {"description": "Based case1 longer simulation", "parent": "case1", "spec": {"stopTime": 10}},
+        "caseX": {
+            "description": "Based case1 longer simulation",
+            "parent": "case1",
+            "spec": {"stopTime": 10},
+        },
     }
     js = Json5(json5)
     js.write("data/test.cases")
@@ -79,7 +87,13 @@ def test_case_at_time(simpletable):
     do_case_at_time(
         "v@1.0", "caseX", "res", ("v", "get", 1.0), simpletable
     )  # value retrieval per case at specified time
-    do_case_at_time("@1.0", "base", "result", "'@1.0' is not allowed as basis for _disect_at_time", simpletable)
+    do_case_at_time(
+        "@1.0",
+        "base",
+        "result",
+        "'@1.0' is not allowed as basis for _disect_at_time",
+        simpletable,
+    )
     do_case_at_time("i", "base", "res", ("i", "get", 1), simpletable)  # "report the value at end of sim!"
     do_case_at_time("y", "caseX", 99.9, ("y", "set", 0), simpletable)  # "Initial value setting!"
 
@@ -149,7 +163,10 @@ def str_act(action) -> str:
 def test_case_set_get(simpletable):
     """Test of the features provided by the Case class"""
     print(simpletable.base.list_cases())
-    assert simpletable.base.list_cases()[1] == ["case1", ["caseX"]], "Error in list_cases"
+    assert simpletable.base.list_cases()[1] == [
+        "case1",
+        ["caseX"],
+    ], "Error in list_cases"
     assert simpletable.base.special == {
         "stopTime": 1,
         "startTime": 0.0,
@@ -158,7 +175,11 @@ def test_case_set_get(simpletable):
     # iter()
     caseX = simpletable.case_by_name("caseX")
     assert caseX is not None, "CaseX does not seem to exist"
-    assert [c.name for c in caseX.iter()] == ["base", "case1", "caseX"], "Hierarchy of caseX not as expected"
+    assert [c.name for c in caseX.iter()] == [
+        "base",
+        "case1",
+        "caseX",
+    ], "Hierarchy of caseX not as expected"
     check_value(caseX, "i", True)
     check_value(caseX, "stopTime", 10)
     print("caseX, act_set[0.0]:")

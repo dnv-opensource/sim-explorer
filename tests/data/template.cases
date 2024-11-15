@@ -1,0 +1,23 @@
+{header : {
+   name        : '<simulation-exploration-name>',
+   description : 'Simulation-exploration-description>',
+   modelFile : "OspSystemStructure.xml", # this will often be ok
+   logLevel : 'FATAL', # possible levels: TRACE, DEBUG, INFO, WARNING, ERROR, FATAL
+   timeUnit  : "second", # possible units: ns, us, ms, sec, min, h, d, or extensions of that, like 'second'  
+   variables : {
+      <variable-key> : [<model-name>, <variab-name>, <optional-description>],
+      # ...
+      }},
+base : { # mandatory parent-case
+   description : "<optional-description-of-case>",
+   spec: { # any variable setting or result specification
+      # optional special variables: stepSize, stopTime
+      # variable key format: <variable-key>[@<time> | @step[ time] keword 'res' or 'result' instead of value
+   },
+#   assert: { # future results expectation feature
+#      1 : 'abs(g-9.81)<1e-9'
+#   }
+   },
+<case-name> : {
+    <case-specification-as-in-base>
+   }}}

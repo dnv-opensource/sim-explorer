@@ -4,8 +4,16 @@
 import argparse
 import importlib.metadata
 import logging
+import sys
 from pathlib import Path
 
+# Remove current directory from Python search path.
+# Only through this trick it is possible that the current CLI file 'sim_explorer.py'
+# carries the same name as the package 'sim_explorer' we import from in the next lines.
+# If we did NOT remove the current directory from the Python search path,
+# Python would start searching for the imported names within the current file (sim_explorer.py)
+# instead of the package 'sim_explorer' (and the import statements fail).
+sys.path = [path for path in sys.path if Path(path) != Path(__file__).parent]
 from sim_explorer.case import Case, Cases
 from sim_explorer.utils.logging import configure_logging
 
@@ -140,7 +148,7 @@ def main() -> None:
 
     case: Case | None = None
 
-    if args.info is not None:
+    if args.info is not None and args.info:
         print(cases.info())
 
     elif args.run is not None:
@@ -159,8 +167,7 @@ def main() -> None:
             return
         logger.info(f"{log_msg_stub}\t --Run \t\t\t{args.Run}\n")
         # Invoke API
-        for _case in case.iter():
-            _case.run()
+        cases.run_case(case, run_subs=True)
 
 
 if __name__ == "__main__":

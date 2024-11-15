@@ -3,7 +3,8 @@ from pathlib import Path
 import pytest
 from libcosimpy.CosimExecution import CosimExecution
 
-from sim_explorer.simulator_interface import SimulatorInterface, match_with_wildcard
+from sim_explorer.simulator_interface import SimulatorInterface
+from sim_explorer.utils.misc import match_with_wildcard
 
 
 def test_match_with_wildcard():
@@ -104,7 +105,12 @@ def test_simulator_instantiated():
     #    simulator.check_instances_variables()
     assert len(simulator.components) == 3, "Three instantiated (identical) components"
     variables = simulator.get_variables("bb")
-    assert variables["g"] == {"reference": 5, "type": 0, "causality": 1, "variability": 1}
+    assert variables["g"] == {
+        "reference": 5,
+        "type": 0,
+        "causality": 1,
+        "variability": 1,
+    }
     assert simulator.allowed_action("set", "bb", "g", 0)
     assert not simulator.allowed_action("set", "bb", "g", 100)
     assert simulator.message.startswith("Variable g, causality PARAMETER,")

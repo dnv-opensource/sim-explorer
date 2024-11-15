@@ -1,0 +1,16 @@
+<OspSystemStructure xmlns="http://opensimulationplatform.com/MSMI/OSPSystemStructure" version="0.1">
+   <Simulators>
+      <Simulator name="osc" source="HarmonicOscillator.fmu" stepSize="0.01">
+         <InitialValues />
+      </Simulator>
+      <Simulator name="drv" source="DrivingForce.fmu" stepSize="0.01">
+         <InitialValues />
+      </Simulator>
+   </Simulators>
+   <Connections>
+      <VariableConnection>
+         <Variable simulator="drv" name="f[2]" />
+         <Variable simulator="osc" name="f[2]" />
+      </VariableConnection>
+   </Connections>
+</OspSystemStructure>

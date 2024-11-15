@@ -1,16 +1,16 @@
 # pyright: reportMissingImports=false, reportGeneralTypeIssues=false
-import re
 import xml.etree.ElementTree as ET  # noqa: N817
 from enum import Enum
 from pathlib import Path
 from typing import TypeAlias, cast
-from zipfile import BadZipFile, ZipFile, is_zipfile
 
 from libcosimpy.CosimEnums import CosimVariableCausality, CosimVariableType, CosimVariableVariability  # type: ignore
 from libcosimpy.CosimExecution import CosimExecution  # type: ignore
 from libcosimpy.CosimLogging import CosimLogLevel, log_output_level
 from libcosimpy.CosimManipulator import CosimManipulator  # type: ignore
 from libcosimpy.CosimObserver import CosimObserver  # type: ignore
+
+from sim_explorer.utils.misc import from_xml, match_with_wildcard
 
 # type definitions
 PyVal: TypeAlias = str | float | int | bool  # simple python types / Json5 atom
@@ -134,14 +134,25 @@ class SimulatorInterface:
         """
         if file.is_file():
             _type = "ssp" if file.name.endswith(".ssp") else "osp"
-            file = file.parent
+        #            file = file.parent
         else:  # a directory. Find type
-            for child in file.iterdir():
-                if child.is_file() and child.name.endswith(".ssp"):
-                    _type = "ssp"
-                    break
             _type = "osp"
+            for child in file.iterdir():
+                if child.is_file():
+                    if child.name.endswith(".ssp"):
+                        _type = "ssp"
+                        file = file / child
+                        break
+                    elif child.name.endswith(".xml"):
+                        file = file / child
+                        xml = from_xml(file)
+                        assert isinstance(xml, ET.Element), f"An ET.Element is ixpected here. Found {xml}"
+                        if xml.tag.endswith("OspSystemStructure"):
+                            break
         if _type == "osp":
+            xml = from_xml(file)
+            assert isinstance(xml, ET.Element), f"An ET.Element is ixpected here. Found {xml}"
+            assert xml.tag.endswith("OspSystemStructure"), f"File {file} not an OSP structure file"
             return CosimExecution.from_osp_config_file(str(file))
         else:
             return CosimExecution.from_ssp_file(str(file))
@@ -436,7 +447,13 @@ class SimulatorInterface:
         If val is None, the python type object is returned. Else if boolean, true or false is returned.
         """
         fmu_type_str = CosimVariableType(fmu_type).name if isinstance(fmu_type, int) else fmu_type
-        typ = {"real": float, "integer": int, "boolean": bool, "string": str, "enumeration": Enum}[fmu_type_str.lower()]
+        typ = {
+            "real": float,
+            "integer": int,
+            "boolean": bool,
+            "string": str,
+            "enumeration": Enum,
+        }[fmu_type_str.lower()]
 
         if val is None:
             return typ
@@ -458,9 +475,13 @@ class SimulatorInterface:
         * Causality: input=0, parameter=1, output=2, calc.par.=3, local=4, independent=5 (within OSP)
         * Initial:   exact=0, approx=1, calculated=2, none=3.
         """
-        code = ((3, 3, 0, 3, 0, 3), (3, 0, 3, 1, 1, 3), (3, 0, 3, 1, 1, 3), (3, 3, 2, 3, 2, 3), (3, 3, 2, 3, 2, 3))[
-            variability
-        ][causality]
+        code = (
+            (3, 3, 0, 3, 0, 3),
+            (3, 0, 3, 1, 1, 3),
+            (3, 0, 3, 1, 1, 3),
+            (3, 3, 2, 3, 2, 3),
+            (3, 3, 2, 3, 2, 3),
+        )[variability][causality]
         if max_possible:
             return (0, 1, 0, 3)[code]  # first 'possible value' in table
         else:
@@ -512,9 +533,15 @@ class SimulatorInterface:
                 if action == "get":  # no restrictions on get
                     pass
                 elif action == "set":
-                    if _check(_variability == 0, f"Variable {name} is defined as 'constant' and cannot be set"):
+                    if _check(
+                        _variability == 0,
+                        f"Variable {name} is defined as 'constant' and cannot be set",
+                    ):
                         return False
-                    if _check(_variability == 0, f"Variable {name} is defined as 'constant' and cannot be set"):
+                    if _check(
+                        _variability == 0,
+                        f"Variable {name} is defined as 'constant' and cannot be set",
+                    ):
                         return False
 
                     if time == 0:  # initialization
@@ -532,7 +559,10 @@ class SimulatorInterface:
                         ):
                             return False
             else:  # check whether the properties are equal
-                if _check(_type != var_info["type"], _description(name, var_info, initial) + f" != type {_type}"):
+                if _check(
+                    _type != var_info["type"],
+                    _description(name, var_info, initial) + f" != type {_type}",
+                ):
                     return False
                 if _check(
                     _causality != var_info["causality"],
@@ -563,45 +593,3 @@ class SimulatorInterface:
         """Get the component id from the name. -1 if not found."""
         id = self.simulator.slave_index_from_instance_name(name)
         return id if id is not None else -1
-
-
-def match_with_wildcard(findtxt: str, matchtxt: str) -> bool:
-    """Check whether 'findtxt' matches 'matchtxt'.
-
-    Args:
-        findtxt (str): the text string which is checked. It can contain wildcard characters '*', matching zero or more of any character.
-        matchtxt (str): the text agains findtxt is checked
-    Returns: True/False
-    """
-    if "*" not in findtxt:  # no wildcard characters
-        return matchtxt == findtxt
-    else:  # there are wildcards
-        m = re.search(findtxt.replace("*", ".*"), matchtxt)
-        return m is not None
-
-
-def from_xml(file: Path, sub: str | None = None, xpath: str | None = None) -> ET.Element | list[ET.Element]:
-    """Retrieve the Element root from a zipped file (retrieve sub), or an xml file (sub unused).
-    If xpath is provided only the xpath matching element (using findall) is returned.
-    """
-    if is_zipfile(file) and sub is not None:  # expect a zipped archive containing xml file 'sub'
-        with ZipFile(file) as zp:
-            try:
-                xml = zp.read(sub).decode("utf-8")
-            except BadZipFile as err:
-                raise CaseInitError(f"File '{sub}' not found in {file}: {err}") from err
-    elif not is_zipfile(file) and file.exists() and sub is None:  # expect an xml file
-        with open(file, encoding="utf-8") as f:
-            xml = f.read()
-    else:
-        raise CaseInitError(f"It was not possible to read an XML from file {file}, sub {sub}")
-
-    try:
-        et = ET.fromstring(xml)
-    except ET.ParseError as err:
-        raise CaseInitError(f"File '{file}' does not seem to be a proper xml file") from err
-
-    if xpath is None:
-        return et
-    else:
-        return et.findall(xpath)

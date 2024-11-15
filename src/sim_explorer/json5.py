@@ -33,7 +33,15 @@ class Json5:
           Double-quote ml comments are also supported per default
     """
 
-    __slots__ = ("comments", "comments_eol", "comments_ml", "js5", "js_py", "lines", "pos")
+    __slots__ = (
+        "comments",
+        "comments_eol",
+        "comments_ml",
+        "js5",
+        "js_py",
+        "lines",
+        "pos",
+    )
 
     def __init__(
         self,
@@ -378,14 +386,21 @@ class Json5:
             m = re.search(r"[,\}\]]", self.js5[self.pos :])
         #            print("Found quoted", self.js5[q1:q2], m)
         assert m is not None, self._msg("value expected")
-        if m.group() in ("{", "["):  # found an object or a list start (quotation not allowed!)
+        if m.group() in (
+            "{",
+            "[",
+        ):  # found an object or a list start (quotation not allowed!)
             assert ":" not in self.js5[self.pos : self.pos + m.start()], self._msg("Found ':'. Forgot ','?")
             self.pos += m.start()
             v = self._object() if m.group() == "{" else self._list()
             m = re.search(r"[,\}\]]", self.js5[self.pos :])
             cr, cc = self._get_line_number(self.pos)
             assert m is not None, self._msg(f"End of value or end of object/list '{str(v)[:50]+'..'}' expected")
-        elif m.group() in ("]", "}", ","):  # any allowed value separator (also last list/object value)
+        elif m.group() in (
+            "]",
+            "}",
+            ",",
+        ):  # any allowed value separator (also last list/object value)
             v = self.js5[self.pos : self.pos + m.start()].strip() if q2 < 0 else self.js5[q1 + 1 : q2 - 1]
         else:
             raise Json5Error(
