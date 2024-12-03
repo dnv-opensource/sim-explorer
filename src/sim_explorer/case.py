@@ -6,7 +6,7 @@ from collections.abc import Callable
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -102,7 +102,7 @@ class Case:
         if _results is not None:
             for _res in _results:
                 self.read_spec_item(_res)
-        self.asserts = []  # list of assert keys
+        self.asserts: list = []  # list of assert keys
         _assert = self.js.jspath("$.assert", dict)
         if _assert is not None:
             for k, v in _assert.items():
@@ -1078,7 +1078,7 @@ class Results:
                                     )
         return cont
 
-    def time_series(self, variable: str | Iterable):
+    def time_series(self, variable: str):
         """Extract the provided alias variables and make them available as two lists 'times' and 'values'
         of equal length.
 

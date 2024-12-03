@@ -40,7 +40,7 @@ def test_osp_structure():
 
 
 def test_system_structure_from_js5():
-    osp_system_structure_from_js5(Path(__file__).parent / "data" / "crane_table.js5", dest=".")
+    osp_system_structure_from_js5(Path(__file__).parent / "data" / "crane_table.js5")
 
 
 if __name__ == "__main__":
