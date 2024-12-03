@@ -2,6 +2,7 @@ from math import sqrt
 from pathlib import Path
 
 import pytest
+from component_model.model import Model
 from libcosimpy.CosimEnums import CosimExecutionState
 from libcosimpy.CosimExecution import CosimExecution
 from libcosimpy.CosimManipulator import CosimManipulator
@@ -11,6 +12,22 @@ from libcosimpy.CosimSlave import CosimLocalSlave
 from sim_explorer.case import Case, Cases
 from sim_explorer.json5 import Json5
 from sim_explorer.simulator_interface import SimulatorInterface
+
+
+@pytest.fixture(scope="session")
+def mobile_crane_fmu():
+    return _mobile_crane_fmu()
+
+
+def _mobile_crane_fmu():
+    build_path = Path(__file__).parent / "data" / "MobileCrane"
+    src = Path(__file__).parent / "data" / "MobileCrane" / "mobile_crane.py"
+    assert src.exists(), "MobileCrane source not found"
+    fmu_path = Model.build(
+        str(src),
+        dest=build_path,
+    )
+    return fmu_path
 
 
 def is_nearly_equal(x: float | list, expected: float | list, eps: float = 1e-10) -> int:
@@ -31,7 +48,7 @@ def is_nearly_equal(x: float | list, expected: float | list, eps: float = 1e-10)
 
 # @pytest.mark.skip("Basic reading of js5 cases  definition")
 def test_read_cases():
-    path = Path(Path(__file__).parent, "data/MobileCrane/MobileCrane.cases")
+    path = Path(Path(__file__).parent / "data" / "MobileCrane" / "MobileCrane.cases")
     assert path.exists(), "System structure file not found"
     json5 = Json5(path)
     assert "# lift 1m / 0.1sec" in list(json5.comments.values())
@@ -43,7 +60,7 @@ def test_read_cases():
 
 
 # @pytest.mark.skip("Alternative step-by step, only using libcosimpy")
-def test_step_by_step_cosim():
+def test_step_by_step_cosim(mobile_crane_fmu):
     def set_var(name: str, value: float, slave: int = 0):
         for idx in range(sim.num_slave_variables(slave)):
             if sim.slave_variables(slave)[idx].name.decode() == name:
@@ -55,9 +72,8 @@ def test_step_by_step_cosim():
                 return sim.real_initial_value(slave, idx, value)
 
     sim = CosimExecution.from_step_size(0.1 * 1.0e9)
-    fmu = Path(Path(__file__).parent, "data/MobileCrane/MobileCrane.fmu").resolve()
-    assert fmu.exists(), f"FMU {fmu} not found"
-    local_slave = CosimLocalSlave(fmu_path=f"{fmu}", instance_name="mobileCrane")
+    assert mobile_crane_fmu.exists(), f"FMU {mobile_crane_fmu} not found"
+    local_slave = CosimLocalSlave(fmu_path=f"{mobile_crane_fmu}", instance_name="mobileCrane")
     sim.add_local_slave(local_slave=local_slave)
     manipulator = CosimManipulator.create_override()
     assert sim.add_manipulator(manipulator=manipulator)
@@ -107,7 +123,7 @@ def test_step_by_step_cosim():
 
 
 # @pytest.mark.skip("Alternative step-by step, using SimulatorInterface and Cases")
-def test_step_by_step_cases():
+def test_step_by_step_cases(mobile_crane_fmu):
     sim: SimulatorInterface
     cosim: CosimExecution
 
@@ -128,7 +144,7 @@ def test_step_by_step_cases():
         cases.simulator.set_initial(0, 0, get_ref("rope_boom[0]"), 1e-6)
         cases.simulator.set_initial(0, 0, get_ref("dLoad"), 50.0)
 
-    system = Path(Path(__file__).parent, "data/MobileCrane/OspSystemStructure.xml")
+    system = Path(Path(__file__).parent / "data" / "MobileCrane" / "OspSystemStructure.xml")
     assert system.exists(), f"OspSystemStructure file {system} not found"
     sim = SimulatorInterface(system)
     assert sim.get_components() == {"mobileCrane": 0}, f"Found component {sim.get_components()}"
@@ -248,15 +264,15 @@ def test_step_by_step_cases():
 
 # @pytest.mark.skip("Alternative only using SimulatorInterface")
 def test_run_basic():
-    path = Path(Path(__file__).parent, "data/MobileCrane/OspSystemStructure.xml")
+    path = Path(Path(__file__).parent / "data" / "MobileCrane" / "OspSystemStructure.xml")
     assert path.exists(), "System structure file not found"
     sim = SimulatorInterface(path)
     sim.simulator.simulate_until(1e9)
 
 
-@pytest.mark.skip("So far not working. Need to look into that: Run all cases defined in MobileCrane.cases")
-def test_run_cases():
-    path = Path(Path(__file__).parent, "data/MobileCrane/MobileCrane.cases")
+# @pytest.mark.skip("So far not working. Need to look into that: Run all cases defined in MobileCrane.cases")
+def test_run_cases(mobile_crane_fmu):
+    path = Path(Path(__file__).parent / "data" / "MobileCrane" / "MobileCrane.cases")
     # system_structure = Path(Path(__file__).parent, "data/MobileCrane/OspSystemStructure.xml")
     assert path.exists(), "MobileCrane cases file not found"
     cases = Cases(path)
@@ -272,9 +288,9 @@ def test_run_cases():
     assert static.act_get[-1][3].args == (0, 0, (53, 54, 55))
 
     print("Running case 'base'...")
-    cases.run_case("base", dump="results_base")
     case = cases.case_by_name("base")
     assert case is not None
+    case.run(dump="results_base")
     res = case.res.res
     # ToDo: expected Torque?
     assert is_nearly_equal(res.jspath("$['1.0'].mobileCrane.x_pedestal"), [0.0, 0.0, 3.0])
@@ -308,7 +324,7 @@ if __name__ == "__main__":
     retcode = pytest.main(["-rA", "-v", __file__])
     assert retcode == 0, f"Return code {retcode}"
     # test_read_cases()
-    # test_step_by_step_cosim()
-    # test_step_by_step_cases()
-    # test_run_basic()
-    # test_run_cases()
+    # test_step_by_step_cosim(_mobile_crane_fmu())
+    # test_step_by_step_cases(_mobile_crane_fmu())
+    # test_run_basic(_mobile_crane_fmu())
+    # test_run_cases(_mobile_crane_fmu())

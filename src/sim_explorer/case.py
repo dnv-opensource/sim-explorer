@@ -1,18 +1,18 @@
 # pyright: reportMissingImports=false, reportGeneralTypeIssues=false
 from __future__ import annotations
 
-import math
 import os
 from collections.abc import Callable
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 import matplotlib.pyplot as plt
 import numpy as np
 from libcosimpy.CosimLogging import CosimLogLevel, log_output_level
 
+from sim_explorer.assertion import Assertion
 from sim_explorer.exceptions import CaseInitError
 from sim_explorer.json5 import Json5
 from sim_explorer.simulator_interface import SimulatorInterface
@@ -102,7 +102,11 @@ class Case:
         if _results is not None:
             for _res in _results:
                 self.read_spec_item(_res)
-
+        self.asserts = []  # list of assert keys
+        _assert = self.js.jspath("$.assert", dict)
+        if _assert is not None:
+            for k, v in _assert.items():
+                _ = self.read_assertion(k, v)
         if self.name == "base":
             self.special = self._ensure_specials(self.special)  # must specify for base case
         self.act_get = dict(sorted(self.act_get.items()))
@@ -199,12 +203,13 @@ class Case:
         else:
             return 1
 
-    def _disect_at_time(self, txt: str, value: Any | None = None) -> tuple[str, str, float]:
+    def _disect_at_time(self, txt: str, value: Any | None = None, tl: bool = False) -> tuple[str, str, float]:
         """Disect the @txt argument into 'at_time_type' and 'at_time_arg'.
 
         Args:
             txt (str): The key text after '@' and before ':'
             value (Any): the value argument. Needed to distinguish the action type
+            tl (bool)=False: expect a Temporal Logic type of '@' specification (for assertion)
 
         Returns
         -------
@@ -213,44 +218,73 @@ class Case:
             type is the type of action (get, set, step),
             arg is the time argument, or -1
         """
-        pre, _, at = txt.partition("@")
-        assert len(pre), f"'{txt}' is not allowed as basis for _disect_at_time"
-        if value in (
-            "result",
-            "res",
-        ):  # marking a normal variable specification as 'get' or 'step' action
-            value = None
-        if not len(at):  # no @time spec
-            if value is None:
-                return (pre, "get", self.special["stopTime"])  # report final value
-            else:
-                msg = f"Value required for 'set' in _disect_at_time('{txt}','{self.name}','{value}')"
-                assert Case._num_elements(value), msg
-                return (pre, "set", 0)  # set at startTime
-        else:  # time spec provided
+
+        def time_spec(at: str, tl: bool):
+            """Analyse the specification after '@' and disect into typ and arg."""
             try:
                 arg_float = float(at)
             except Exception:
-                arg_float = float("nan")
-            if math.isnan(arg_float):
-                if at.startswith("step"):
-                    try:
-                        return (pre, "step", float(at[4:]))
-                    except Exception:
-                        return (pre, "step", -1)  # this means 'all macro steps'
-                else:
-                    raise AssertionError(f"Unknown @time instruction {txt}. Case:{self.name}, value:'{value}'")
+                arg_float = float("-inf")
+            if tl:
+                typ = at[0] if arg_float == float("-inf") else "T"
+                assert typ in ("T", "G", "F"), f"Unknown temporal type {typ}"
+                return (typ, arg_float)
             else:
-                return (pre, "set" if Case._num_elements(value) else "get", arg_float)
+                if arg_float == float("-inf"):
+                    if at.startswith("step"):
+                        try:
+                            return ("step", float(at[4:]))
+                        except Exception:
+                            return ("step", -1)  # this means 'all macro steps'
+                    else:
+                        raise AssertionError(f"Unknown '@{txt}'. Case:{self.name}, value:'{value}'") from None
+                else:
+                    return ("set" if Case._num_elements(value) else "get", arg_float)
+
+        pre, _, at = txt.partition("@")
+        assert len(pre), f"'{txt}' is not allowed as basis for _disect_at_time"
+        if tl:  # temporal logic specification
+            assert isinstance(value, str), f"String value expected. Found {value}"
+            if not len(at):  # no @time spec. Assume 'G'lobal
+                return (pre, "G", float("-inf"))
+            else:
+                typ, arg = time_spec(at, tl)
+                return (pre, typ, arg)
+        else:
+            if value in ("result", "res"):  # mark variable specification as 'get' or 'step' action
+                value = None
+            if not len(at):  # no @time spec
+                if value is None:
+                    return (pre, "get", self.special["stopTime"])  # report final value
+                else:
+                    msg = f"Value required for 'set' in _disect_at_time('{txt}','{self.name}','{value}')"
+                    assert Case._num_elements(value), msg
+                    return (pre, "set", 0)  # set at startTime
+            else:  # time spec provided
+                typ, arg = time_spec(at, tl)
+                return (pre, typ, arg)
 
     def read_assertion(self, key: str, expr: Any | None = None):
-        """Read an assert statement, compile as sympy expression and return the Assertion object.
+        """Read an assert statement, compile as sympy expression, register and store the key..
 
         Args:
             key (str): Identification key for the assertion. Should be unique. Recommended to use numbers
+
+            Also assertion keys can have temporal specifications (@...) with the following possibilities:
+
+               * @G : The expression is expected to be globally (always) true
+               * @F : The expression is expected to be true at some point in time
+               * @<val>: The expression is expected to be true at the specific time value
             expr: A sympy expression using available variables
         """
-        return
+        key, at_time_type, at_time_arg = self._disect_at_time(key, expr, tl=True)
+        self.cases.assertion.expr(key, expr)
+        if at_time_type in ("G", "F"):  # no time argument
+            self.cases.assertion.temporal(key, (at_time_type,))
+        elif at_time_type in ("T",):
+            self.cases.assertion.temporal(key, (at_time_type, at_time_arg))
+        self.asserts.append(key)
+        return key
 
     def read_spec_item(self, key: str, value: Any | None = None):
         """Use the alias variable information (key) and the value to construct an action function,
@@ -533,7 +567,7 @@ class Cases:
         "timefac",
         "variables",
         "base",
-        "results",
+        "assertion",
         "_comp_refs_to_case_var_cache",
         "results_print_type",
     )
@@ -563,9 +597,9 @@ class Cases:
         self.timefac = self._get_time_unit() * 1e9  # internally OSP uses pico-seconds as integer!
         # read the 'variables' section and generate dict { alias : { (instances), (variables)}}:
         self.variables = self.get_case_variables()
-        self._comp_refs_to_case_var_cache: dict = (
-            dict()
-        )  # cache of results indices translations used by comp_refs_to_case_var()
+        self.assertion = Assertion()
+        self.assertion.register_vars(self.variables)  # register variables as symbols
+        self._comp_refs_to_case_var_cache: dict = dict()  # cache used by comp_refs_to_case_var()
         self.read_cases()
 
     def get_case_variables(self) -> dict[str, dict]:
@@ -675,9 +709,7 @@ class Cases:
                 if k not in ("header", "base"):
                     _ = Case(self, k, spec=self.js.jspath(f"$.{k}", dict, True))
         else:
-            raise CaseInitError(
-                f"Mandatory main section 'base' is needed. Found {list(self.js.js_py.keys())}"
-            ) from None
+            raise CaseInitError(f"Main section 'base' is needed. Found {list(self.js.js_py.keys())}") from None
 
     def case_by_name(self, name: str) -> Case | None:
         """Find the case 'name' amoung all defined cases. Return None if not found.
@@ -1046,7 +1078,7 @@ class Results:
                                     )
         return cont
 
-    def time_series(self, variable: str):
+    def time_series(self, variable: str | Iterable):
         """Extract the provided alias variables and make them available as two lists 'times' and 'values'
         of equal length.
 
@@ -1067,7 +1099,7 @@ class Results:
             found = self.res.jspath("$['" + str(key) + "']." + variable)
             if found is not None:
                 if isinstance(found, list):
-                    raise NotImplementedError("So far not implemented for multi-dimensional plots") from None
+                    raise NotImplementedError("So far not implemented for multi-dimensional retrievals") from None
                 else:
                     times.append(float(key))
                     values.append(found)
