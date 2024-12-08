@@ -1,0 +1,46 @@
+SimulatorInterface
+==================
+
+.. currentmodule:: sim_explorer.simulator_interface
+
+.. autoclass:: SimulatorInterface
+   :members:
+   :show-inheritance:
+
+
+   
+   .. automethod:: __init__
+   
+   .. rubric:: Methods
+   .. autosummary::
+   
+      ~SimulatorInterface.__init__
+      ~SimulatorInterface.allowed_action
+      ~SimulatorInterface.component_id_from_name
+      ~SimulatorInterface.component_name_from_id
+      ~SimulatorInterface.default_initial
+      ~SimulatorInterface.get_components
+      ~SimulatorInterface.get_models
+      ~SimulatorInterface.get_variable_value
+      ~SimulatorInterface.get_variables
+      ~SimulatorInterface.is_output_var
+      ~SimulatorInterface.match_components
+      ~SimulatorInterface.match_variables
+      ~SimulatorInterface.pytype
+      ~SimulatorInterface.reset
+      ~SimulatorInterface.same_model
+      ~SimulatorInterface.set_initial
+      ~SimulatorInterface.set_variable_value
+      ~SimulatorInterface.variable_name_from_ref
+   
+   
+
+
+   
+   
+   .. rubric:: Attributes
+   .. autosummary::
+   
+      ~SimulatorInterface.path
+   
+   
