@@ -1,0 +1,28 @@
+﻿sim\_explorer.simulator\_interface
+==================================
+
+.. automodule:: sim_explorer.simulator_interface
+   :members:
+   :exclude-members: SimulatorInterface,
+   
+
+
+   
+   .. rubric:: Module Attributes
+   .. autosummary::
+   
+      Json5Val
+   
+   .. rubric:: Classes
+   .. autosummary::
+      :toctree:
+      :template: custom-class.rst
+   
+      SimulatorInterface
+   
+   .. rubric:: Exceptions
+   .. autosummary::
+   
+      CaseInitError
+      CaseUseError
+   
