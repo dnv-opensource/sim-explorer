@@ -1,0 +1,33 @@
+Case
+====
+
+.. currentmodule:: sim_explorer.case
+
+.. autoclass:: Case
+   :members:
+   :show-inheritance:
+
+
+   
+   .. automethod:: __init__
+   
+   .. rubric:: Methods
+   .. autosummary::
+   
+      ~Case.__init__
+      ~Case.add_results_object
+      ~Case.append
+      ~Case.case_by_name
+      ~Case.iter
+      ~Case.list_cases
+      ~Case.read_assertion
+      ~Case.read_spec_item
+      ~Case.run
+      ~Case.str_act
+   
+   
+
+
+   
+   
+   
