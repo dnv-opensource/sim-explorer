@@ -205,8 +205,9 @@ def test_do_assert(show):
     cases = Cases(spec=Path(__file__).parent / "data" / "BouncingBall3D" / "BouncingBall3D.cases")
     case = cases.case_by_name("restitutionAndGravity")
     case.run()
-    #res = Results(file=Path(__file__).parent / "data" / "BouncingBall3D" / "restitutionAndGravity.js5")
+    # res = Results(file=Path(__file__).parent / "data" / "BouncingBall3D" / "restitutionAndGravity.js5")
     res = case.res
+    assert isinstance(res, Results)
     # cases = res.case.cases
     assert res.case.name == "restitutionAndGravity"
     assert cases.file.name == "BouncingBall3D.cases"
@@ -242,8 +243,8 @@ def test_do_assert(show):
 
 
 if __name__ == "__main__":
-    # retcode = pytest.main(["-rA", "-v", __file__, "--show", "False"])
-    # assert retcode == 0, f"Non-zero return code {retcode}"
+    retcode = pytest.main(["-rA", "-v", __file__, "--show", "False"])
+    assert retcode == 0, f"Non-zero return code {retcode}"
     import os
 
     os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
@@ -253,4 +254,4 @@ if __name__ == "__main__":
     # test_assertion()
     # test_assertion_spec()
     # test_vector()
-    test_do_assert(show=True)
+    # test_do_assert(show=True)
