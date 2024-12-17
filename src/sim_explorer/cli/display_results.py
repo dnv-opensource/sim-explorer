@@ -1,9 +1,12 @@
 from typing import List
+
 from rich.console import Console
 from rich.panel import Panel
+
 from sim_explorer.models import AssertionResult
 
 console = Console()
+
 
 def reconstruct_assertion_name(result: AssertionResult) -> str:
     """
@@ -14,6 +17,7 @@ def reconstruct_assertion_name(result: AssertionResult) -> str:
     """
     time = result.time if result.time is not None else ""
     return f"{result.key}@{result.temporal.name}{time}({result.expression})"
+
 
 def log_assertion_results(results: dict[str, List[AssertionResult]]):
     """
@@ -30,7 +34,6 @@ def log_assertion_results(results: dict[str, List[AssertionResult]]):
 
     # Print results for each assertion executed in each of the cases ran
     for case_name, assertions in results.items():
-
         # Show case name first
         console.print(f"[bold magenta]• {case_name}[/bold magenta]")
         for assertion in assertions:
@@ -48,7 +51,7 @@ def log_assertion_results(results: dict[str, List[AssertionResult]]):
             console.print(f"   [{status_color}]{status_icon}[/] [cyan]{assertion_name}[/cyan]: {assertion.description}")
 
             if not assertion.result:
-                console.print(f"      [red]⚠️ Error:[/] [dim]Assertion has failed[/dim]")
+                console.print("      [red]⚠️ Error:[/] [dim]Assertion has failed[/dim]")
 
         console.print()  # Add spacing between scenarios
 
@@ -59,11 +62,12 @@ def log_assertion_results(results: dict[str, List[AssertionResult]]):
     passed_tests = f"[green]✅ {total_passed} tests passed[/green] 😎" if total_passed > 0 else ""
     failed_tests = f"[red]❌ {total_failed} tests failed[/red] 😭" if total_failed > 0 else ""
     padding = "   " if total_passed > 0 and total_failed > 0 else ""
-    console.print(Panel.fit(
-        f"{passed_tests}{padding}{failed_tests}",
-        title="[bold blue]Test Summary[/bold blue]",
-        border_style="blue"
-    ))
+    console.print(
+        Panel.fit(
+            f"{passed_tests}{padding}{failed_tests}", title="[bold blue]Test Summary[/bold blue]", border_style="blue"
+        )
+    )
+
 
 def group_assertion_results(results: List[AssertionResult]) -> dict[str, List[AssertionResult]]:
     """
@@ -75,7 +79,9 @@ def group_assertion_results(results: List[AssertionResult]) -> dict[str, List[As
     grouped_results: dict[str, List[AssertionResult]] = {}
     for result in results:
         case_name = result.case
-        if case_name not in grouped_results:
+        if case_name and case_name not in grouped_results:
             grouped_results[case_name] = []
-        grouped_results[case_name].append(result)
+
+        if case_name:
+            grouped_results[case_name].append(result)
     return grouped_results

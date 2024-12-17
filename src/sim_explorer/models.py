@@ -1,5 +1,7 @@
 from enum import Enum
+
 from pydantic import BaseModel
+
 
 class Temporal(Enum):
     UNDEFINED = 0
@@ -10,11 +12,12 @@ class Temporal(Enum):
     T = 3
     TIME = 3
 
+
 class AssertionResult(BaseModel):
     key: str
     expression: str
     result: bool
-    temporal: Temporal | None
+    temporal: Temporal
     time: float | int | None
     description: str
     case: str | None

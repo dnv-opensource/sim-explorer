@@ -1,10 +1,12 @@
+# type: ignore
+
 import ast
-from enum import Enum
 from typing import Any, Callable, Iterable, Iterator
 
 import numpy as np
 
 from sim_explorer.models import AssertionResult, Temporal
+
 
 class Assertion:
     """Defines a common Assertion object for checking expectations with respect to simulation results.
@@ -301,7 +303,7 @@ class Assertion:
         # print("kvargs", kvargs, self._syms[key], self.expr_get_symbols_functions(key))
         return self._eval(locals()["_" + key], kvargs)
 
-    def eval_series(self, key: str, data: list[list], ret: float | str | Callable | None = None):
+    def eval_series(self, key: str, data: list[Any], ret: float | str | Callable | None = None):
         """Perform assertion on a (time) series.
 
         Args:
@@ -427,7 +429,9 @@ class Assertion:
             return AssertionResult(
                 key=key,
                 expression=self._expr[key],
-                time=time_arg[0] if len(time_arg) > 0 and (isinstance(time_arg[0], int) or isinstance(time_arg[0], float)) else None,
+                time=time_arg[0]
+                if len(time_arg) > 0 and (isinstance(time_arg[0], int) or isinstance(time_arg[0], float))
+                else None,
                 result=self._assertions[key].get("passed", False),
                 description=self._description[key],
                 temporal=self._temporal[key].get("type", None),

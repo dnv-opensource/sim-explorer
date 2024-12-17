@@ -2,7 +2,6 @@ from math import sqrt
 from pathlib import Path
 
 import pytest
-from component_model.model import Model
 from libcosimpy.CosimEnums import CosimExecutionState
 from libcosimpy.CosimExecution import CosimExecution
 from libcosimpy.CosimManipulator import CosimManipulator
@@ -17,6 +16,7 @@ from sim_explorer.simulator_interface import SimulatorInterface
 @pytest.fixture(scope="session")
 def mobile_crane_fmu():
     return Path(__file__).parent / "data" / "MobileCrane" / "MobileCrane.fmu"
+
 
 def is_nearly_equal(x: float | list, expected: float | list, eps: float = 1e-10) -> int:
     if isinstance(x, float):

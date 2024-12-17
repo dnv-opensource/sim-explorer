@@ -12,6 +12,7 @@ def check_command(cmd: str, expected: str | None = None):
     else:
         assert ret.startswith(expected), f"{cmd}: {ret} != {expected}"
 
+
 @pytest.mark.skip("Doesn't work with new results display")
 def test_cli():
     os.chdir(str(Path(__file__).parent / "data" / "BouncingBall3D"))

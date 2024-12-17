@@ -7,7 +7,9 @@ import logging
 import sys
 from pathlib import Path
 
+from sim_explorer.case import Case, Cases
 from sim_explorer.cli.display_results import group_assertion_results, log_assertion_results
+from sim_explorer.utils.logging import configure_logging
 
 # Remove current directory from Python search path.
 # Only through this trick it is possible that the current CLI file 'sim_explorer.py'
@@ -16,8 +18,6 @@ from sim_explorer.cli.display_results import group_assertion_results, log_assert
 # Python would start searching for the imported names within the current file (sim_explorer.py)
 # instead of the package 'sim_explorer' (and the import statements fail).
 sys.path = [path for path in sys.path if Path(path) != Path(__file__).parent]
-from sim_explorer.case import Case, Cases
-from sim_explorer.utils.logging import configure_logging
 
 logger = logging.getLogger(__name__)
 
