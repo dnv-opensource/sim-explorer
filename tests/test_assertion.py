@@ -227,20 +227,17 @@ def test_do_assert(show):
     assert asserts.temporal("1")["type"] == Temporal.A
     assert asserts.syms("1") == ["g"]
     assert asserts.do_assert("1", res)
-    assert asserts.assertions("1") == {"passed": True, "details": None}
+    assert asserts.assertions("1") == {"passed": True, "details": None, "case": None}
     asserts.do_assert("2", res)
-    assert asserts.assertions("2") == {"passed": True, "details": None}, f"Found {asserts.assertions('2')}"
+    assert asserts.assertions("2") == {"passed": True, "details": None, "case": None}, f"Found {asserts.assertions('2')}"
     if show:
         res.plot_time_series(["bb.x[2]"])
     asserts.do_assert("3", res)
-    assert asserts.assertions("3") == {"passed": True, "details": "@2.22"}, f"Found {asserts.assertions('3')}"
+    assert asserts.assertions("3") == {"passed": True, "details": "@2.22", "case": None}, f"Found {asserts.assertions('3')}"
     asserts.do_assert("4", res)
-    assert asserts.assertions("4") == {"passed": True, "details": "@1.1547 (interpolated)"}, f"Found {asserts.assertions('4')}"
+    assert asserts.assertions("4") == {"passed": True, "details": "@1.1547 (interpolated)", "case": None}, f"Found {asserts.assertions('4')}"
     count = asserts.do_assert_case(res)  # do all
     assert count == [4, 4], "Expected 4 of 4 passed"
-    for rep in asserts.report():
-        print(rep)
-
 
 if __name__ == "__main__":
     retcode = pytest.main(["-rA", "-v", __file__, "--show", "False"])

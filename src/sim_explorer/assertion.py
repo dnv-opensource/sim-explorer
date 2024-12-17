@@ -382,7 +382,7 @@ class Assertion:
         else:
             raise ValueError(f"Unknown return type '{ret}'") from None
 
-    def do_assert(self, key: str, result: Any, case_name: str | None):
+    def do_assert(self, key: str, result: Any, case_name: str | None = None):
         """Perform assert action 'key' on data of 'result' object."""
         assert isinstance(key, str) and key in self._temporal, f"Assertion key {key} not found"
         from sim_explorer.case import Results
