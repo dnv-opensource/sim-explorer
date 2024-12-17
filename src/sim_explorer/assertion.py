@@ -1,8 +1,10 @@
 import ast
 from enum import Enum
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Iterator
 
 import numpy as np
+
+from sim_explorer.models import AssertionResult
 
 
 class Temporal(Enum):
@@ -235,7 +237,7 @@ class Assertion:
             self._description.update({key: descr})
             return descr
 
-    def assertions(self, key: str, res: bool | None = None, details: str | None = None):
+    def assertions(self, key: str, res: bool | None = None, details: str | None = None, case_name: str | None = None):
         """Get or set an assertion result."""
         if res is None:  # getter
             try:
@@ -245,7 +247,7 @@ class Assertion:
             else:
                 return _res
         else:  # setter
-            self._assertions.update({key: {"passed": res, "details": details}})
+            self._assertions.update({key: {"passed": res, "details": details, "case": case_name}})
             return self._assertions[key]
 
     def register_vars(self, variables: dict):
@@ -391,7 +393,7 @@ class Assertion:
         else:
             raise ValueError(f"Unknown return type '{ret}'") from None
 
-    def do_assert(self, key: str, result: Any):
+    def do_assert(self, key: str, result: Any, case_name: str | None):
         """Perform assert action 'key' on data of 'result' object."""
         assert isinstance(key, str) and key in self._temporal, f"Assertion key {key} not found"
         from sim_explorer.case import Results
@@ -410,36 +412,36 @@ class Assertion:
         data = result.retrieve(zip(inst, var, strict=False))
         res = self.eval_series(key, data, ret=None)
         if self._temporal[key]["type"] == Temporal.A:
-            self.assertions(key, res[1])
+            self.assertions(key, res[1], None, case_name)
         elif self._temporal[key]["type"] == Temporal.F:
-            self.assertions(key, res[1], f"@{res[0]}")
+            self.assertions(key, res[1], f"@{res[0]}", case_name)
         elif self._temporal[key]["type"] == Temporal.T:
-            self.assertions(key, res[1], f"@{res[0]} (interpolated)")
+            self.assertions(key, res[1], f"@{res[0]} (interpolated)", case_name)
         return res[1]
 
     def do_assert_case(self, result: Any) -> list[int]:
         """Perform all assertions defined for the case related to the result object."""
         count = [0, 0]
         for key in result.case.asserts:
-            self.do_assert(key, result)
+            self.do_assert(key, result, result.case.name)
             count[0] += self._assertions[key]["passed"]
             count[1] += 1
         return count
 
-    def report(self, case: Any = None):
+    def report(self, case: Any = None) -> Iterator[AssertionResult]:
         """Report on all registered asserts.
         If case denotes a case object, only the results for this case are reported.
         """
 
         def do_report(key: str):
-            return {
-                "key": key,
-                "description": self._description[key],
-                "temporal": self._temporal[key],
-                "expression": self._expr[key],
-                "passed": self._assertions[key].get("passed", "unknown"),
-                "assert-details": self._assertions[key].get("passed", "none"),
-            }
+            return AssertionResult(
+                key=key,
+                expression=self._expr[key],
+                result=self._assertions[key].get("passed", False),
+                descriptions=self._description[key],
+                case=self._assertions[key].get("case", None),
+                details="No details",
+            )
 
         from sim_explorer.case import Case
 

@@ -33,11 +33,11 @@ def test_ast(show):
         a = ast.parse(expr, "<source>", "exec")
         print(a, ast.dump(a, indent=4))
 
-    ass = Assertion()
-    ass.register_vars(
+    asserts = Assertion()
+    asserts.register_vars(
         {"x": {"instances": ("dummy",), "variables": (1, 2, 3)}, "y": {"instances": ("dummy2",), "variables": (1,)}}
     )
-    syms, funcs = ass.expr_get_symbols_functions(expr)
+    syms, funcs = asserts.expr_get_symbols_functions(expr)
     assert syms == ["x", "y"], f"SYMS: {syms}"
     assert funcs == ["sin"], f"FUNCS: {funcs}"
 
@@ -45,31 +45,31 @@ def test_ast(show):
     if show:
         a = a = ast.parse(expr)
         print(a, ast.dump(a, indent=4))
-    syms, funcs = ass.expr_get_symbols_functions(expr)
+    syms, funcs = asserts.expr_get_symbols_functions(expr)
     assert syms == ["y"]
     assert funcs == ["abs"]
 
-    ass = Assertion()
-    ass.symbol("t", 1)
-    ass.symbol("x", 3)
-    ass.symbol("y", 1)
-    ass.expr("1", "1+2+x.dot(x) + sin(y)")
-    syms, funcs = ass.expr_get_symbols_functions("1")
+    asserts = Assertion()
+    asserts.symbol("t", 1)
+    asserts.symbol("x", 3)
+    asserts.symbol("y", 1)
+    asserts.expr("1", "1+2+x.dot(x) + sin(y)")
+    syms, funcs = asserts.expr_get_symbols_functions("1")
     assert syms == ["x", "y"]
     assert funcs == ["sin"]
-    syms, funcs = ass.expr_get_symbols_functions("abs(y-4)<0.11")
+    syms, funcs = asserts.expr_get_symbols_functions("abs(y-4)<0.11")
     assert syms == ["y"]
     assert funcs == ["abs"]
 
-    ass = Assertion()
-    ass.register_vars(
+    asserts = Assertion()
+    asserts.register_vars(
         {"g": {"instances": ("bb",), "variables": (1,)}, "x": {"instances": ("bb",), "variables": (2, 3, 4)}}
     )
     expr = "sqrt(2*bb_x[2] / bb_g)"  # fully qualified variables with components
     a = ast.parse(expr, "<source>", "exec")
     if show:
         print(a, ast.dump(a, indent=4))
-    syms, funcs = ass.expr_get_symbols_functions(expr)
+    syms, funcs = asserts.expr_get_symbols_functions(expr)
     assert syms == ["bb_g", "bb_x"]
     assert funcs == ["sqrt"]
 
@@ -94,58 +94,58 @@ def test_temporal():
 
 def test_assertion():
     # show_data()print("Analyze", analyze( "t>8 & x>0.1"))
-    ass = Assertion()
-    ass.symbol("t")
-    ass.register_vars(
+    asserts = Assertion()
+    asserts.symbol("t")
+    asserts.register_vars(
         {
             "x": {"instances": ("dummy",), "variables": (2,)},
             "y": {"instances": ("dummy",), "variables": (3,)},
             "z": {"instances": ("dummy",), "variables": (4, 5)},
         }
     )
-    ass.expr("1", "t>8")
-    assert ass.eval_single("1", {"t": 9.0})
-    assert not ass.eval_single("1", {"t": 7})
-    times, results = ass.eval_series("1", _t, "bool-list")
+    asserts.expr("1", "t>8")
+    assert asserts.eval_single("1", {"t": 9.0})
+    assert not asserts.eval_single("1", {"t": 7})
+    times, results = asserts.eval_series("1", _t, "bool-list")
     assert True in results, "There is at least one point where the assertion is True"
     assert results.index(True) == 81, f"Element {results.index(True)} is True"
     assert all(results[i] for i in range(81, 100)), "Assertion remains True"
-    assert ass.eval_series("1", _t, max)[1]
-    assert results == ass.eval_series("1", _t, "bool-list")[1]
-    assert ass.eval_series("1", _t, "F") == (8.1, True), "Finally True"
-    ass.symbol("x")
-    ass.expr("2", "(t>8) and (x>0.1)")
-    times, results = ass.eval_series("2", zip(_t, _x, strict=True), "bool")
-    assert times == 8.1, f"Should be 'True' (at some point). Found {times}, {results}. Expr: {ass.expr('2')}"
-    times, results = ass.eval_series("2", zip(_t, _x, strict=True), "bool-list")
+    assert asserts.eval_series("1", _t, max)[1]
+    assert results == asserts.eval_series("1", _t, "bool-list")[1]
+    assert asserts.eval_series("1", _t, "F") == (8.1, True), "Finally True"
+    asserts.symbol("x")
+    asserts.expr("2", "(t>8) and (x>0.1)")
+    times, results = asserts.eval_series("2", zip(_t, _x, strict=True), "bool")
+    assert times == 8.1, f"Should be 'True' (at some point). Found {times}, {results}. Expr: {asserts.expr('2')}"
+    times, results = asserts.eval_series("2", zip(_t, _x, strict=True), "bool-list")
     time_interval = [r[0] for r in filter(lambda res: res[1], zip(times, results, strict=False))]
     assert (time_interval[0], time_interval[-1]) == (8.1, 9.0)
     assert len(time_interval) == 10
     with pytest.raises(ValueError, match="Unknown return type 'Hello'") as err:
-        ass.eval_series("2", zip(_t, _x, strict=True), "Hello")
+        asserts.eval_series("2", zip(_t, _x, strict=True), "Hello")
     assert str(err.value) == "Unknown return type 'Hello'"
     # Checking equivalence. '==' does not work
-    ass.symbol("y")
-    ass.expr("3", "(y<=4) & (y>=4)")
+    asserts.symbol("y")
+    asserts.expr("3", "(y<=4) & (y>=4)")
     expected = ["t", "x", "dummy_x", "y", "dummy_y", "z", "dummy_z"]
-    assert list(ass._symbols.keys()) == expected, f"Found: {list(ass._symbols.keys())}"
-    assert ass.expr_get_symbols_functions("3") == (["y"], [])
-    assert ass.eval_single("3", {"y": 4})
-    assert not ass.eval_series("3", zip(_t, _y, strict=True), ret="bool")[1]
-    ass.expr("4", "y==4"), "Also equivalence check is allowed here"
-    assert ass.eval_single("4", {"y": 4})
-    ass.expr("5", "abs(y-4)<0.11")  # abs function can also be used
-    assert ass.eval_single("5", (4.1,))
-    ass.expr("6", "sin(t)**2 + cos(t)**2")
-    assert abs(ass.eval_series("6", _t, ret=max)[1] - 1.0) < 1e-15, "sin and cos accepted"
-    ass.expr("7", "sqrt(t)")
-    assert abs(ass.eval_series("7", _t, ret=max)[1] ** 2 - _t[-1]) < 1e-14, "Also sqrt works out of the box"
-    ass.expr("8", "dummy_x*dummy_y")
-    assert abs(ass.eval_series("8", zip(_t, _x, _y, strict=False), ret=max)[1] - 0.14993604045622577) < 1e-14
-    ass.expr("9", "dummy_x*dummy_y* z[0]")
+    assert list(asserts._symbols.keys()) == expected, f"Found: {list(asserts._symbols.keys())}"
+    assert asserts.expr_get_symbols_functions("3") == (["y"], [])
+    assert asserts.eval_single("3", {"y": 4})
+    assert not asserts.eval_series("3", zip(_t, _y, strict=True), ret="bool")[1]
+    asserts.expr("4", "y==4"), "Also equivalence check is allowed here"
+    assert asserts.eval_single("4", {"y": 4})
+    asserts.expr("5", "abs(y-4)<0.11")  # abs function can also be used
+    assert asserts.eval_single("5", (4.1,))
+    asserts.expr("6", "sin(t)**2 + cos(t)**2")
+    assert abs(asserts.eval_series("6", _t, ret=max)[1] - 1.0) < 1e-15, "sin and cos accepted"
+    asserts.expr("7", "sqrt(t)")
+    assert abs(asserts.eval_series("7", _t, ret=max)[1] ** 2 - _t[-1]) < 1e-14, "Also sqrt works out of the box"
+    asserts.expr("8", "dummy_x*dummy_y")
+    assert abs(asserts.eval_series("8", zip(_t, _x, _y, strict=False), ret=max)[1] - 0.14993604045622577) < 1e-14
+    asserts.expr("9", "dummy_x*dummy_y* z[0]")
     assert (
         abs(
-            ass.eval_series("9", zip(_t, _x, _y, zip(_x, _y, strict=False), strict=False), ret=max)[1]
+            asserts.eval_series("9", zip(_t, _x, _y, zip(_x, _y, strict=False), strict=False), ret=max)[1]
             - 0.03455981729517478
         )
         < 1e-14
@@ -186,18 +186,18 @@ def test_assertion_spec():
 
 def test_vector():
     """Test sympy vector operations."""
-    ass = Assertion()
-    ass.symbol("x", length=3)
-    print("Symbol x", ass.symbol("x"), type(ass.symbol("x")))
-    ass.expr("1", "x.dot(x)")
-    assert ass.expr_get_symbols_functions("1") == (["x"], [])
-    ass.eval_single("1", ((1, 2, 3),))
-    ass.eval_single("1", {"x": (1, 2, 3)})
-    assert ass.symbol("x").dot(ass.symbol("x")) == 3.0, "Initialized as ones"
-    assert ass.symbol("x").dot(np.array((0, 1, 0), dtype=float)) == 1.0, "Initialized as ones"
-    ass.symbol("y", 3)  # a vector without explicit components
-    assert all(ass.symbol("y")[i] == 1.0 for i in range(3))
-    y = ass.symbol("y")
+    asserts = Assertion()
+    asserts.symbol("x", length=3)
+    print("Symbol x", asserts.symbol("x"), type(asserts.symbol("x")))
+    asserts.expr("1", "x.dot(x)")
+    assert asserts.expr_get_symbols_functions("1") == (["x"], [])
+    asserts.eval_single("1", ((1, 2, 3),))
+    asserts.eval_single("1", {"x": (1, 2, 3)})
+    assert asserts.symbol("x").dot(asserts.symbol("x")) == 3.0, "Initialized as ones"
+    assert asserts.symbol("x").dot(np.array((0, 1, 0), dtype=float)) == 1.0, "Initialized as ones"
+    asserts.symbol("y", 3)  # a vector without explicit components
+    assert all(asserts.symbol("y")[i] == 1.0 for i in range(3))
+    y = asserts.symbol("y")
     assert y.dot(y) == 3.0, "Initialized as ones"
 
 
@@ -216,29 +216,29 @@ def test_do_assert(show):
     info = res.inspect()["bb.v"]
     assert info["len"] == 300
     assert info["range"] == [0.01, 3.0]
-    ass = cases.assertion
-    # ass.vector('x', (1,0,0))
-    # ass.vector('v', (0,1,0))
-    _ = ass.expr("0", "x.dot(v)")  # additional expression (not in .cases)
-    assert ass._syms["0"] == ["x", "v"]
-    assert all(ass.symbol("x")[i] == np.ones(3, dtype=float)[i] for i in range(3)), "Initialized to ones"
-    assert ass.eval_single("0", ((1, 2, 3), (4, 5, 6))) == 32
-    assert ass.expr("1") == "g==1.5"
-    assert ass.temporal("1")["type"] == Temporal.A
-    assert ass.syms("1") == ["g"]
-    assert ass.do_assert("1", res)
-    assert ass.assertions("1") == {"passed": True, "details": None}
-    ass.do_assert("2", res)
-    assert ass.assertions("2") == {"passed": True, "details": None}, f"Found {ass.assertions('2')}"
+    asserts = cases.assertion
+    # asserts.vector('x', (1,0,0))
+    # asserts.vector('v', (0,1,0))
+    _ = asserts.expr("0", "x.dot(v)")  # additional expression (not in .cases)
+    assert asserts._syms["0"] == ["x", "v"]
+    assert all(asserts.symbol("x")[i] == np.ones(3, dtype=float)[i] for i in range(3)), "Initialized to ones"
+    assert asserts.eval_single("0", ((1, 2, 3), (4, 5, 6))) == 32
+    assert asserts.expr("1") == "g==1.5"
+    assert asserts.temporal("1")["type"] == Temporal.A
+    assert asserts.syms("1") == ["g"]
+    assert asserts.do_assert("1", res)
+    assert asserts.assertions("1") == {"passed": True, "details": None}
+    asserts.do_assert("2", res)
+    assert asserts.assertions("2") == {"passed": True, "details": None}, f"Found {asserts.assertions('2')}"
     if show:
         res.plot_time_series(["bb.x[2]"])
-    ass.do_assert("3", res)
-    assert ass.assertions("3") == {"passed": True, "details": "@2.22"}, f"Found {ass.assertions('3')}"
-    ass.do_assert("4", res)
-    assert ass.assertions("4") == {"passed": True, "details": "@1.1547 (interpolated)"}, f"Found {ass.assertions('4')}"
-    count = ass.do_assert_case(res)  # do all
+    asserts.do_assert("3", res)
+    assert asserts.assertions("3") == {"passed": True, "details": "@2.22"}, f"Found {asserts.assertions('3')}"
+    asserts.do_assert("4", res)
+    assert asserts.assertions("4") == {"passed": True, "details": "@1.1547 (interpolated)"}, f"Found {asserts.assertions('4')}"
+    count = asserts.do_assert_case(res)  # do all
     assert count == [4, 4], "Expected 4 of 4 passed"
-    for rep in ass.report():
+    for rep in asserts.report():
         print(rep)
 
 

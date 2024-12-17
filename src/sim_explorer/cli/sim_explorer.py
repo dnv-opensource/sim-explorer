@@ -169,41 +169,9 @@ def main() -> None:
             return
         logger.info(f"{log_msg_stub}\t --Run \t\t\t{args.Run}\n")
         # Invoke API
-        cases.run_case(case, run_subs=True)
-
-    log_assertion_results([
-        {
-            "name": "base",
-            "assertions": [
-                {
-                    "status": True,
-                    "formulation": "a==5",
-                },
-                {
-                    "status": True,
-                    "formulation": "c==5",
-                }
-            ]
-        },
-        {
-            "name": case.name,
-            "assertions": [
-                {
-                    "status": False,
-                    "formulation": "b==6",
-                }
-            ]
-        },
-        {
-            "name": "dynamic",
-            "assertions": [
-                {
-                    "status": False,
-                    "formulation": "7==76",
-                }
-            ]
-        }
-    ])
+        cases.run_case(case, run_subs=True, run_assertions=True)
+        for i in cases.assertion.report():
+            print(i)
 
 
 if __name__ == "__main__":

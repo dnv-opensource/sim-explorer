@@ -5,7 +5,7 @@ from collections.abc import Callable
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,6 +14,7 @@ from libcosimpy.CosimLogging import CosimLogLevel, log_output_level  # type: ign
 from sim_explorer.assertion import Assertion, Temporal
 from sim_explorer.exceptions import CaseInitError
 from sim_explorer.json5 import Json5
+from sim_explorer.models import AssertionResult
 from sim_explorer.simulator_interface import SimulatorInterface
 from sim_explorer.utils.misc import from_xml
 from sim_explorer.utils.paths import get_path, relative_path
@@ -599,6 +600,7 @@ class Cases:
         "_comp_refs_to_case_var_cache",
         "results_print_type",
     )
+    assertion_results: List[AssertionResult] = []
 
     def __init__(self, spec: str | Path, simulator: SimulatorInterface | None = None):
         self.file = Path(spec)  # everything relative to the folder of this file!
@@ -903,7 +905,7 @@ class Cases:
             self._comp_refs_to_case_var_cache[comp].update({refs: (component, var)})
         return component, var
 
-    def run_case(self, name: str | Case, dump: str | None = "", run_subs: bool = False):
+    def run_case(self, name: str | Case, dump: str | None = "", run_subs: bool = False, run_assertions: bool = False):
         """Initiate case run. If done from here, the case name can be chosen.
         If run_subs = True, also the sub-cases are run.
         """
@@ -916,8 +918,13 @@ class Cases:
             raise ValueError(f"Invalid argument name:{name}") from None
 
         c.run(dump)
+
+        if run_assertions and c:
+            # Run assertions on every case after running the case -> results will be saved in memory for now
+            self.assertion.do_assert_case(c.res)
+
         for _c in c.subs:
-            self.run_case(_c, dump)
+            self.run_case(_c, dump, None, run_assertions)
 
 
 class Results:
