@@ -4,18 +4,7 @@ from typing import Any, Callable, Iterable, Iterator
 
 import numpy as np
 
-from sim_explorer.models import AssertionResult
-
-
-class Temporal(Enum):
-    UNDEFINED = 0
-    A = 1
-    ALWAYS = 1
-    F = 2
-    FINALLY = 2
-    T = 3
-    TIME = 3
-
+from sim_explorer.models import AssertionResult, Temporal
 
 class Assertion:
     """Defines a common Assertion object for checking expectations with respect to simulation results.
@@ -434,11 +423,14 @@ class Assertion:
         """
 
         def do_report(key: str):
+            time_arg = self._temporal[key].get("args", None)
             return AssertionResult(
                 key=key,
                 expression=self._expr[key],
+                time=time_arg[0] if len(time_arg) > 0 and (isinstance(time_arg[0], int) or isinstance(time_arg[0], float)) else None,
                 result=self._assertions[key].get("passed", False),
-                descriptions=self._description[key],
+                description=self._description[key],
+                temporal=self._temporal[key].get("type", None),
                 case=self._assertions[key].get("case", None),
                 details="No details",
             )

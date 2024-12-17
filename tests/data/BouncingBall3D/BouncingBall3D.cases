@@ -46,4 +46,7 @@ gravity : {
    spec : {
       g : 1.5
    },
+   assert: {
+      6@ALWAYS: ['g==9.81', 'Check wrong gravity.']
+   }
 }}

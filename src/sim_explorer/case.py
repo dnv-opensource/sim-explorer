@@ -923,8 +923,11 @@ class Cases:
             # Run assertions on every case after running the case -> results will be saved in memory for now
             self.assertion.do_assert_case(c.res)
 
+        if not run_subs:
+            return None
+
         for _c in c.subs:
-            self.run_case(_c, dump, None, run_assertions)
+            self.run_case(_c, dump, run_subs, run_assertions)
 
 
 class Results:

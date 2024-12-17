@@ -7,7 +7,7 @@ import logging
 import sys
 from pathlib import Path
 
-from sim_explorer.cli.display_results import log_assertion_results
+from sim_explorer.cli.display_results import group_assertion_results, log_assertion_results
 
 # Remove current directory from Python search path.
 # Only through this trick it is possible that the current CLI file 'sim_explorer.py'
@@ -155,12 +155,19 @@ def main() -> None:
 
     elif args.run is not None:
         case = cases.case_by_name(args.run)
+
         if case is None:
             logger.error(f"Case {args.run} not found in {args.cases}")
             return
+
         logger.info(f"{log_msg_stub}\t option: run \t\t\t{args.run}\n")
         # Invoke API
-        case.run()
+        cases.run_case(case, run_subs=False, run_assertions=True)
+
+        # Display assertion results
+        assertion_results = [assertion for assertion in cases.assertion.report()]
+        grouped_results = group_assertion_results(assertion_results)
+        log_assertion_results(grouped_results)
 
     elif args.Run is not None:
         case = cases.case_by_name(args.Run)
@@ -170,8 +177,11 @@ def main() -> None:
         logger.info(f"{log_msg_stub}\t --Run \t\t\t{args.Run}\n")
         # Invoke API
         cases.run_case(case, run_subs=True, run_assertions=True)
-        for i in cases.assertion.report():
-            print(i)
+
+        # Display assertion results
+        assertion_results = [assertion for assertion in cases.assertion.report()]
+        grouped_results = group_assertion_results(assertion_results)
+        log_assertion_results(grouped_results)
 
 
 if __name__ == "__main__":
