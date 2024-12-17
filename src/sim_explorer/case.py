@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from libcosimpy.CosimLogging import CosimLogLevel, log_output_level  # type: ignore
 
-from sim_explorer.assertion import Assertion # type: ignore
+from sim_explorer.assertion import Assertion  # type: ignore
 from sim_explorer.exceptions import CaseInitError
 from sim_explorer.json5 import Json5
 from sim_explorer.models import AssertionResult, Temporal
