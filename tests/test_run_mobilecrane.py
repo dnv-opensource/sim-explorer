@@ -16,19 +16,7 @@ from sim_explorer.simulator_interface import SimulatorInterface
 
 @pytest.fixture(scope="session")
 def mobile_crane_fmu():
-    return _mobile_crane_fmu()
-
-
-def _mobile_crane_fmu():
-    build_path = Path(__file__).parent / "data" / "MobileCrane"
-    src = Path(__file__).parent / "data" / "MobileCrane" / "mobile_crane.py"
-    assert src.exists(), "MobileCrane source not found"
-    fmu_path = Model.build(
-        str(src),
-        dest=build_path,
-    )
-    return fmu_path
-
+    return Path(__file__).parent / "data" / "MobileCrane" / "MobileCrane.fmu"
 
 def is_nearly_equal(x: float | list, expected: float | list, eps: float = 1e-10) -> int:
     if isinstance(x, float):
@@ -271,7 +259,7 @@ def test_run_basic():
 
 
 # @pytest.mark.skip("So far not working. Need to look into that: Run all cases defined in MobileCrane.cases")
-def test_run_cases(mobile_crane_fmu):
+def test_run_cases():
     path = Path(Path(__file__).parent / "data" / "MobileCrane" / "MobileCrane.cases")
     # system_structure = Path(Path(__file__).parent, "data/MobileCrane/OspSystemStructure.xml")
     assert path.exists(), "MobileCrane cases file not found"
