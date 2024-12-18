@@ -22,7 +22,7 @@ packages = [
 
 [project]
 name = "sim-explorer"
-version = "0.1.2"
+version = "0.2.0"
 description = "Experimentation tools on top of OSP simulation models."
 readme = "README.rst"
 requires-python = ">= 3.10"
