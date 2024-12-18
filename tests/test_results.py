@@ -1,8 +1,6 @@
 from datetime import datetime
 from pathlib import Path
 
-import pytest
-
 from sim_explorer.case import Cases, Results
 
 
@@ -39,7 +37,7 @@ def test_plot_time_series(show):
     assert file.exists(), f"File {file} not found"
     res = Results(file=file)
     if show:
-        res.plot_time_series(variables=["bb.x[2]", "bb.v[2]"], title="Test plot")
+        res.plot_time_series(comp_var=["bb.x[2]", "bb.v[2]"], title="Test plot")
 
 
 def test_inspect():
@@ -56,12 +54,24 @@ def test_inspect():
     assert cont["bb.x"]["info"]["variables"] == (0, 1, 2), "ValueReferences"
 
 
+def test_retrieve():
+    file = Path(__file__).parent / "data" / "BouncingBall3D" / "test_results"
+    res = Results(file=file)
+    data = res.retrieve((("bb", "g"), ("bb", "e")))
+    assert data == [[0.01, 9.81, 0.5]]
+    data = res.retrieve((("bb", "x"), ("bb", "v")))
+    assert len(data) == 300
+    assert data[0] == [0.01, [0.01, 0.0, 39.35076771653544], [1.0, 0.0, -0.0981]]
+
+
 if __name__ == "__main__":
-    retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
-    assert retcode == 0, f"Non-zero return code {retcode}"
-    # import os
-    # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
+    # retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
+    # assert retcode == 0, f"Non-zero return code {retcode}"
+    import os
+
+    os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
+    # test_retrieve()
     # test_init()
     # test_add()
-    # test_plot_time_series()
+    test_plot_time_series(show=True)
     # test_inspect()

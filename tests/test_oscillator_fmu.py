@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pytest
 from component_model.model import Model
-from component_model.utils.osp import make_osp_system_structure
 from fmpy import plot_result, simulate_fmu  # type: ignore
 from fmpy.util import fmu_info  # type: ignore
 from fmpy.validation import validate_fmu  # type: ignore
@@ -18,6 +17,7 @@ from libcosimpy.CosimObserver import CosimObserver  # type: ignore
 from libcosimpy.CosimSlave import CosimLocalSlave
 
 from sim_explorer.utils.misc import from_xml
+from sim_explorer.utils.osp import make_osp_system_structure
 
 
 def check_expected(value, expected, feature: str):
@@ -93,11 +93,11 @@ def _system_structure():
     """Make a OSP structure file and return the path"""
     path = make_osp_system_structure(
         name="ForcedOscillator",
-        models={
+        simulators={
             "osc": {"source": "HarmonicOscillator.fmu", "stepSize": 0.01},
             "drv": {"source": "DrivingForce.fmu", "stepSize": 0.01},
         },
-        connections=("drv", "f[2]", "osc", "f[2]"),
+        connections_variable=(("drv", "f[2]", "osc", "f[2]"),),
         version="0.1",
         start=0.0,
         base_step=0.01,

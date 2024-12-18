@@ -22,7 +22,7 @@ packages = [
 
 [project]
 name = "sim-explorer"
-version = "0.1.2"
+version = "0.2.0"
 description = "Experimentation tools on top of OSP simulation models."
 readme = "README.rst"
 requires-python = ">= 3.10"
@@ -61,6 +61,8 @@ dependencies = [
     "fmpy>=0.3.21",
     "component-model>=0.1.0",
     "plotly>=5.24.1",
+    "pydantic>=2.10.3",
+    "rich>=13.9.4",
 ]
 
 [project.optional-dependencies]

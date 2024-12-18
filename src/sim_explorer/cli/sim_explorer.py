@@ -7,6 +7,10 @@ import logging
 import sys
 from pathlib import Path
 
+from sim_explorer.case import Case, Cases
+from sim_explorer.cli.display_results import group_assertion_results, log_assertion_results
+from sim_explorer.utils.logging import configure_logging
+
 # Remove current directory from Python search path.
 # Only through this trick it is possible that the current CLI file 'sim_explorer.py'
 # carries the same name as the package 'sim_explorer' we import from in the next lines.
@@ -14,8 +18,6 @@ from pathlib import Path
 # Python would start searching for the imported names within the current file (sim_explorer.py)
 # instead of the package 'sim_explorer' (and the import statements fail).
 sys.path = [path for path in sys.path if Path(path) != Path(__file__).parent]
-from sim_explorer.case import Case, Cases
-from sim_explorer.utils.logging import configure_logging
 
 logger = logging.getLogger(__name__)
 
@@ -153,12 +155,19 @@ def main() -> None:
 
     elif args.run is not None:
         case = cases.case_by_name(args.run)
+
         if case is None:
             logger.error(f"Case {args.run} not found in {args.cases}")
             return
+
         logger.info(f"{log_msg_stub}\t option: run \t\t\t{args.run}\n")
         # Invoke API
-        case.run()
+        cases.run_case(case, run_subs=False, run_assertions=True)
+
+        # Display assertion results
+        assertion_results = [assertion for assertion in cases.assertion.report()]
+        grouped_results = group_assertion_results(assertion_results)
+        log_assertion_results(grouped_results)
 
     elif args.Run is not None:
         case = cases.case_by_name(args.Run)
@@ -167,7 +176,12 @@ def main() -> None:
             return
         logger.info(f"{log_msg_stub}\t --Run \t\t\t{args.Run}\n")
         # Invoke API
-        cases.run_case(case, run_subs=True)
+        cases.run_case(case, run_subs=True, run_assertions=True)
+
+        # Display assertion results
+        assertion_results = [assertion for assertion in cases.assertion.report()]
+        grouped_results = group_assertion_results(assertion_results)
+        log_assertion_results(grouped_results)
 
 
 if __name__ == "__main__":
