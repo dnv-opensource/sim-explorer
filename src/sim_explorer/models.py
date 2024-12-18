@@ -1,9 +1,9 @@
-from enum import Enum
+from enum import IntEnum
 
 from pydantic import BaseModel
 
 
-class Temporal(Enum):
+class Temporal(IntEnum):
     UNDEFINED = 0
     A = 1
     ALWAYS = 1
