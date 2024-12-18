@@ -78,7 +78,7 @@ def _make_cases():
 
 # @pytest.mark.skip(reason="Deactivated")
 def test_case_at_time(simpletable):
-    # print("DISECT", simpletable.case_by_name("base")._disect_at_time("x@step", ""))
+    # print("DISECT", simpletable.case_by_name("base")._disect_at_time_spec("x@step", ""))
     do_case_at_time("v@1.0", "base", "res", ("v", "get", 1.0), simpletable)
     return
     do_case_at_time("x@step", "base", "res", ("x", "step", -1), simpletable)
@@ -91,7 +91,7 @@ def test_case_at_time(simpletable):
         "@1.0",
         "base",
         "result",
-        "'@1.0' is not allowed as basis for _disect_at_time",
+        "'@1.0' is not allowed as basis for _disect_at_time_spec",
         simpletable,
     )
     do_case_at_time("i", "base", "res", ("i", "get", 1), simpletable)  # "report the value at end of sim!"
@@ -105,10 +105,10 @@ def do_case_at_time(txt, casename, value, expected, simpletable):
     assert case is not None, f"Case {casename} was not found"
     if isinstance(expected, str):  # error case
         with pytest.raises(AssertionError) as err:
-            case._disect_at_time(txt, value)
+            case._disect_at_time_spec(txt, value)
         assert str(err.value).startswith(expected)
     else:
-        assert case._disect_at_time(txt, value) == expected, f"Found {case._disect_at_time(txt, value)}"
+        assert case._disect_at_time_spec(txt, value) == expected, f"Found {case._disect_at_time(txt, value)}"
 
 
 # @pytest.mark.skip(reason="Deactivated")

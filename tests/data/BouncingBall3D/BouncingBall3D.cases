@@ -21,12 +21,8 @@ base : {
       x[2] : 39.37007874015748, # this is in inch => 1m!
       x@step : 'result',
       v@step : 'result',
-      x_b[0]@step : 'res',
-   },
-#   assert: {
-#      1 : 'abs(g-9.81)<1e-9'
-#   }
-   },
+      x_b@step : 'res',
+   }},
 restitution : {
    description : "Smaller coefficient of restitution e",
    spec: {
@@ -37,9 +33,20 @@ restitutionAndGravity : {
    parent : 'restitution',
    spec : {
       g : 1.5
-   }},
+   },
+   assert: {
+      1@A : ['g==1.5', 'Check setting of gravity (about 1/7 of earth)'],
+      2@ALWAYS : ['e==0.5', 'Check setting of restitution'],
+      3@F : ['x[2] < 3.0', 'For long times the z-position of the ball remains small (loss of energy)'],
+      4@T1.1547 : ['abs(x[2]) < 0.4', 'Close to bouncing time the ball should be close to the floor'],
+   }
+},
 gravity : {
    description : "Gravity like on the moon",
    spec : {
       g : 1.5
-   }}}
+   },
+   assert: {
+      6@ALWAYS: ['g==9.81', 'Check wrong gravity.']
+   }
+}}

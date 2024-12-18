@@ -3,10 +3,13 @@
 All notable changes to the [sim-explorer] project will be documented in this file.<br>
 The changelog format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
-
 -/-
 
+## [0.2.0] - 2024-12-18
+New Assertions release:
+
+* Added support for assertions in each of the cases to have some kind of evaluation being run after every simulation.
+* Display features to show the results of the assertions in a developer friendly format.
 
 ## [0.1.0] - 2024-11-08
 

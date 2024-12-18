@@ -74,7 +74,7 @@ def check_case(
             e = val
         elif k == "x[2]":
             x[2] = val
-        elif k in ("x@step", "v@step", "x_b[0]@step"):
+        elif k in ("x@step", "v@step", "x_b@step"):
             pass  # get actions
         else:
             raise KeyError(f"Unknown key {k}")
@@ -95,8 +95,8 @@ def check_case(
         res=results.res.jspath(path="$['0.01'].bb.v"),
         expected=(v[0], 0, -g * dt),
     )
-    x_b = results.res.jspath(path="$.['0.01'].bb.['x_b[0]']")
-    assert abs(x_b - x_bounce) < 1e-9
+    x_b = results.res.jspath(path="$.['0.01'].bb.['x_b']")
+    assert abs(x_b[0] - x_bounce) < 1e-9
     # just before bounce
     t_before = int(t_bounce * tfac) / tfac  # * dt  # just before bounce
     if t_before == t_bounce:  # at the interval border
@@ -110,7 +110,7 @@ def check_case(
         res=results.res.jspath(path=f"$['{t_before}'].bb.v"),
         expected=(v[0], 0, -g * t_before),
     )
-    assert abs(results.res.jspath(f"$['{t_before}'].bb.['x_b[0]']") - x_bounce) < 1e-9
+    assert abs(results.res.jspath(f"$['{t_before}'].bb.['x_b']")[0] - x_bounce) < 1e-9
     # just after bounce
     ddt = t_before + dt - t_bounce  # time from bounce to end of step
     x_bounce2 = x_bounce + 2 * v_bounce * e * 1.0 * e / g
@@ -127,7 +127,7 @@ def check_case(
         res=results.res.jspath(path=f"$['{t_before+dt}'].bb.v"),
         expected=(e * v[0], 0, (v_bounce * e - g * ddt)),
     )
-    assert abs(results.res.jspath(path=f"$['{t_before+dt}'].bb.['x_b[0]']") - x_bounce2) < 1e-9
+    assert abs(results.res.jspath(path=f"$['{t_before+dt}'].bb.['x_b']")[0] - x_bounce2) < 1e-9
     # from bounce to bounce
     v_x, v_z, t_b, x_b = (
         v[0],
