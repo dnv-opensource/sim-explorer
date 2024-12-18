@@ -1,5 +1,3 @@
-from typing import List
-
 from rich.console import Console
 from rich.panel import Panel
 
@@ -69,14 +67,14 @@ def log_assertion_results(results: dict[str, list[AssertionResult]]):
     )
 
 
-def group_assertion_results(results: List[AssertionResult]) -> dict[str, List[AssertionResult]]:
+def group_assertion_results(results: list[AssertionResult]) -> dict[str, list[AssertionResult]]:
     """
     Group test results by case name.
 
-    :param results: List of assertion results.
+    :param results: list of assertion results.
     :return: Dictionary where keys are case names and values are lists of assertion results.
     """
-    grouped_results: dict[str, List[AssertionResult]] = {}
+    grouped_results: dict[str, list[AssertionResult]] = {}
     for result in results:
         case_name = result.case
         if case_name and case_name not in grouped_results:
