@@ -66,8 +66,11 @@ class SimulatorInterface:
         description (str)="": Optional possibility to provide a system description
         simulator (CosimExecution)=None: Optional possibility to insert an existing simulator object.
            Otherwise this is generated through CosimExecution.from_osp_config_file().
-        log_level (CosimLogLevel): Per default the level is set to FATAL,
-           but it can be set to TRACE, DEBUG, INFO, WARNING, ERROR or FATAL (e.g. for debugging purposes)
+        log_level (str) = 'fatal': Per default the level is set to 'fatal',
+           but it can be set to 'trace', 'debug', 'info', 'warning', 'error' or 'fatal' (e.g. for debugging purposes)
+        fmus_available (bool) = False: Optional possibility to state that all FMUs shall be explicitly available,
+           and the interface object is thus able to attain all interface information from the modelDescription files.
+           The OSP interface has such information pre-loaded and the FMUs are thus not explicitly necessary.
     """
 
     def __init__(
@@ -76,12 +79,13 @@ class SimulatorInterface:
         name: str | None = None,
         description: str = "",
         simulator: CosimExecution | None = None,
-        log_level: CosimLogLevel = CosimLogLevel.FATAL,
+        log_level: str = 'fatal',
+        fmus_available: bool = False,
     ):
         self.name = name  # overwrite if the system includes that
         self.description = description  # overwrite if the system includes that
         self.sysconfig: Path | None = None
-        log_output_level(log_level)
+        log_output_level(CosimLogLevel[log_level.upper()])
         self.simulator: CosimExecution
         if simulator is None:  # instantiate the simulator through the system config file
             self.sysconfig = Path(system)

@@ -548,6 +548,7 @@ class Case:
                     self.res.add(time / self.cases.timefac, a.args[0], a.args[1], a.args[2], a())
 
         self.cases.simulator.reset()
+        
         if dump is not None:
             self.res.save(dump)
 
