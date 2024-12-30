@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from libcosimpy.CosimEnums import (
     CosimVariableCausality,
     CosimVariableType,
@@ -40,15 +41,15 @@ def test_osp_structure():
 
 
 def test_system_structure_from_js5():
-    osp_system_structure_from_js5(Path(__file__).parent / "data" / "crane_table.js5")
+    osp_system_structure_from_js5(Path(__file__).parent / "data" / "MobileCrane" / "crane_table.js5")
 
 
 if __name__ == "__main__":
-    # retcode = pytest.main(["-rA", "-v", __file__])
-    # assert retcode == 0, f"Non-zero return code {retcode}"
-    import os
+    retcode = pytest.main(["-rA", "-v", __file__])
+    assert retcode == 0, f"Non-zero return code {retcode}"
+    # import os
 
-    os.chdir(Path(__file__).parent / "test_working_directory")
-    test_system_structure()
+    # os.chdir(Path(__file__).parent / "test_working_directory")
+    # test_system_structure()
     # test_osp_structure()
     # test_system_structure_from_js5()

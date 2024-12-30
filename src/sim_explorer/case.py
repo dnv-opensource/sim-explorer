@@ -167,7 +167,12 @@ class Case:
         else:
             raise AssertionError(f"Unknown typ {typ} in _add_action")
         assert isinstance(at_time, (float, int)), f"Actions require a defined time as float. Found {at_time}"
-        if at_time in dct:
+        if typ == "set" and at_time <= self.special["startTime"] and action != self.cases.simulator.set_initial:
+            # isinstance( self.simulator, SystemInterfaceOSP)):
+            action = self.cases.simulator.set_initial  # OSP requires a special initial value function
+            for i in range(len(args[2])):  # set_initial takes only single variables
+                self._add_action(typ, action, (args[0], args[1], args[2][i], args[3][i]), at_time)
+        elif at_time in dct:
             for i, act in enumerate(dct[at_time]):
                 if act.func.__name__ == action.__name__ and all(act.args[k] == args[k] for k in range(2)):
                     # the type of action, the model id and the variable type match
@@ -404,36 +409,21 @@ class Case:
             else:  # set actions
                 assert value is not None, f"Variable {key}: Value needed for 'set' actions."
                 assert at_time_type in ("set"), f"Unknown @time type {at_time_type} for case '{self.name}'"
-                if at_time_arg <= self.special["startTime"]:  # False: #?? set_initial() does so far not work??#
-                    #  SimulatorInterface.default_initial(cvar_info["causality"], cvar_info["variability"]) < 3:
-                    assert at_time_arg <= self.special["startTime"], f"Initial settings at time {at_time_arg}?"
-                    for inst in cvar_info["instances"]:  # ask simulator to provide function to set variables:
-                        _inst = self.cases.simulator.component_id_from_name(inst)
-                        if not self.cases.simulator.allowed_action("set", _inst, tuple(var_refs), 0):
-                            raise AssertionError(self.cases.simulator.message) from None
-                        for ref, val in zip(var_refs, var_vals, strict=False):
-                            self._add_action(
-                                at_time_type,
-                                self.cases.simulator.set_initial,
-                                (_inst, cvar_info["type"], ref, val),
-                                at_time_arg * self.cases.timefac,
-                            )
-                else:
-                    for inst in cvar_info["instances"]:  # ask simulator to provide function to set variables:
-                        _inst = self.cases.simulator.component_id_from_name(inst)
-                        if not self.cases.simulator.allowed_action("set", _inst, tuple(var_refs), at_time_arg):
-                            raise AssertionError(self.cases.simulator.message) from None
-                        self._add_action(
-                            at_time_type,
-                            self.cases.simulator.set_variable_value,
-                            (
-                                _inst,
-                                cvar_info["type"],
-                                tuple(var_refs),
-                                tuple(var_vals),
-                            ),
-                            at_time_arg * self.cases.timefac,
-                        )
+                for inst in cvar_info["instances"]:  # ask simulator to provide function to set variables:
+                    _inst = self.cases.simulator.component_id_from_name(inst)
+                    if not self.cases.simulator.allowed_action("set", _inst, tuple(var_refs), at_time_arg):
+                        raise AssertionError(self.cases.simulator.message) from None
+                    self._add_action(
+                        at_time_type,
+                        self.cases.simulator.set_variable_value,
+                        (
+                            _inst,
+                            cvar_info["type"],
+                            tuple(var_refs),
+                            tuple(var_vals),
+                        ),
+                        at_time_arg * self.cases.timefac,
+                    )
 
     def list_cases(self, as_name: bool = True, flat: bool = False) -> list[str] | list[Case]:
         """List this case and all sub-cases recursively, as name or case objects."""
@@ -455,7 +445,7 @@ class Case:
 
         def get_from_config(element: str, default: float | None = None):
             if isinstance(self.cases.simulator.sysconfig, Path):
-                info = from_xml(self.cases.simulator.sysconfig, sub=None, xpath=".//{*}" + element)
+                info = from_xml(self.cases.simulator.sysconfig, sub=None).findall(".//{*}" + element)
                 if not len(info):
                     return default
                 txt = info[0].text
@@ -548,7 +538,7 @@ class Case:
                     self.res.add(time / self.cases.timefac, a.args[0], a.args[1], a.args[2], a())
 
         self.cases.simulator.reset()
-        
+
         if dump is not None:
             self.res.save(dump)
 
@@ -607,7 +597,8 @@ class Cases:
         self.file = Path(spec)  # everything relative to the folder of this file!
         assert self.file.exists(), f"Cases spec file {spec} not found"
         self.js = Json5(spec)
-        log_level = CosimLogLevel[self.js.jspath("$.header.logLevel") or "FATAL"]
+        # del        log_level = CosimLogLevel[self.js.jspath("$.header.logLevel") or "FATAL"]
+        log_level = self.js.jspath("$.header.logLevel") or "fatal"
         if simulator is None:
             modelfile = self.js.jspath("$.header.modelFile", str) or "OspSystemStructure.xml"
             path = self.file.parent / modelfile
@@ -617,13 +608,13 @@ class Cases:
                     system=path,
                     name=self.js.jspath("$.header.name", str) or "",
                     description=self.js.jspath("$.header.description", str) or "",
-                    log_level=log_level,
+                    log_level=log_level.upper(),
                 )
             except Exception as err:
                 raise AssertionError(f"'modelFile' needed from spec: {err}") from err
         else:
             self.simulator = simulator  # SimulatorInterface( simulator = simulator)
-            log_output_level(log_level)
+            log_output_level(CosimLogLevel[log_level.upper()])
 
         self.timefac = self._get_time_unit() * 1e9  # internally OSP uses pico-seconds as integer!
         # read the 'variables' section and generate dict { alias : { (instances), (variables)}}:

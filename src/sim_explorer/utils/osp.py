@@ -1,8 +1,10 @@
 import xml.etree.ElementTree as ET  # noqa: N817
 from pathlib import Path
 
+from component_model.utils.xml import read_xml
+
 from sim_explorer.json5 import Json5
-from component_model.utils.xml import read_xml 
+from typing import Any
 
 
 # ==========================================
@@ -76,6 +78,7 @@ def make_osp_system_structure(
         _simulators = ET.Element("Simulators")
         if simulators is not None:
             for m, props in simulators.items():
+                print("COMPONENT", m, props)
                 simulator = ET.Element(
                     "Simulator",
                     {
@@ -84,10 +87,12 @@ def make_osp_system_structure(
                         "stepSize": str(props.get("stepSize", base_step)),
                     },
                 )
-                if "initialValues" in props:
-                    initial = ET.SubElement(simulator, "InitialValues")
-                    for var, value in props["initialValues"].items():
+                initial = ET.Element("InitialValues")
+                for var, value in props.items():
+                    if var not in ("source", "stepSize"):
                         initial.append(make_initial_value(var, value))
+                if len(initial):
+                    simulator.append(initial)
                 _simulators.append(simulator)
             #            print(f"Model {m}: {simulator}. Length {len(simulators)}")
             #            ET.ElementTree(simulators).write("Test.xml")
@@ -180,6 +185,7 @@ def make_osp_system_structure(
     tree.write(file, encoding="utf-8")
     return file
 
+
 def osp_system_structure_from_js5(file: Path, dest: Path | None = None):
     """Make a OspSystemStructure file from a js5 specification.
     The js5 specification is closely related to the make_osp_systemStructure() function (and uses it).
@@ -207,46 +213,52 @@ def osp_system_structure_from_js5(file: Path, dest: Path | None = None):
 
     return ss
 
-def read_system_structure_xml( file: Path):
+
+def read_system_structure_xml(file: Path) -> dict[str, Any]:
     """Read the system structure in xml format and return as js5 dict, similar to ..._from_js5."""
-    def type_value( typ:str, value:str):
-        return {'Real': float, 'Integer': int, 'Boolean': bool, 'String': str}[typ]( value)
-    el = read_xml( file)
+
+    def type_value(el: ET.Element):
+        typ = el.tag.split("}")[1]
+        value = el.get("value")
+        return {"Real": float, "Integer": int, "Boolean": bool, "String": str}[typ](value)
+
+    el = read_xml(file)
     assert el.tag.endswith("OspSystemStructure"), f"<OspSystemStructure> expected. Found {el.tag}"
     ns = el.tag.split("{")[1].split("}")[0]
     bss = el.find(".//BaseStepSize") or 0.01
     header = {
-        "xmlns" : ns,
-        "version" : el.get( "version", "'0.1'"),
+        "xmlns": ns,
+        "version": el.get("version", "'0.1'"),
         "StartTime": el.find(".//StartTime") or 0.0,
-        "Algorithm": el.find(".//Algorithm") or 'fixedStep',
+        "Algorithm": el.find(".//Algorithm") or "fixedStep",
         "BaseStepSize": bss,
-        }
-    
-    simulators : dict = {}
+    }
+
+    simulators: dict = {}
     for sim in el.findall(".//{*}Simulator"):
         props = {
-            "source" : sim.get('source'),
-            "stepSize" : sim.get('stepSize', bss),
-            }
+            "source": sim.get("source"),
+            "stepSize": sim.get("stepSize", bss),
+        }
         for initial in sim.findall(".//{*}InitialValue"):
-            props.update( { initial.get('variable') : type_value( initial[0].tag.split('}')[1], initial[0].get('value'))})
-        simulators.update( {sim.get('name') : props})
-    
-    structure = {"header" : header, "Simulators" : simulators}
-    connections = {}
+            props.update({str(initial.get("variable")): type_value(initial[0])})
+        assert "name" in sim.attrib, f"Required attribute 'name' not found in {sim.tag}, attrib:{sim.attrib}"
+        simulators.update({sim.get("name"): props})
+
+    structure = {"header": header, "Simulators": simulators}
+    connections: dict = {}
     for c in ("Variable", "Signal", "Group", "SignalGroup"):
-        cons = []
-        for con in el.findall(".//{*}"+c+"Connection"):
+        cons: list = []
+        for con in el.findall(".//{*}" + c + "Connection"):
             assert len(con) == 2, f"Two sub-elements expected. Found {len(con)}"
-            props = []
+            _con: list = []
             for i in range(2):
                 for p in con[i].attrib.values():
-                    props.append( p)
-            cons.append( props)
-        if len( cons):
-            connections.update( {"Connections"+c : cons})
+                    _con.append(p)
+            cons.append(_con)
+        if len(cons):
+            connections.update({"Connections" + c: cons})
     if len(connections):
-        structure.update( connections)
-    
+        structure.update(connections)
+
     return structure

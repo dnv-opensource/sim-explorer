@@ -19,7 +19,7 @@ def match_with_wildcard(findtxt: str, matchtxt: str) -> bool:
         return m is not None
 
 
-def from_xml(file: Path, sub: str | None = None, xpath: str | None = None) -> ET.Element | list[ET.Element]:
+def from_xml(file: Path, sub: str | None = None) -> ET.Element:
     """Retrieve the Element root from a zipped file (retrieve sub), or an xml file (sub unused).
     If xpath is provided only the xpath matching element (using findall) is returned.
     """
@@ -40,7 +40,4 @@ def from_xml(file: Path, sub: str | None = None, xpath: str | None = None) -> ET
     except ET.ParseError as err:
         raise Exception(f"File '{file}' does not seem to be a proper xml file") from err
 
-    if xpath is None:
-        return et
-    else:
-        return et.findall(xpath)
+    return et

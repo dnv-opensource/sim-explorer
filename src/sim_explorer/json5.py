@@ -421,7 +421,7 @@ class Json5:
         elif isinstance(v, str) and not len(v):  # might be empty due to trailing ','
             return ""
 
-        if q2 >= 0: # explicitly quoted values are treated as strings!
+        if q2 >= 0:  # explicitly quoted values are treated as strings!
             return str(v)
         try:
             return int(v)  # type: ignore

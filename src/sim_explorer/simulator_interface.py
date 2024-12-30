@@ -79,7 +79,7 @@ class SimulatorInterface:
         name: str | None = None,
         description: str = "",
         simulator: CosimExecution | None = None,
-        log_level: str = 'fatal',
+        log_level: str = "fatal",
         fmus_available: bool = False,
     ):
         self.name = name  # overwrite if the system includes that

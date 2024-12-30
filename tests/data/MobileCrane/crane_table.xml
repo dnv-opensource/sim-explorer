@@ -1,0 +1,30 @@
+<OspSystemStructure xmlns="http://opensimulationplatform.com/MSMI/OSPSystemStructure" version="0.1">
+   <StartTime>0.0</StartTime>
+   <BaseStepSize>0.01</BaseStepSize>
+   <Simulators>
+      <Simulator name="simpleTable" source="../SimpleTable/SimpleTable.fmu" stepSize="0.01">
+         <InitialValues>
+            <InitialValue variable="interpolate">
+               <Boolean value="True" />
+            </InitialValue>
+         </InitialValues>
+      </Simulator>
+      <Simulator name="mobileCrane" source="MobileCrane.fmu" stepSize="0.01">
+         <InitialValues>
+            <InitialValue variable="pedestal.pedestalMass">
+               <Real value="5000.0" />
+            </InitialValue>
+            <InitialValue variable="boom.boom[0]">
+               <Real value="20.0" />
+            </InitialValue>
+         </InitialValues>
+      </Simulator>
+   </Simulators>
+   <Functions />
+   <Connections>
+      <VariableConnection>
+         <Variable simulator="simpleTable" name="outputs[0]" />
+         <Variable simulator="mobileCrane" name="pedestal.angularVelocity" />
+      </VariableConnection>
+   </Connections>
+</OspSystemStructure>
