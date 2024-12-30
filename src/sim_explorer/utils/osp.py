@@ -1,10 +1,10 @@
 import xml.etree.ElementTree as ET  # noqa: N817
 from pathlib import Path
+from typing import Any
 
 from component_model.utils.xml import read_xml
 
 from sim_explorer.json5 import Json5
-from typing import Any
 
 
 # ==========================================
