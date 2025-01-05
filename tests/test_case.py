@@ -6,7 +6,7 @@ import pytest
 
 from sim_explorer.case import Case, Cases
 from sim_explorer.json5 import Json5
-from sim_explorer.simulator_interface import SimulatorInterface
+from sim_explorer.system_interface import SystemInterface
 
 
 @pytest.fixture
@@ -72,7 +72,7 @@ def _make_cases():
     }
     js = Json5(json5)
     js.write("data/test.cases")
-    _ = SimulatorInterface("data/OspSystemStructure.xml", "testSystem")
+    _ = SystemInterface("data/OspSystemStructure.xml")
     _ = Cases("data/test.cases")
 
 
@@ -189,17 +189,17 @@ def test_case_set_get(simpletable):
     # print(f"ACT_SET: {caseX.act_set[0.0][0]}") #! set_initial, therefore no tuples!
     assert caseX.act_set[0.0][0].func.__name__ == "set_initial", "function name"
     assert caseX.act_set[0.0][0].args[0] == 0, "model instance"
-    assert caseX.act_set[0.0][0].args[1] == 3, f"variable type {caseX.act_set[0.0][0].args[1]}"
+    assert caseX.act_set[0.0][0].args[1] is bool, f"variable type {caseX.act_set[0.0][0].args[1]}"
     assert caseX.act_set[0.0][0].args[2] == 3, f"variable ref {caseX.act_set[0.0][0].args[2]}"
     assert caseX.act_set[0.0][0].args[3], f"variable value {caseX.act_set[0.0][0].args[3]}"
     # print(caseX.act_set[0.0][0])
     assert caseX.act_set[0.0][0].args[0] == 0, "model instance"
-    assert caseX.act_set[0.0][0].args[1] == 3, f"variable type {caseX.act_set[0.0][0].args[1]}"
+    assert caseX.act_set[0.0][0].args[1] is bool, f"variable type {caseX.act_set[0.0][0].args[1]}"
     assert caseX.act_set[0.0][0].args[2] == 3, f"variable ref {caseX.act_set[0.0][0].args[2]}"
     assert caseX.act_set[0.0][0].args[3] is True, f"variable value {caseX.act_set[0.0][0].args[3]}"
     # print(f"ACT_GET: {caseX.act_get}")
     assert caseX.act_get[1e9][0].args[0] == 0, "model instance"
-    assert caseX.act_get[1e9][0].args[1] == 0, "variable type"
+    assert caseX.act_get[1e9][0].args[1] is float, "variable type"
     assert caseX.act_get[1e9][0].args[2] == (0,), f"variable refs {caseX.act_get[1e9][0].args[2]}"
     # print( "PRINT", caseX.act_get[-1][0].args[2])
     assert caseX.act_get[-1][0].args[2] == (

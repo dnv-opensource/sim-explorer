@@ -1,6 +1,8 @@
 from datetime import datetime
 from pathlib import Path
 
+import pytest
+
 from sim_explorer.case import Cases, Results
 
 
@@ -65,13 +67,12 @@ def test_retrieve():
 
 
 if __name__ == "__main__":
-    # retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
-    # assert retcode == 0, f"Non-zero return code {retcode}"
-    import os
-
-    os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
+    retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
+    assert retcode == 0, f"Non-zero return code {retcode}"
+    # import os
+    # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
     # test_retrieve()
     # test_init()
     # test_add()
-    test_plot_time_series(show=True)
+    # test_plot_time_series(show=True)
     # test_inspect()

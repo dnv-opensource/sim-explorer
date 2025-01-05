@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from sim_explorer.case import Case, Cases
-from sim_explorer.simulator_interface import SimulatorInterface
+from sim_explorer.system_interface_osp import SystemInterfaceOSP
 
 # def test_tuple_iter():
 #     """Test of the features provided by the Case class"""
@@ -34,8 +34,9 @@ def test_cases_management():
 
 def test_cases():
     """Test of the features provided by the Cases class"""
-    sim = SimulatorInterface(str(Path(__file__).parent / "data" / "BouncingBall0" / "OspSystemStructure.xml"))
-    cases = Cases(Path(__file__).parent / "data" / "BouncingBall0" / "BouncingBall.cases", sim)
+    cases = Cases(
+        Path(__file__).parent / "data" / "BouncingBall0" / "BouncingBall.cases", simulator_type=SystemInterfaceOSP
+    )
 
     c: str | Case
     print(cases.info())
@@ -74,9 +75,9 @@ def test_cases():
     assert cases.variables["h"]["instances"] == ("bb",)
     assert cases.variables["h"]["variables"] == (1,)
     assert cases.variables["h"]["description"] == "Position (z) of the ball"
-    assert cases.variables["h"]["type"] == 0
-    assert cases.variables["h"]["causality"] == 2
-    assert cases.variables["h"]["variability"] == 4
+    assert cases.variables["h"]["type"] is float
+    assert cases.variables["h"]["causality"] == "output", f"Found {cases.variables['h']['causality']}"
+    assert cases.variables["h"]["variability"] == "continuous", f"Found {cases.variables['h']['variability']}"
     vs = dict((k, v) for k, v in cases.variables.items() if k.startswith("v"))
     assert all(x in vs for x in ("v_min", "v_z", "v"))
 

@@ -15,7 +15,7 @@ def nearly_equal(res: tuple, expected: tuple, eps=1e-7):
 
 def test_run_fmpy(show):
     """Test and validate the basic BouncingBall using fmpy and not using OSP or sim_explorer."""
-    path = Path(Path(__file__).parent, "data/BouncingBall0/BouncingBall.fmu")
+    path = Path(__file__).parent / "data" / "BouncingBall0" / "BouncingBall.fmu"
     assert path.exists(), f"File {path} does not exist"
     stepsize = 0.01
     result = simulate_fmu(
@@ -61,3 +61,4 @@ def test_run_fmpy(show):
 if __name__ == "__main__":
     retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
     assert retcode == 0, f"Non-zero return code {retcode}"
+    # test_run_fmpy(show=True)

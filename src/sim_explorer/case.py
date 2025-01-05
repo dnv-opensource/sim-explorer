@@ -9,13 +9,13 @@ from typing import Any, Iterable, List
 
 import matplotlib.pyplot as plt
 import numpy as np
-from libcosimpy.CosimLogging import CosimLogLevel, log_output_level  # type: ignore
 
 from sim_explorer.assertion import Assertion  # type: ignore
 from sim_explorer.exceptions import CaseInitError
 from sim_explorer.json5 import Json5
 from sim_explorer.models import AssertionResult, Temporal
-from sim_explorer.simulator_interface import SimulatorInterface
+from sim_explorer.system_interface import SystemInterface
+from sim_explorer.system_interface_osp import SystemInterfaceOSP
 from sim_explorer.utils.misc import from_xml
 from sim_explorer.utils.paths import get_path, relative_path
 
@@ -96,21 +96,22 @@ class Case:
             self.act_get = Case._actions_copy(self.parent.act_get)
             self.act_set = Case._actions_copy(self.parent.act_set)
 
-        for k, v in self.js.jspath("$.spec", dict, True).items():
-            self.read_spec_item(k, v)
-        _results = self.js.jspath("$.results", list)
-        if _results is not None:
-            for _res in _results:
-                self.read_spec_item(_res)
-        self.asserts: list = []  # list of assert keys
-        _assert = self.js.jspath("$.assert", dict)
-        if _assert is not None:
-            for k, v in _assert.items():
-                _ = self.read_assertion(k, v)
-        if self.name == "base":
-            self.special = self._ensure_specials(self.special)  # must specify for base case
-        self.act_get = dict(sorted(self.act_get.items()))
-        self.act_set = dict(sorted(self.act_set.items()))
+        if self.cases.simulator.full_simulator_available:
+            for k, v in self.js.jspath("$.spec", dict, True).items():
+                self.read_spec_item(k, v)
+            _results = self.js.jspath("$.results", list)
+            if _results is not None:
+                for _res in _results:
+                    self.read_spec_item(_res)
+            self.asserts: list = []  # list of assert keys
+            _assert = self.js.jspath("$.assert", dict)
+            if _assert is not None:
+                for k, v in _assert.items():
+                    _ = self.read_assertion(k, v)
+            if self.name == "base":
+                self.special = self._ensure_specials(self.special)  # must specify for base case
+            self.act_get = dict(sorted(self.act_get.items()))
+            self.act_set = dict(sorted(self.act_set.items()))
         # self.res represents the Results object and is added when collecting results or when evaluating results
 
     def add_results_object(self, res: Results):
@@ -575,8 +576,8 @@ class Cases:
 
     Args:
         spec (Path): file name for cases specification
-        simulator (SimulatorInterface)=None: Optional (pre-instantiated) SimulatorInterface object.
-           If that is None, the spec shall contain a modelFile to be used to instantiate the simulator.
+        simulator_type (SystemInterface)=SystemInterfaceOSP: Optional possibility to choose system simulator details
+           Default is OSP (libcosimpy), but when only results are read the basic SystemInterface is sufficient.
     """
 
     __slots__ = (
@@ -593,28 +594,25 @@ class Cases:
     )
     assertion_results: List[AssertionResult] = []
 
-    def __init__(self, spec: str | Path, simulator: SimulatorInterface | None = None):
+    def __init__(self, spec: str | Path, simulator_type: type = SystemInterfaceOSP):
         self.file = Path(spec)  # everything relative to the folder of this file!
         assert self.file.exists(), f"Cases spec file {spec} not found"
         self.js = Json5(spec)
         # del        log_level = CosimLogLevel[self.js.jspath("$.header.logLevel") or "FATAL"]
         log_level = self.js.jspath("$.header.logLevel") or "fatal"
-        if simulator is None:
-            modelfile = self.js.jspath("$.header.modelFile", str) or "OspSystemStructure.xml"
-            path = self.file.parent / modelfile
-            assert path.exists(), f"OSP system structure file {path} not found"
-            try:
-                self.simulator = SimulatorInterface(
-                    system=path,
-                    name=self.js.jspath("$.header.name", str) or "",
-                    description=self.js.jspath("$.header.description", str) or "",
-                    log_level=log_level.upper(),
-                )
-            except Exception as err:
-                raise AssertionError(f"'modelFile' needed from spec: {err}") from err
-        else:
-            self.simulator = simulator  # SimulatorInterface( simulator = simulator)
-            log_output_level(CosimLogLevel[log_level.upper()])
+        modelfile = self.js.jspath("$.header.modelFile", str) or "OspSystemStructure.xml"
+        path = self.file.parent / modelfile
+        assert path.exists(), f"OSP system structure file {path} not found"
+        print("SIM_type", simulator_type)
+        try:
+            self.simulator = simulator_type(
+                structure_file=path,
+                name=self.js.jspath("$.header.name", str) or "",
+                description=self.js.jspath("$.header.description", str) or "",
+                log_level=log_level,
+            )
+        except Exception as err:
+            raise AssertionError(f"'modelFile' needed from spec: {err}") from err
 
         self.timefac = self._get_time_unit() * 1e9  # internally OSP uses pico-seconds as integer!
         # read the 'variables' section and generate dict { alias : { (instances), (variables)}}:
@@ -637,6 +635,7 @@ class Cases:
         Optionally a description of the alias variable may be provided (and added to the dictionary).
         """
         variables = {}
+        model_vars = {}  # cache of variables of models
         for k, v in self.js.jspath("$.header.variables", dict, True).items():
             if not isinstance(v, list):
                 raise CaseInitError(f"List of 'component(s)' and 'variable(s)' expected. Found {v}") from None
@@ -650,31 +649,32 @@ class Cases:
             assert len(comp) > 0, f"No component model instances '{v[0]}' found for alias variable '{k}'"
             assert isinstance(v[1], str), f"Second argument of variable sped: Variable name(s)! Found {v[1]}"
             _vars = self.simulator.match_variables(comp[0], v[1])  # tuple of matching var refs
+            if model not in model_vars:  # ensure that model is included in the cache
+                model_vars.update({model: self.simulator.variables(comp[0])})
+            prototype = model_vars[model][self.simulator.variable_name_from_ref(comp[0], _vars[0])]
             var: dict = {
                 "model": model,
                 "instances": comp,
                 "variables": _vars,  # variables from same model!
             }
-            assert len(var["variables"]) > 0, f"No matching variables found for alias {k}:{v}, component '{comp}'"
+            assert len(var["variables"]), f"No matching variables found for alias {k}:{v}, component '{comp}'"
             if len(v) > 2:
                 var.update({"description": v[2]})
             # We add also the more detailed variable info from the simulator (the FMU)
             # The type, causality and variability shall be equal for all variables.
-            # The 'reference' element is the same as 'variables'.
-            # next( iter( ...)) is used to get the first dict value
-            var0 = next(iter(self.simulator.get_variables(model, _vars[0]).values()))  # prototype
-            for i in range(1, len(var["variables"])):
-                var_i = next(iter(self.simulator.get_variables(model, _vars[i]).values()))
+            for ref in _vars:
+                _var = model_vars[model][self.simulator.variable_name_from_ref(comp[0], ref)]
                 for test in ["type", "causality", "variability"]:
                     _assert(
-                        var_i[test] == var0[test],
-                        f"Variable with ref {var['variables'][i]} not same {test} as {var0} in model {model}",
+                        _var[test] == prototype[test],
+                        f"Variable with ref {ref} not same {test} as {prototype} in model {model}",
                     )
             var.update(
                 {
-                    "type": var0["type"],
-                    "causality": var0["causality"],
-                    "variability": var0["variability"],
+                    "type": prototype["type"],
+                    "causality": prototype["causality"],
+                    "variability": prototype["variability"],
+                    "initial": prototype.get("initial", ""),
                 }
             )
             variables.update({k: var})
@@ -955,7 +955,7 @@ class Results:
         self.res = Json5(self.file)
         case = Path(self.file.parent / (self.res.jspath("$.header.cases", str, True) + ".cases"))
         try:
-            cases = Cases(Path(case))
+            cases = Cases(Path(case), simulator_type=SystemInterface)
         except ValueError:
             raise CaseInitError(f"Cases {Path(case)} instantiation error") from ValueError
         self.case: Case | None = cases.case_by_name(name=self.res.jspath(path="$.header.case", typ=str, errorMsg=True))

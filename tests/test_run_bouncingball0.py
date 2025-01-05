@@ -6,7 +6,7 @@ import pytest
 
 from sim_explorer.case import Case, Cases
 from sim_explorer.json5 import Json5
-from sim_explorer.simulator_interface import SimulatorInterface
+from sim_explorer.system_interface_osp import SystemInterfaceOSP
 
 
 def expected_actions(case: Case, act: dict, expect: dict):
@@ -35,7 +35,7 @@ def expected_actions(case: Case, act: dict, expect: dict):
                     args[k] = (action.args[k],)  # type: ignore[call-overload]
             arg = [
                 sim.component_name_from_id(action.args[0]),
-                SimulatorInterface.pytype(action.args[1]),
+                action.args[1],
                 tuple(sim.variable_name_from_ref(comp=action.args[0], ref=ref) for ref in args[2]),  # type: ignore[attr-defined]
             ]
             for k in range(1, len(action.args)):
@@ -75,7 +75,7 @@ def test_step_by_step():
     """Do the simulation step-by step, only using libcosimpy"""
     path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
     assert path.exists(), "System structure file not found"
-    sim = SimulatorInterface(path)
+    sim = SystemInterfaceOSP(path)
     assert sim.simulator.real_initial_value(0, 6, 0.35), "Setting of 'e' did not work"
     for t in np.linspace(1, 1e9, 100):
         sim.simulator.simulate_until(t)
@@ -92,17 +92,17 @@ def test_step_by_step_interface():
     """Do the simulation step by step, using the simulatorInterface"""
     path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
     assert path.exists(), "System structure file not found"
-    sim = SimulatorInterface(path)
+    sim = SystemInterfaceOSP(path)
     # Commented out as order of variables and models are not guaranteed in different OS
     # assert sim.components["bb"] == 0
     # print(f"Variables: {sim.get_variables( 0, as_numbers = False)}")
     # assert sim.get_variables(0)["e"] == {"reference": 6, "type": 0, "causality": 1, "variability": 2}
-    sim.set_initial(0, 0, 6, 0.35)
+    sim.set_variable_value(0, float, (6,), (0.35,))
     for t in np.linspace(1, 1e9, 1):
         sim.simulator.simulate_until(t)
-        print(sim.get_variable_value(instance=0, typ=0, var_refs=(0, 1, 6)))
+        assert sim.get_variable_value(instance=0, typ=float, var_refs=(0, 1, 6)) == [0.01, 0.99955855, 0.35]
         if t == int(0.11 * 1e9):
-            assert sim.get_variable_value(instance=0, typ=0, var_refs=(0, 1, 6)) == [
+            assert sim.get_variable_value(instance=0, typ=float, var_refs=(0, 1, 6)) == [
                 0.11,
                 0.9411890500000001,
                 0.35,
@@ -243,3 +243,5 @@ if __name__ == "__main__":
     retcode = pytest.main(["-rA", "-v", __file__])
     assert retcode == 0, f"Non-zero return code {retcode}"
     # test_run_cases()
+    # test_step_by_step()
+    # test_step_by_step_interface()

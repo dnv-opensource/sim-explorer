@@ -10,11 +10,15 @@ from libcosimpy.CosimSlave import CosimLocalSlave
 
 from sim_explorer.case import Case, Cases
 from sim_explorer.json5 import Json5
-from sim_explorer.simulator_interface import SimulatorInterface
+from sim_explorer.system_interface_osp import SystemInterfaceOSP
 
 
 @pytest.fixture(scope="session")
 def mobile_crane_fmu():
+    return _mobile_crane_fmu()
+
+
+def _mobile_crane_fmu():
     return Path(__file__).parent / "data" / "MobileCrane" / "MobileCrane.fmu"
 
 
@@ -110,15 +114,15 @@ def test_step_by_step_cosim(mobile_crane_fmu):
         sim.simulate_until(step_count * 1e9)
 
 
-# @pytest.mark.skip("Alternative step-by step, using SimulatorInterface and Cases")
+# @pytest.mark.skip("Alternative step-by step, using SystemInterfaceOSP and Cases")
 def test_step_by_step_cases(mobile_crane_fmu):
-    sim: SimulatorInterface
+    sim: SystemInterfaceOSP
     cosim: CosimExecution
 
     def get_ref(name: str):
-        variable = cases.simulator.get_variables(0, name)
+        variable = cases.simulator.variables(0)[name]
         assert len(variable), f"Variable {name} not found"
-        return next(iter(variable.values()))["reference"]
+        return variable["reference"]
 
     def set_initial(name: str, value: float, slave: int = 0):
         for idx in range(cosim.num_slave_variables(slave_index=slave)):
@@ -126,16 +130,25 @@ def test_step_by_step_cases(mobile_crane_fmu):
                 return cosim.real_initial_value(slave_index=slave, variable_reference=idx, value=value)
 
     def initial_settings():
-        cases.simulator.set_initial(0, 0, get_ref("pedestal_boom[0]"), 3.0)
-        cases.simulator.set_initial(0, 0, get_ref("boom_boom[0]"), 8.0)
-        cases.simulator.set_initial(0, 0, get_ref("boom_boom[1]"), 0.7854)
-        cases.simulator.set_initial(0, 0, get_ref("rope_boom[0]"), 1e-6)
-        cases.simulator.set_initial(0, 0, get_ref("dLoad"), 50.0)
+        cases.simulator.set_variable_value(
+            0,
+            float,
+            (
+                get_ref("pedestal_boom[0]"),
+                get_ref("boom_boom[0]"),
+                get_ref("boom_boom[1]"),
+                get_ref("rope_boom[0]"),
+                get_ref("dLoad"),
+            ),
+            (3.0, 8.0, 0.7854, 1e-6, 50.0),
+        )
 
     system = Path(Path(__file__).parent / "data" / "MobileCrane" / "OspSystemStructure.xml")
     assert system.exists(), f"OspSystemStructure file {system} not found"
-    sim = SimulatorInterface(system)
-    assert sim.get_components() == {"mobileCrane": 0}, f"Found component {sim.get_components()}"
+    sim = SystemInterfaceOSP(system)
+    print("COMP", {k: v for k, v in sim.components})
+    expected = {k: v for k, v in sim.components}
+    assert isinstance(expected["mobileCrane"], dict), f"Found components {expected}"
 
     path = Path(Path(__file__).parent, "data/MobileCrane/MobileCrane.cases")
     assert path.exists(), "Cases file not found"
@@ -157,7 +170,7 @@ def test_step_by_step_cases(mobile_crane_fmu):
         "timeUnit",
         "variables",
     ]
-    cases = Cases(path, sim)
+    cases = Cases(path)
     print("INFO", cases.info())
     static = cases.case_by_name("static")
     assert static is not None
@@ -169,10 +182,10 @@ def test_step_by_step_cases(mobile_crane_fmu):
     }
     assert static.act_get[-1][0].args == (
         0,
-        0,
+        float,
         (10, 11, 12),
     ), f"Step action arguments {static.act_get[-1][0].args}"
-    assert sim.get_variable_value(0, 0, (10, 11, 12)) == [
+    assert sim.get_variable_value(0, float, (10, 11, 12)) == [
         0.0,
         0.0,
         0.0,
@@ -250,15 +263,14 @@ def test_step_by_step_cases(mobile_crane_fmu):
 #             cases.simulator.set_variable_value(0, 0, (get_ref("boom_angularVelocity"),), (0.7,))
 
 
-# @pytest.mark.skip("Alternative only using SimulatorInterface")
+# @pytest.mark.skip("Alternative only using SystemInterfaceOSP")
 def test_run_basic():
     path = Path(Path(__file__).parent / "data" / "MobileCrane" / "OspSystemStructure.xml")
     assert path.exists(), "System structure file not found"
-    sim = SimulatorInterface(path)
+    sim = SystemInterfaceOSP(path)
     sim.simulator.simulate_until(1e9)
 
 
-# @pytest.mark.skip("So far not working. Need to look into that: Run all cases defined in MobileCrane.cases")
 def test_run_cases():
     path = Path(Path(__file__).parent / "data" / "MobileCrane" / "MobileCrane.cases")
     # system_structure = Path(Path(__file__).parent, "data/MobileCrane/OspSystemStructure.xml")
@@ -270,10 +282,10 @@ def test_run_cases():
     static = cases.case_by_name("static")
     assert static is not None
     assert static.act_get[-1][0].func.__name__ == "get_variable_value"
-    assert static.act_get[-1][0].args == (0, 0, (10, 11, 12))
-    assert static.act_get[-1][1].args == (0, 0, (21, 22, 23))
-    assert static.act_get[-1][2].args == (0, 0, (37, 38, 39))
-    assert static.act_get[-1][3].args == (0, 0, (53, 54, 55))
+    assert static.act_get[-1][0].args == (0, float, (10, 11, 12))
+    assert static.act_get[-1][1].args == (0, float, (21, 22, 23))
+    assert static.act_get[-1][2].args == (0, float, (37, 38, 39))
+    assert static.act_get[-1][3].args == (0, float, (53, 54, 55))
 
     print("Running case 'base'...")
     case = cases.case_by_name("base")
@@ -315,4 +327,4 @@ if __name__ == "__main__":
     # test_step_by_step_cosim(_mobile_crane_fmu())
     # test_step_by_step_cases(_mobile_crane_fmu())
     # test_run_basic(_mobile_crane_fmu())
-    # test_run_cases(_mobile_crane_fmu())
+    # test_run_cases()
