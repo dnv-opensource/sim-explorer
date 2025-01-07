@@ -531,7 +531,8 @@ class Case:
             time += tstep
             if time > tstop:
                 break
-            self.cases.simulator.simulator.simulate_until(time)
+            if not self.cases.simulator.run_until(time):
+                break
             t_get, a_get = do_actions(t_get, a_get, get_iter, time)  # issue the current get actions
 
             if act_step is not None:  # there are step-always actions

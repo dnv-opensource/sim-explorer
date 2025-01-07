@@ -393,8 +393,13 @@ class SystemInterface:
                     return False
         return True
 
+    def run_until(self, time: float):
+        """Instruct the simulator to simulate until the given time."""
+        raise NotImplementedError("The method 'run_until()' cannot be used in SystemInterface") from None
+        return False
+
     def set_variable_value(self, instance: int, typ: type, var_refs: tuple[int, ...], var_vals: tuple) -> bool:
-        """Provide a manipulator function which sets the 'variable' (of the given 'instance' model) to 'value'.
+        """Provide a function which sets the 'variable' (of the given 'instance' model) to 'value'.
 
         Args:
             instance (int): identifier of the instance model for which the variable is to be set

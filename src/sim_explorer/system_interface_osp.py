@@ -54,6 +54,10 @@ class SystemInterfaceOSP(SystemInterface):
         assert self.simulator.add_manipulator(manipulator=self.manipulator), "Could not add manipulator object"
         assert self.simulator.add_observer(observer=self.observer), "Could not add observer object"
 
+    def run_until(self, time: float):
+        """Instruct the simulator to simulate until the given time."""
+        return self.simulator.simulate_until(time)
+
     def set_initial(self, instance: int, typ: type, var_ref: int, var_val: str | float | int | bool):
         """Provide an _initial_value set function (OSP only allows simple variables).
         The signature is the same as the manipulator functions slave_real_values()...,
