@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import copy
 import os
 from collections.abc import Callable
 from datetime import datetime
-from functools import partial
 from pathlib import Path
 from typing import Any, Iterable, List
 
@@ -31,22 +31,6 @@ sim_explorer module for definition and execution of simulation experiments
 With respect to MVx in general, this module serves the preparation of start conditions for smart testing.
 Note: The classes Case and Cases should be kept together in this file to avoid circular references.
 """
-
-
-def _assert(condition: bool, msg: str, crit: int = 4, typ=CaseInitError):
-    """Check condition and raise error is relevant with respect to condition and crit."""
-    if crit == 1:
-        print(f"DEBUG ({condition}): {msg}")
-    elif crit == 2:
-        print("INFO ({condition}): {msg}")
-    else:
-        if condition:
-            return
-        else:
-            if crit == 3:
-                print("WARNING:", msg)
-            else:
-                raise typ(msg) from None
 
 
 class Case:
@@ -93,8 +77,8 @@ class Case:
         else:
             assert isinstance(self.parent, Case), f"Parent case expected for case {self.name}"
             self.special = dict(self.parent.special)
-            self.act_get = Case._actions_copy(self.parent.act_get)
-            self.act_set = Case._actions_copy(self.parent.act_set)
+            self.act_get = copy.deepcopy(self.parent.act_get)
+            self.act_set = copy.deepcopy(self.parent.act_set)
 
         if self.cases.simulator.full_simulator_available:
             for k, v in self.js.jspath("$.spec", dict, True).items():
@@ -150,53 +134,18 @@ class Case:
         """Append a case as sub-case to this case."""
         self.subs.append(case)
 
-    def _add_action(self, typ: str, action: Callable, args: tuple, at_time: float):
-        """Add an action to one of the properties act_set, act_get, act_final, act_step - used for results.
-        We use functools.partial to return the functions with fully filled in arguments.
-        Compared to lambda... this allows for still accessible (testable) argument lists.
-
-        Args:
-            typ (str): the action type 'get' or 'set'
-            action (Callable): the relevant action (manipulator/observer) function to perform
-            args (tuple): action arguments as tuple (instance:int, type:int, valueReferences:list[int][, values])
-            at_time (float): optional time argument (not needed for all actions)
+    def _add_actions(self, act_type: str, at_time: float, act_list: list[Callable]):
+        """Add actions to one of the properties act_get, act_set.
+        The act_list should be prepared by the system_interface in the way it is needed there.
         """
-        if typ == "get":
+        if act_type == "get":
             dct = self.act_get
-        elif typ == "set":
-            dct = self.act_set
         else:
-            raise AssertionError(f"Unknown typ {typ} in _add_action")
-        assert isinstance(at_time, (float, int)), f"Actions require a defined time as float. Found {at_time}"
-        if typ == "set" and at_time <= self.special["startTime"] and action != self.cases.simulator.set_initial:
-            # isinstance( self.simulator, SystemInterfaceOSP)):
-            action = self.cases.simulator.set_initial  # OSP requires a special initial value function
-            for i in range(len(args[2])):  # set_initial takes only single variables
-                self._add_action(typ, action, (args[0], args[1], args[2][i], args[3][i]), at_time)
-        elif at_time in dct:
-            for i, act in enumerate(dct[at_time]):
-                if act.func.__name__ == action.__name__ and all(act.args[k] == args[k] for k in range(2)):
-                    # the type of action, the model id and the variable type match
-                    if isinstance(args[2], int):  # single variable (used for initial set actions)
-                        if args[2] == act.args[2]:
-                            if typ == "set":
-                                dct[at_time][i] = partial(action, *args)  # replace
-                            return
-                    elif all(r in act.args[2] for r in args[2]):  # refs are a subset or equal
-                        if typ == "set":  # Need to (partially) replace value(s)
-                            values = list(act.args[3])  # copy of existing values
-                            for k, r in enumerate(act.args[2]):  # go through refs
-                                for _k, _r in enumerate(args[2]):
-                                    if r == _r:
-                                        values[k] = args[3][_k]  # replace
-                            dct[at_time][i] = partial(
-                                action, args[0], args[1], act.args[2], tuple(values)
-                            )  # replace action
-                        return  # Note: get actions do not need special actions
-            dct[at_time].append(partial(action, *args))
+            dct = self.act_set
 
-        else:  # no action for this time yet
-            dct.update({at_time: [partial(action, *args)]})
+        if at_time not in dct:
+            dct.update({at_time: []})
+        dct[at_time].extend(act_list)
 
     @staticmethod
     def _num_elements(obj) -> int:
@@ -359,7 +308,7 @@ class Case:
 
         Returns
         -------
-            self.act_*** actions through _add_action()
+            updated self.act_*** actions through add_actions() of the SystemInterface***
         """
         if key in ("startTime", "stopTime", "stepSize"):
             self.special.update({key: value})  # just keep these as a dictionary so far
@@ -372,59 +321,23 @@ class Case:
             if value is not None:  # check also the number of supplied values
                 if isinstance(value, (str, float, int, bool)):  # make sure that there are always lists
                     value = [value]
-                _assert(
-                    sum(1 for _ in rng) == Case._num_elements(value),
-                    f"Variable {key}: # values {value} != # vars {rng}",
-                )
-            var_refs = []
-            var_vals = []
-            for i, r in enumerate(rng):
-                var_refs.append(cvar_info["variables"][r])
-                if value is not None:
-                    var_vals.append(value[i])
+                # assert sum(1 for _ in rng) == Case._num_elements(value), f"Variable {key}: # values {value} != # vars {rng}",
+                assert len(rng) == Case._num_elements(value), f"Variable {key}: # values {value} != # vars {rng}"
+            varnames = tuple([cvar_info["names"][r] for r in rng])
             # print(f"CASE.read_spec, {key}@{at_time_arg}({at_time_type}):{value}[{rng}], alias={cvar_info}")
-            if at_time_type in ("get", "step"):  # get actions
-                for inst in cvar_info["instances"]:  # ask simulator to provide function to set variables:
-                    _inst = self.cases.simulator.component_id_from_name(inst)
-                    if not self.cases.simulator.allowed_action("get", _inst, tuple(var_refs), 0):
-                        raise AssertionError(self.cases.simulator.message) from None
-                    elif at_time_type == "get" or at_time_arg == -1:  # normal get or step without time spec
-                        self._add_action(
-                            "get",
-                            self.cases.simulator.get_variable_value,
-                            (_inst, cvar_info["type"], tuple(var_refs)),
-                            (at_time_arg if at_time_arg <= 0 else at_time_arg * self.cases.timefac),
-                        )
-                    else:  # step actions with specified interval
-                        for time in np.arange(
-                            start=at_time_arg,
-                            stop=self.special["stopTime"],
-                            step=at_time_arg,
-                        ):
-                            self._add_action(
-                                time,
-                                self.cases.simulator.get_variable_value,
-                                (_inst, cvar_info["type"], tuple(var_refs)),
-                                at_time_arg * self.cases.timefac,
-                            )
-            else:  # set actions
-                assert value is not None, f"Variable {key}: Value needed for 'set' actions."
-                assert at_time_type in ("set"), f"Unknown @time type {at_time_type} for case '{self.name}'"
-                for inst in cvar_info["instances"]:  # ask simulator to provide function to set variables:
-                    _inst = self.cases.simulator.component_id_from_name(inst)
-                    if not self.cases.simulator.allowed_action("set", _inst, tuple(var_refs), at_time_arg):
-                        raise AssertionError(self.cases.simulator.message) from None
-                    self._add_action(
-                        at_time_type,
-                        self.cases.simulator.set_variable_value,
-                        (
-                            _inst,
-                            cvar_info["type"],
-                            tuple(var_refs),
-                            tuple(var_vals),
-                        ),
-                        at_time_arg * self.cases.timefac,
-                    )
+            if not self.cases.simulator.allowed_action(at_time_type, cvar_info["instances"][0], varnames, at_time_arg):
+                raise AssertionError(self.cases.simulator.message) from None
+            else:  # action allowed. Ask simulator to add actions appropriately
+                self.cases.simulator.add_actions(
+                    self.act_get if at_time_type in ("get", "step") else self.act_set,
+                    at_time_type,
+                    key,
+                    cvar_info,
+                    value,
+                    at_time_arg if at_time_arg <= 0 else at_time_arg * self.cases.timefac,
+                    self.special["stopTime"],
+                    tuple(rng),
+                )
 
     def list_cases(self, as_name: bool = True, flat: bool = False) -> list[str] | list[Case]:
         """List this case and all sub-cases recursively, as name or case objects."""
@@ -445,8 +358,8 @@ class Case:
         """
 
         def get_from_config(element: str, default: float | None = None):
-            if isinstance(self.cases.simulator.sysconfig, Path):
-                info = from_xml(self.cases.simulator.sysconfig, sub=None).findall(".//{*}" + element)
+            if isinstance(self.cases.simulator.structure_file, Path):
+                info = from_xml(self.cases.simulator.structure_file, sub=None).findall(".//{*}" + element)
                 if not len(info):
                     return default
                 txt = info[0].text
@@ -471,37 +384,35 @@ class Case:
     def run(self, dump: str | None = ""):
         """Set up case and run it.
 
+        All get action are recorded in results and get actions always concern whole case variables.
+        It is difficult to report initial settings. Therefore all start values are collected,
+        changed with initial settings (settings before the main simulation loop) and reported.
+
         Args:
             dump (str): Optionally save the results as json file.
                 None: do not save, '': use default file name, str (with or without '.js5'): save with that file name
         """
 
-        def do_actions(_t: float, _a, _iter, time: int, record: bool = True):
-            while time >= _t:  # issue the _a - actions
-                if len(_a):
-                    if record:
-                        for a in _a:
-                            self.res.add(
-                                time / self.cases.timefac,
-                                a.args[0],
-                                a.args[1],
-                                a.args[2],
-                                a(),
-                            )
-                    else:  # do not record
-                        for a in _a:
-                            a()
+        def do_actions(_t: float, actions, _iter, time: int | float):
+            while time >= _t:  # issue the actions - actions
+                if len(actions):
+                    for _act in actions:
+                        res = self.cases.simulator.do_action(time, _act, self.cases.variables[_act[0]]["type"])
+                        if len(_act) == 3:  # get action. Report
+                            self.res.add(time / self.cases.timefac, _act[1], _act[0], res)
                     try:
-                        _t, _a = next(_iter)
+                        _t, actions = next(_iter)
                     except StopIteration:
-                        _t, _a = 10 * tstop, []
-            return (_t, _a)
+                        _t, actions = 10 * tstop, []
+            return (_t, actions)
 
+        self.cases.simulator.init_simulator()
         # Note: final actions are included as _get at stopTime
         tstart: int = int(self.special["startTime"] * self.cases.timefac)
         time = tstart
         tstop: int = int(self.special["stopTime"] * self.cases.timefac)
         tstep: int = int(self.special["stepSize"] * self.cases.timefac)
+        starts = self.cases.get_starts()  # start value of all case variables (where defined)
 
         set_iter = self.act_set.items().__iter__()  # iterator over set actions => time, action_list
         try:
@@ -509,7 +420,7 @@ class Case:
         except StopIteration:
             t_set, a_set = (float("inf"), [])  # satisfy linter
         get_iter = self.act_get.items().__iter__()  # iterator over get actions => time, action_list
-        act_step = None
+        act_step = []
         self.add_results_object(Results(self))
 
         while True:
@@ -518,15 +429,23 @@ class Case:
             except StopIteration:
                 t_get, a_get = (tstop + 1, [])
             if t_get < 0:  # negative time indicates 'always'
-                act_step = a_get
+                for a in a_get:
+                    act_step.append((*a, self.cases.simulator.action_step(a, self.cases.variables[a[0]]["type"])))
             else:
                 break
 
-        for a in a_set:  # since there is no hook to get initial values we report it this way
-            self.res.add(tstart, *a.args)
+        for cvar, _comp, refs, values in a_set:  # since there is no hook to get initial values we keep track
+            refs, values = self.cases.simulator.update_refs_values(
+                self.cases.variables[cvar]["refs"], self.cases.variables[cvar]["refs"], starts[cvar], refs, values
+            )
+            starts[cvar] = values
+
+        for v, s in starts.items():  # report the start values
+            for c in self.cases.variables[cvar]["instances"]:
+                self.res.add(tstart, c, v, s if len(s) > 1 else s[0])
 
         while True:  # main simulation loop
-            t_set, a_set = do_actions(t_set, a_set, set_iter, time, record=False)
+            t_set, a_set = do_actions(t_set, a_set, set_iter, time)
 
             time += tstep
             if time > tstop:
@@ -535,36 +454,12 @@ class Case:
                 break
             t_get, a_get = do_actions(t_get, a_get, get_iter, time)  # issue the current get actions
 
-            if act_step is not None:  # there are step-always actions
-                for a in act_step:
-                    self.res.add(time / self.cases.timefac, a.args[0], a.args[1], a.args[2], a())
-
-        self.cases.simulator.reset()
+            if len(act_step):  # there are step-always actions
+                for cvar, comp, _refs, a in act_step:
+                    self.res.add(time / self.cases.timefac, comp, cvar, a())
 
         if dump is not None:
             self.res.save(dump)
-
-    @staticmethod
-    def _actions_copy(actions: dict) -> dict:
-        """Copy the dict of actions to a new dict,
-        which can be changed without changing the original dict.
-        Note: deepcopy cannot be used here since actions contain pointer objects.
-        """
-        res = {}
-        for t, t_actions in actions.items():
-            action_list = []
-            for action in t_actions:
-                action_list.append(partial(action.func, *action.args))
-            res.update({t: action_list})
-        return res
-
-    @staticmethod
-    def str_act(action: Callable):
-        """Prepare a human readable view of the action."""
-        txt = f"{action.func.__name__}(inst={action.args[0]}, type={action.args[1]}, ref={action.args[2]}"  # type: ignore
-        if len(action.args) > 3:  # type: ignore
-            txt += f", val={action.args[3]}"  # type: ignore
-        return txt
 
 
 class Cases:
@@ -590,37 +485,31 @@ class Cases:
         "variables",
         "base",
         "assertion",
-        "_comp_refs_to_case_var_cache",
         "results_print_type",
     )
     assertion_results: List[AssertionResult] = []
 
-    def __init__(self, spec: str | Path, simulator_type: type = SystemInterfaceOSP):
+    def __init__(self, spec: str | Path):
         self.file = Path(spec)  # everything relative to the folder of this file!
         assert self.file.exists(), f"Cases spec file {spec} not found"
         self.js = Json5(spec)
-        # del        log_level = CosimLogLevel[self.js.jspath("$.header.logLevel") or "FATAL"]
+        name = (self.js.jspath("$.header.name", str) or "",)
+        description = (self.js.jspath("$.header.description", str) or "",)
         log_level = self.js.jspath("$.header.logLevel") or "fatal"
         modelfile = self.js.jspath("$.header.modelFile", str) or "OspSystemStructure.xml"
+        simulator = self.js.jspath("$.header.simulator", str) or ""
         path = self.file.parent / modelfile
-        assert path.exists(), f"OSP system structure file {path} not found"
-        print("SIM_type", simulator_type)
-        try:
-            self.simulator = simulator_type(
-                structure_file=path,
-                name=self.js.jspath("$.header.name", str) or "",
-                description=self.js.jspath("$.header.description", str) or "",
-                log_level=log_level,
-            )
-        except Exception as err:
-            raise AssertionError(f"'modelFile' needed from spec: {err}") from err
+        assert path.exists(), f"System structure file {path} not found"
+        if simulator == "":  # without ability to perform simulatiosn
+            self.simulator = SystemInterface(path, name, description, log_level)  # type: ignore
+        elif simulator == "OSP":
+            self.simulator = SystemInterfaceOSP(path, name, description, log_level)  # type: ignore
 
         self.timefac = self._get_time_unit() * 1e9  # internally OSP uses pico-seconds as integer!
         # read the 'variables' section and generate dict { alias : { (instances), (variables)}}:
         self.variables = self.get_case_variables()
         self.assertion = Assertion()
         self.assertion.register_vars(self.variables)  # register variables as symbols
-        self._comp_refs_to_case_var_cache: dict = dict()  # cache used by comp_refs_to_case_var()
         self.read_cases()
 
     def get_case_variables(self) -> dict[str, dict]:
@@ -628,10 +517,13 @@ class Cases:
 
         { c_var_name : {'model':model ID,
                         'instances': tuple of instance names,
-                        'variables': tuple of ValueReference,
-                        'type':CosimVariableType,
-                        'causality':CosimVariableCausality,
-                        'variability': CosimVariableVariability}.
+                        'names': tuple of variable names,
+                        'refs': tuple of ValueReferences
+                        'type': python type,
+                        'causality': causality (str),
+                        'variability': variability (str),
+                        'initial': initial (str)
+                        'start': tuple of start values}.
 
         Optionally a description of the alias variable may be provided (and added to the dictionary).
         """
@@ -649,48 +541,60 @@ class Cases:
             model, comp = self.simulator.match_components(v[0])
             assert len(comp) > 0, f"No component model instances '{v[0]}' found for alias variable '{k}'"
             assert isinstance(v[1], str), f"Second argument of variable sped: Variable name(s)! Found {v[1]}"
-            _vars = self.simulator.match_variables(comp[0], v[1])  # tuple of matching var refs
+            _vars = self.simulator.match_variables(comp[0], v[1])  # tuple of matching variables (name,ref)
+            _varnames = tuple([n for n, _ in _vars])
+            _varrefs = tuple([r for _, r in _vars])
             if model not in model_vars:  # ensure that model is included in the cache
                 model_vars.update({model: self.simulator.variables(comp[0])})
-            prototype = model_vars[model][self.simulator.variable_name_from_ref(comp[0], _vars[0])]
+            prototype = model_vars[model][_varnames[0]]
             var: dict = {
                 "model": model,
                 "instances": comp,
-                "variables": _vars,  # variables from same model!
+                "names": _varnames,  # variable names from FMU
+                "refs": _varrefs,
             }
-            assert len(var["variables"]), f"No matching variables found for alias {k}:{v}, component '{comp}'"
+            assert len(var["names"]), f"No matching variables found for alias {k}:{v}, component '{comp}'"
             if len(v) > 2:
                 var.update({"description": v[2]})
             # We add also the more detailed variable info from the simulator (the FMU)
             # The type, causality and variability shall be equal for all variables.
-            for ref in _vars:
-                _var = model_vars[model][self.simulator.variable_name_from_ref(comp[0], ref)]
+            for n in _varnames:
                 for test in ["type", "causality", "variability"]:
-                    _assert(
-                        _var[test] == prototype[test],
-                        f"Variable with ref {ref} not same {test} as {prototype} in model {model}",
-                    )
+                    assert (
+                        model_vars[model][n][test] == prototype[test]
+                    ), f"Model {model} variable {n} != {test} as {prototype}"
+            starts = []
+            for v, info in self.simulator.models[model]["variables"].items():
+                if v in _varnames and "start" in info:
+                    starts.append(info["type"](info["start"]))
             var.update(
                 {
                     "type": prototype["type"],
                     "causality": prototype["causality"],
                     "variability": prototype["variability"],
                     "initial": prototype.get("initial", ""),
+                    "start": tuple(starts),
                 }
             )
             variables.update({k: var})
         return variables
 
-    #     def get_alias_from_spec(self, modelname: str, instance: str, ref: Union[int, str]) -> str:
-    #         """Get a variable alias from its detailed specification (modelname, instance, ref)."""
-    #         for alias, var in self.variables.items():
-    #             print("GET_ALIAS", alias, var)
-    #             if var["model"].get("modelName") == modelname:
-    #                 if instance in var["instances"]:
-    #                     for v in var["variables"]:
-    #                         if v.get("valueReference", "-1") == str(ref) or v.get("name", "") == ref:
-    #                             return alias
-    #
+    def case_variable(self, component: str, variables: str | tuple):
+        """Identify the case variable (as defined in the spec) from the component instance and fmu variable names."""
+        if isinstance(variables, (tuple, list)) and len(variables) == 1:
+            variables = variables[0]
+        for var, info in self.variables.items():
+            if component in info["instances"]:
+                rng = []
+                for i, name in enumerate(info["names"]):
+                    if name in variables:
+                        rng.append(i)
+                if len(rng) == len(variables):  # perfect match
+                    return (var, ())
+                elif len(rng) > 0:
+                    return (var, tuple(rng))
+        raise KeyError(f"Undefined case variable with component {component}, variables {variables}") from None
+
     def _get_time_unit(self) -> float:
         """Find system time unit from the spec and return as seconds.
         If the entry is not found, 1 second is assumed.
@@ -752,21 +656,6 @@ class Cases:
                 return found
         return None
 
-    def case_var_by_ref(self, comp: int | str, ref: int | tuple[int, ...]) -> tuple[str, tuple]:
-        """Get the case variable name related to the component model `comp` and the reference `ref`
-        Returns a tuple of case variable name and an index (if composit variable).
-        """
-        component = self.simulator.component_name_from_id(comp) if isinstance(comp, int) else comp
-        refs = (ref,) if isinstance(ref, int) else ref
-
-        for var, info in self.variables.items():
-            if component in info["instances"] and all(r in info["variables"] for r in refs):
-                if len(refs) == len(info["variables"]):  # the whole variable is addressed
-                    return (var, ())
-                else:
-                    return (var, tuple([info["variables"].index(r) for r in refs]))
-        return ("", ())
-
     def disect_variable(self, key: str, err_level: int = 2) -> tuple[str, dict, list | range]:
         """Extract the variable name, definition and explicit variable range, if relevant
         (multi-valued variables, where only some elements are addressed).
@@ -779,7 +668,7 @@ class Cases:
         -------
             1. The variable name as defined in the 'variables' section of the spec
             2. The variable definition, which the name refers to
-            3. An iterator over indices of the variable, i.e. the range
+            3. An Iterable over indices of the variable, i.e. the range
         """
 
         def handle_error(msg: str, err: Exception | None, level: int):
@@ -800,7 +689,7 @@ class Cases:
                 err_level,
             )
 
-        cvar_len = len(cvar_info["variables"])  # len of the tuple of refs
+        cvar_len = len(cvar_info["names"])  # len of the tuple of refs
         if len(r):  # range among several variables
             r = r.rstrip("]").strip()  # string version of a non-trivial range
             parts_comma = r.split(",")
@@ -830,10 +719,7 @@ class Cases:
                         )
                     rng.append(idx)
                 else:
-                    _assert(
-                        len(parts_ellipses) == 2,
-                        f"RangeError: Exactly two indices expected in {p} of {pre}",
-                    )
+                    assert len(parts_ellipses) == 2, f"RangeError: Exactly two indices expected in {p} of {pre}"
                     parts_ellipses[1] = parts_ellipses[1].lstrip(".")  # facilitates the option to use '...' or '..'
                     try:
                         if len(parts_ellipses[0]) == 0:
@@ -860,8 +746,16 @@ class Cases:
                 rng = range(cvar_len)
         return (pre, cvar_info, rng)
 
+    def get_starts(self):
+        """Get a copy of the start values (as advised by FMU) as dict {case-var : (start-values), }."""
+        starts: dict = {}
+        for v, info in self.variables.items():
+            if "start" in info and len(info["start"]):
+                starts.update({v: list(info["start"])})
+        return starts
+
     def info(self, case: Case | None = None, level: int = 0) -> str:
-        """Show main infromation and the cases structure as string."""
+        """Show main information and the cases structure as string."""
         txt = ""
         if case is None:
             case = self.base
@@ -880,23 +774,6 @@ class Cases:
         else:
             raise ValueError(f"The argument 'case' shall be a Case object or None. Type {type(case)} found.")
         return txt
-
-    def comp_refs_to_case_var(self, comp: int, refs: tuple[int, ...]):
-        """Get the translation of the component id `comp` + references `refs`
-        to the variable names used in the cases file.
-        To speed up the process the cache dict _comp_refs_to_case_var_cache is used.
-        """
-        try:
-            component, var = self._comp_refs_to_case_var_cache[comp][refs]
-        except Exception:
-            component = self.simulator.component_name_from_id(comp)
-            var, rng = self.case_var_by_ref(component, refs)
-            if len(rng):  # elements of a composit variable
-                var += f"{list(rng)}"
-            if comp not in self._comp_refs_to_case_var_cache:
-                self._comp_refs_to_case_var_cache.update({comp: {}})
-            self._comp_refs_to_case_var_cache[comp].update({refs: (component, var)})
-        return component, var
 
     def run_case(self, name: str | Case, dump: str | None = "", run_subs: bool = False, run_assertions: bool = False):
         """Initiate case run. If done from here, the case name can be chosen.
@@ -956,7 +833,7 @@ class Results:
         self.res = Json5(self.file)
         case = Path(self.file.parent / (self.res.jspath("$.header.cases", str, True) + ".cases"))
         try:
-            cases = Cases(Path(case), simulator_type=SystemInterface)
+            cases = Cases(Path(case))
         except ValueError:
             raise CaseInitError(f"Cases {Path(case)} instantiation error") from ValueError
         self.case: Case | None = cases.case_by_name(name=self.res.jspath(path="$.header.case", typ=str, errorMsg=True))
@@ -1031,25 +908,18 @@ class Results:
                 get_path(res.jspath("$.header.file", str, True), self.file.parent),
             )
 
-    def add(self, time: float, comp: int, typ: int, refs: int | list[int], values: tuple):
+    def add(self, time: float, comp: str, cvar: str, values: tuple | int | float | bool | str):
         """Add the results of a get action to the results dict for the case.
 
         Args:
             time (float): the time of the results
-            component (int): The index of the component
-            typ (int): The data type of the variable as enumeration int
-            ref (list): The variable reference(s) linked to this variable definition
-            values (tuple): the values of the variable
+            comp (str): the component name
+            cvar (str): the case variable name
+            values (PyVal, tuple): the value(s) to record
         """
-        if isinstance(refs, int):
-            refs = [refs]
-            values = (values,)
-        compname, varname = self.case.cases.comp_refs_to_case_var(comp, tuple(refs))  # type: ignore [union-attr]
-        # print(f"ADD@{time}: {compname}, {varname} = {values}")
-        if len(values) == 1:
-            self.res.update("$[" + str(time) + "]" + compname, {varname: values[0]})
-        else:
-            self.res.update("$[" + str(time) + "]" + compname, {varname: values})
+        # print(f"Update ({time}): {comp}: {cvar} : {values}")
+        _values = values[0] if isinstance(values, (tuple, list)) and len(values) == 1 else values
+        self.res.update("$[" + str(time) + "]" + comp, {cvar: _values})
 
     def save(self, jsfile: str | Path = ""):
         """Dump the results dict to a json5 file.

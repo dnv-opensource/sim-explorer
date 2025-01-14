@@ -2,7 +2,8 @@
    name        : 'ForcedOscillator',
    description : 'Test forced oscillator in various conditions',
    modelFile : "ForcedOscillator.xml",
-   logLevel : 'FATAL', # possible levels: TRACE, DEBUG, INFO, WARNING, ERROR, FATAL
+   simulator : "OSP"
+   logLevel : 'fatal', # possible levels: trace, debug, info, warning, error, fatal
    timeUnit  : "second", # possible units: ns, us, ms, sec, min, h, d, or extensions of that, like 'second'  
    variables : {
       k : ['osc', 'k', "The spring constant in N/m"],

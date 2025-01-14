@@ -1,6 +1,7 @@
 from math import sqrt
 from pathlib import Path
 
+import pytest
 from fmpy import plot_result, simulate_fmu
 
 from sim_explorer.case import Case, Cases
@@ -61,7 +62,7 @@ def check_case(
     case.run()  # run the case and return results as results object
     results = case.res  # the results object
     assert results.res.jspath(path="$.header.case", typ=str, errorMsg=True) == case.name
-    # default initial settings, superceded by base case values
+    # default initial settings, superceeded by base case values
     x = [0, 0, x_z]  # z-value is in inch =! 1m!
     v = [1.0, 0, 0]
     # adjust to case settings:
@@ -86,7 +87,10 @@ def check_case(
     # check outputs after first step:
     assert results.res.jspath(path="$['0'].bb.e") == e, "??Initial value of e"
     assert results.res.jspath(path="$['0'].bb.g") == g, "??Initial value of g"
-    assert results.res.jspath(path="$['0'].bb.['x[2]']") == x[2], "??Initial value of x[2]"
+    assert results.res.jspath(path="$['0'].bb.x[2]") == x[2], "??Initial value of x[2]"
+    # print("0.01", results.res.jspath(path="$['0.01']"))
+    # print( results.res.jspath(path="$['0.01'].bb.x"), (dt, 0, x[2] - 0.5 * g * dt**2 / hf))
+
     arrays_equal(
         res=results.res.jspath(path="$['0.01'].bb.x"),
         expected=(dt, 0, x[2] - 0.5 * g * dt**2 / hf),
@@ -205,11 +209,10 @@ def test_run_cases():
 
 
 if __name__ == "__main__":
-    # retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
-    # assert retcode == 0, f"Non-zero return code {retcode}"
-    import os
-
-    os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
+    retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
+    assert retcode == 0, f"Non-zero return code {retcode}"
+    # import os
+    # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
     # test_make_fmu()
     # test_run_fmpy( show=True)
-    test_run_cases()
+    # test_run_cases()

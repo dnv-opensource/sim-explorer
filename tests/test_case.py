@@ -151,14 +151,6 @@ def check_value(case: Case, var: str, val: Any):
         check_value(case.parent, var, val)
 
 
-def str_act(action) -> str:
-    """Prepare a human readable view of the action"""
-    if len(action.args) == 3:
-        return f"{action.func.__name__}(inst={action.args[0]}, type={action.args[1]}, ref={action.args[2]}"
-    else:
-        return f"{action.func.__name__}(inst={action.args[0]}, type={action.args[1]}, ref={action.args[2]}, val={action.args[3]}"
-
-
 # @pytest.mark.skip(reason="Deactivated")
 def test_case_set_get(simpletable):
     """Test of the features provided by the Case class"""
@@ -182,38 +174,16 @@ def test_case_set_get(simpletable):
     ], "Hierarchy of caseX not as expected"
     check_value(caseX, "i", True)
     check_value(caseX, "stopTime", 10)
-    print("caseX, act_set[0.0]:")
-    for act in caseX.act_set[0.0]:
-        print(str_act(act))
+    assert caseX.act_set[0.0][0] == ("i", "tab", (3,), (True,)), f"Found {caseX.act_set[0.0][0]}"
     assert caseX.special["stopTime"] == 10, f"Erroneous stopTime {caseX.special['stopTime']}"
-    # print(f"ACT_SET: {caseX.act_set[0.0][0]}") #! set_initial, therefore no tuples!
-    assert caseX.act_set[0.0][0].func.__name__ == "set_initial", "function name"
-    assert caseX.act_set[0.0][0].args[0] == 0, "model instance"
-    assert caseX.act_set[0.0][0].args[1] is bool, f"variable type {caseX.act_set[0.0][0].args[1]}"
-    assert caseX.act_set[0.0][0].args[2] == 3, f"variable ref {caseX.act_set[0.0][0].args[2]}"
-    assert caseX.act_set[0.0][0].args[3], f"variable value {caseX.act_set[0.0][0].args[3]}"
-    # print(caseX.act_set[0.0][0])
-    assert caseX.act_set[0.0][0].args[0] == 0, "model instance"
-    assert caseX.act_set[0.0][0].args[1] is bool, f"variable type {caseX.act_set[0.0][0].args[1]}"
-    assert caseX.act_set[0.0][0].args[2] == 3, f"variable ref {caseX.act_set[0.0][0].args[2]}"
-    assert caseX.act_set[0.0][0].args[3] is True, f"variable value {caseX.act_set[0.0][0].args[3]}"
-    # print(f"ACT_GET: {caseX.act_get}")
-    assert caseX.act_get[1e9][0].args[0] == 0, "model instance"
-    assert caseX.act_get[1e9][0].args[1] is float, "variable type"
-    assert caseX.act_get[1e9][0].args[2] == (0,), f"variable refs {caseX.act_get[1e9][0].args[2]}"
-    # print( "PRINT", caseX.act_get[-1][0].args[2])
-    assert caseX.act_get[-1][0].args[2] == (
-        0,
-        1,
-        2,
-    ), f"variable refs of step actions {caseX.act_get[-1][0]}"
-    for t in caseX.act_get:
-        for act in caseX.act_get[t]:
-            print(str_act(act))
-    # print("RESULTS", simpletable.run_case(simpletable.base, dump=True))
-
-
-#    cases.base.plot_time_series( ['h'], 'TestPlot')
+    assert list(caseX.act_get.keys()) == [-1, 0.0, 1000000000.0], "Get-action times"
+    # print(f"ACT_GET: {caseX.act_get[-1][0]}")
+    assert caseX.act_get[-1][0] == ("x", "tab", (0, 1, 2))
+    # print(f"ACT_GET: {caseX.act_get[1e9][0]}")
+    assert caseX.act_get[1e9][0] == ("x", "tab", (0, 1, 2))
+    assert caseX.act_get[-1][0] == ("x", "tab", (0, 1, 2))
+    assert caseX.act_get[0.0][0] == ("i", "tab", (3,))
+    assert caseX.act_get[1000000000][0] == ("x", "tab", (0, 1, 2))
 
 
 if __name__ == "__main__":

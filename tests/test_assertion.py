@@ -37,7 +37,10 @@ def test_ast(show):
 
     asserts = Assertion()
     asserts.register_vars(
-        {"x": {"instances": ("dummy",), "variables": (1, 2, 3)}, "y": {"instances": ("dummy2",), "variables": (1,)}}
+        {
+            "x": {"instances": ("dummy",), "names": ("x[0]", "x[1]", "x[2]")},
+            "y": {"instances": ("dummy2",), "names": ("y[0]",)},
+        }
     )
     syms, funcs = asserts.expr_get_symbols_functions(expr)
     assert syms == ["x", "y"], f"SYMS: {syms}"
@@ -65,7 +68,7 @@ def test_ast(show):
 
     asserts = Assertion()
     asserts.register_vars(
-        {"g": {"instances": ("bb",), "variables": (1,)}, "x": {"instances": ("bb",), "variables": (2, 3, 4)}}
+        {"g": {"instances": ("bb",), "names": ("g",)}, "x": {"instances": ("bb",), "names": ("x[0]", "x[1]", "x[2]")}}
     )
     expr = "sqrt(2*bb_x[2] / bb_g)"  # fully qualified variables with components
     a = ast.parse(expr, "<source>", "exec")
@@ -100,9 +103,9 @@ def test_assertion():
     asserts.symbol("t")
     asserts.register_vars(
         {
-            "x": {"instances": ("dummy",), "variables": (2,)},
-            "y": {"instances": ("dummy",), "variables": (3,)},
-            "z": {"instances": ("dummy",), "variables": (4, 5)},
+            "x": {"instances": ("dummy",), "names": ("x[0]",)},
+            "y": {"instances": ("dummy",), "names": ("y[0]",)},
+            "z": {"instances": ("dummy",), "names": ("z[0]", "z[1]")},
         }
     )
     asserts.expr("1", "t>8")
@@ -216,8 +219,8 @@ def test_do_assert(show):
     for key, inf in res.inspect().items():
         print(key, inf["len"], inf["range"])
     info = res.inspect()["bb.v"]
-    assert info["len"] == 300
-    assert info["range"] == [0.01, 3.0]
+    assert info["len"] == 301, f"Found {info['len']}"
+    assert info["range"] == [0.0, 3.0]
     asserts = cases.assertion
     # asserts.vector('x', (1,0,0))
     # asserts.vector('v', (0,1,0))
@@ -257,9 +260,8 @@ def test_do_assert(show):
 if __name__ == "__main__":
     retcode = pytest.main(["-rA", "-v", __file__, "--show", "False"])
     assert retcode == 0, f"Non-zero return code {retcode}"
-    import os
-
-    os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
+    # import os
+    # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
     # test_temporal()
     # test_ast( show=True)
     # test_globals_locals()

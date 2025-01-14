@@ -3,40 +3,20 @@ from pathlib import Path
 import pytest
 
 from sim_explorer.case import Case, Cases
-from sim_explorer.system_interface_osp import SystemInterfaceOSP
-
-# def test_tuple_iter():
-#     """Test of the features provided by the Case class"""
-#
-#     def check(gen: Generator, expectation: list):
-#         lst = [x[0] for x in gen]
-#         assert lst == expectation, f"Expected: {expectation}. Found: {lst}"
-#
-#     tpl20 = tuple(range(20))
-#     check(tuple2_iter(tpl20, tpl20, "3"), [3])
-#     check(tuple2_iter(tpl20, tpl20, "3:7"), [3, 4, 5, 6, 7])
-#     check(tuple2_iter(tpl20, tpl20, ":3"), list(range(0, 4)))
-#     check(tuple2_iter(tpl20, tpl20, "17:"), list(range(17, 20)))
-#     check(tuple2_iter(tpl20, tpl20, "10:-5"), list(range(10, 16)))
-#     check(tuple2_iter(tpl20, tpl20, ":"), list(range(20)))
-#     check(tuple2_iter(tpl20, tpl20, "1,3,4,9"), [1, 3, 4, 9])
 
 
 def test_cases_management():
     cases = Cases(Path(__file__).parent / "data" / "SimpleTable" / "test.cases")
     assert isinstance(cases.base.act_get, dict) and len(cases.base.act_get) > 0
-    assert cases.case_var_by_ref(0, 1) == (
-        "x",
-        (1,),
-    ), f"Case variable of model 0, ref 1: {cases.case_var_by_ref( 0, 1)}"
-    assert cases.case_var_by_ref("tab", 1) == ("x", (1,)), "Same with model by name"
+
+    assert cases.simulator.comp_model_var(0, 1) == ("tab", "SimpleTable", ["outs[1]"])
+    assert cases.simulator.comp_model_var(0, 1) == ("tab", "SimpleTable", ["outs[1]"])
+    assert cases.simulator.component_name_from_id(0) == "tab"
 
 
 def test_cases():
     """Test of the features provided by the Cases class"""
-    cases = Cases(
-        Path(__file__).parent / "data" / "BouncingBall0" / "BouncingBall.cases", simulator_type=SystemInterfaceOSP
-    )
+    cases = Cases(Path(__file__).parent / "data" / "BouncingBall0" / "BouncingBall.cases")
 
     c: str | Case
     print(cases.info())
@@ -73,7 +53,7 @@ def test_cases():
     assert restitution_case is not None and restitution_case.case_by_name("restitutionAndGravity") is not None, msg
     # variables (aliases)
     assert cases.variables["h"]["instances"] == ("bb",)
-    assert cases.variables["h"]["variables"] == (1,)
+    assert cases.variables["h"]["refs"] == (1,)
     assert cases.variables["h"]["description"] == "Position (z) of the ball"
     assert cases.variables["h"]["type"] is float
     assert cases.variables["h"]["causality"] == "output", f"Found {cases.variables['h']['causality']}"

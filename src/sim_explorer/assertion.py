@@ -1,5 +1,3 @@
-# type: ignore
-
 import ast
 from typing import Any, Callable, Iterable, Iterator
 
@@ -69,7 +67,7 @@ class Assertion:
         elif typ == "variable":  # get the generic variable name
             return var
         elif typ == "length":  # get the number of elements
-            return len(self._cases_variables[var]["variables"])
+            return len(self._cases_variables[var]["refs"])
         elif typ == "model":  # get the basic (FMU) model
             return self._cases_variables[var]["model"]
         else:
@@ -250,8 +248,8 @@ class Assertion:
         for key, info in variables.items():
             for inst in info["instances"]:
                 if len(info["instances"]) == 1:  # the instance is unique
-                    self.symbol(key, len(info["variables"]))  # we allow to use the 'short name' if unique
-                self.symbol(inst + "_" + key, len(info["variables"]))  # fully qualified name can always be used
+                    self.symbol(key, len(info["names"]))  # we allow to use the 'short name' if unique
+                self.symbol(inst + "_" + key, len(info["names"]))  # fully qualified name can always be used
 
     def make_locals(self, loc: dict):
         """Adapt the locals with 'allowed' functions."""
@@ -303,7 +301,7 @@ class Assertion:
         # print("kvargs", kvargs, self._syms[key], self.expr_get_symbols_functions(key))
         return self._eval(locals()["_" + key], kvargs)
 
-    def eval_series(self, key: str, data: list[Any], ret: float | str | Callable | None = None):
+    def eval_series(self, key: str, data: list, ret: float | str | Callable | None = None):
         """Perform assertion on a (time) series.
 
         Args:
@@ -336,7 +334,7 @@ class Assertion:
         _temp = self._temporal[key]["type"] if ret is None else Temporal.UNDEFINED
 
         for row in data:
-            if not isinstance(row, Iterable):  # can happen if the time itself is evaluated
+            if not isinstance(row, (tuple, list)):  # can happen if the time itself is evaluated
                 time = row
                 row = [row]
             elif "t" not in argnames:  # the independent variable is not explicitly used in the expression

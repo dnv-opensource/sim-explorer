@@ -1,4 +1,6 @@
+from functools import partial
 from pathlib import Path
+from typing import TypeAlias
 
 from libcosimpy.CosimExecution import CosimExecution
 from libcosimpy.CosimLogging import CosimLogLevel, log_output_level  # type: ignore
@@ -6,6 +8,8 @@ from libcosimpy.CosimManipulator import CosimManipulator  # type: ignore
 from libcosimpy.CosimObserver import CosimObserver  # type: ignore
 
 from sim_explorer.system_interface import SystemInterface
+
+PyVal: TypeAlias = str | float | int | bool  # simple python types / Json5 atom
 
 
 class SystemInterfaceOSP(SystemInterface):
@@ -27,85 +31,85 @@ class SystemInterfaceOSP(SystemInterface):
         log_level: str = "fatal",
     ):
         super().__init__(structure_file, name, description, log_level)
-        log_output_level(CosimLogLevel[log_level.upper()])
+        self.full_simulator_available = True  # system and components specification + simulation capabilities
+        # Note: The initialization of the OSP simulator itself is performed in init_simulator()
+        #      Since this needs to be repeated before every simulation
+
+    def init_simulator(self):
+        """Instantiate and initialize the simulator, so that simulations can be run.
+        Perforemd separately from __init__ so that it can be repeated before simulation runs.
+        """
+        log_output_level(CosimLogLevel[self.log_level.upper()])
         # ck, msg = self._check_system_structure(self.sysconfig)
         # assert ck, msg
-        self.full_simulator_available = True  # system and components specification + simulation capabilities
+        assert self.structure_file.exists(), "Simulator initialization requires the structure file."
         self.simulator = CosimExecution.from_osp_config_file(str(self.structure_file))
         assert isinstance(self.simulator, CosimExecution)
         # Instantiate a suitable manipulator for changing variables.
         self.manipulator = CosimManipulator.create_override()
+        assert isinstance(self.manipulator, CosimManipulator)
         assert self.simulator.add_manipulator(manipulator=self.manipulator), "Could not add manipulator object"
 
         # Instantiate a suitable observer for collecting results.
         self.observer = CosimObserver.create_last_value()
-        assert self.simulator.add_observer(observer=self.observer), "Could not add observer object"
-
-    def reset(self):  # , cases:Cases):
-        """Reset the simulator interface, so that a new simulation can be run."""
-        assert isinstance(
-            self.structure_file, Path
-        ), "Simulator resetting does not work with explicitly supplied simulator."
-        assert self.structure_file.exists(), "Simulator resetting does not work with explicitly supplied simulator."
-        assert isinstance(self.manipulator, CosimManipulator)
         assert isinstance(self.observer, CosimObserver)
-        # self.simulator = self._simulator_from_config(self.sysconfig)
-        self.simulator = CosimExecution.from_osp_config_file(str(self.structure_file))
-        assert self.simulator.add_manipulator(manipulator=self.manipulator), "Could not add manipulator object"
         assert self.simulator.add_observer(observer=self.observer), "Could not add observer object"
+        assert self.simulator.status().current_time == 0
+        return not self.simulator.status().error_code
 
-    def run_until(self, time: float):
+    def _action_func(self, act_type: int, var_type: type):
+        """Determine the correct action function and return it."""
+        if act_type == 0:  # initial settings
+            return {
+                float: self.simulator.real_initial_value,
+                int: self.simulator.integer_initial_value,
+                str: self.simulator.string_initial_value,
+                bool: self.simulator.boolean_initial_value,
+            }[var_type]
+        elif act_type == 1:  # other set actions
+            return {
+                float: self.manipulator.slave_real_values,
+                int: self.manipulator.slave_integer_values,
+                bool: self.manipulator.slave_boolean_values,
+                str: self.manipulator.slave_string_values,
+            }[var_type]
+        else:  # get actions
+            return {
+                float: self.observer.last_real_values,
+                int: self.observer.last_integer_values,
+                bool: self.observer.last_boolean_values,
+                str: self.observer.last_string_values,
+            }[var_type]
+
+    def do_action(self, time: int | float, act_info: tuple, typ: type):
+        """Do the action described by the tuple using OSP functions."""
+        if len(act_info) == 4:  # set action
+            cvar, comp, refs, values = act_info
+            _comp = self.component_id_from_name(comp)
+            if time <= 0:  # initial setting
+                func = self._action_func(0, typ)
+                for r, v in zip(refs, values, strict=False):
+                    if not func(_comp, r, v):
+                        return False
+                return True
+
+            else:
+                return self._action_func(1, typ)(_comp, refs, values)
+        else:  # get action
+            cvar, comp, refs = act_info
+            _comp = self.component_id_from_name(comp)
+            assert time >= 0, "Get actions for all communication points shall be pre-compiled"
+            return self._action_func(2, typ)(_comp, refs)
+
+    def action_step(self, act_info: tuple, typ: type):
+        """Pre-compile the step action and return the partial function
+        so that it can be called at communication points.
+        """
+        assert len(act_info) == 3, f"Exactly 3 arguments exected. Found {act_info}"
+        cvar, comp, refs = act_info
+        _comp = self.component_id_from_name(comp)
+        return partial(self._action_func(2, typ), _comp, refs)
+
+    def run_until(self, time: int | float):
         """Instruct the simulator to simulate until the given time."""
         return self.simulator.simulate_until(time)
-
-    def set_initial(self, instance: int, typ: type, var_ref: int, var_val: str | float | int | bool):
-        """Provide an _initial_value set function (OSP only allows simple variables).
-        The signature is the same as the manipulator functions slave_real_values()...,
-        only that variables are set individually and the type is added as argument.
-        """
-        if typ is float:
-            return self.simulator.real_initial_value(instance, var_ref, typ(var_val))
-        elif typ is int:
-            return self.simulator.integer_initial_value(instance, var_ref, typ(var_val))
-        elif typ is str:
-            return self.simulator.string_initial_value(instance, var_ref, typ(var_val))
-        elif typ is bool:
-            return self.simulator.boolean_initial_value(instance, var_ref, typ(var_val))
-
-    def set_variable_value(self, instance: int, typ: type, var_refs: tuple[int, ...], var_vals: tuple) -> bool:
-        """Provide a manipulator function which sets the 'variable' (of the given 'instance' model) to 'value'.
-
-        Args:
-            instance (int): identifier of the instance model for which the variable is to be set
-            var_refs (tuple): Tuple of variable references for which the values shall be set
-            var_vals (tuple): Tuple of values (of the correct type), used to set model variables
-        """
-        _vals = [typ(x) for x in var_vals]  # ensure list and correct type
-        if typ is float:
-            return self.manipulator.slave_real_values(instance, list(var_refs), _vals)
-        elif typ is int:
-            return self.manipulator.slave_integer_values(instance, list(var_refs), _vals)
-        elif typ is bool:
-            return self.manipulator.slave_boolean_values(instance, list(var_refs), _vals)
-        elif typ is str:
-            return self.manipulator.slave_string_values(instance, list(var_refs), _vals)
-        else:
-            raise ValueError(f"Unknown type {typ}") from None
-
-    def get_variable_value(self, instance: int, typ: type, var_refs: tuple[int, ...]):
-        """Provide an observer function which gets the 'variable' value (of the given 'instance' model) at the time when called.
-
-        Args:
-            instance (int): identifier of the instance model for which the variable is to be set
-            var_refs (tuple): Tuple of variable references for which the values shall be retrieved
-        """
-        if typ is float:
-            return self.observer.last_real_values(instance, list(var_refs))
-        elif typ is int:
-            return self.observer.last_integer_values(instance, list(var_refs))
-        elif typ is bool:
-            return self.observer.last_boolean_values(instance, list(var_refs))
-        elif typ is str:
-            return self.observer.last_string_values(instance, list(var_refs))
-        else:
-            raise ValueError(f"Unknown type {typ}") from None

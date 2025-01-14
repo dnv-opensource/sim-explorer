@@ -130,9 +130,9 @@ def test_step_by_step_cases(mobile_crane_fmu):
                 return cosim.real_initial_value(slave_index=slave, variable_reference=idx, value=value)
 
     def initial_settings():
-        cases.simulator.set_variable_value(
+        assert isinstance(cases.simulator, SystemInterfaceOSP)
+        cases.simulator.manipulator.slave_real_values(
             0,
-            float,
             (
                 get_ref("pedestal_boom[0]"),
                 get_ref("boom_boom[0]"),
@@ -146,6 +146,7 @@ def test_step_by_step_cases(mobile_crane_fmu):
     system = Path(Path(__file__).parent / "data" / "MobileCrane" / "OspSystemStructure.xml")
     assert system.exists(), f"OspSystemStructure file {system} not found"
     sim = SystemInterfaceOSP(system)
+    sim.init_simulator()
     print("COMP", {k: v for k, v in sim.components})
     expected = {k: v for k, v in sim.components}
     assert isinstance(expected["mobileCrane"], dict), f"Found components {expected}"
@@ -166,10 +167,11 @@ def test_step_by_step_cases(mobile_crane_fmu):
         "name",
         "description",
         "modelFile",
+        "simulator",
         "logLevel",
         "timeUnit",
         "variables",
-    ]
+    ], f"Found: {list(js.jspath('$.header', dict).keys())}"
     cases = Cases(path)
     print("INFO", cases.info())
     static = cases.case_by_name("static")
@@ -180,32 +182,39 @@ def test_step_by_step_cases(mobile_crane_fmu):
         "r[0]": 7.657,
         "load": 1000,
     }
-    assert static.act_get[-1][0].args == (
-        0,
-        float,
-        (10, 11, 12),
-    ), f"Step action arguments {static.act_get[-1][0].args}"
-    assert sim.get_variable_value(0, float, (10, 11, 12)) == [
-        0.0,
-        0.0,
-        0.0,
-    ], "Initial value of T"
+    print("ACT", static.act_get[-1][0])
+    assert static.act_get[-1][0] == ("T", "mobileCrane", (10, 11, 12))
+    sim.init_simulator()
+    assert sim.observer.last_real_values(0, (10, 11, 12)) == [0.0, 0.0, 0.0], "Initial value of T"
     # msg = f"SET actions argument: {static.act_set[0][0].args}"
     # assert static.act_set[0][0].args == (0, 0, (13, 15), (3, 1.5708)), msg
     # sim.set_initial(0, 0, (13, 15), (3, 0))
     # assert sim.get_variable_value(0, 0, (13, 15)) == [3.0, 0.0], "Initial value of T"
     print(f"Special: {static.special}")
-    print("Actions SET")
-    for t in static.act_set:
-        print(f"   Time {t}: ")
-        for a in static.act_set[t]:
-            print("      ", static.str_act(a))
-    print("Actions GET")
-    for t in static.act_get:
-        print(f"   Time {t}: ")
-        for a in static.act_get[t]:
-            print("      ", static.str_act(a))
+    assert static.act_set == {
+        0: [
+            ("p", "mobileCrane", (18, 20), (3.0, 1.570796)),
+            ("b", "mobileCrane", (34, 35), (8.0, 45.0)),
+            ("r", "mobileCrane", (50,), (7.657,)),
+            ("df_dt", "mobileCrane", (7, 8), (0.0, 0.0)),
+            ("dp_dt", "mobileCrane", (25,), (0.0,)),
+            ("db_dt", "mobileCrane", (40,), (0.0,)),
+            ("dr_dt", "mobileCrane", (58,), (0.0,)),
+            ("v", "mobileCrane", (7, 8), (0.0, 0.0)),
+            ("load", "mobileCrane", (16,), (1000.0,)),
+        ]
+    }
+    assert static.act_get == {
+        -1: [
+            ("T", "mobileCrane", (10, 11, 12)),
+            ("x_pedestal", "mobileCrane", (21, 22, 23)),
+            ("x_boom", "mobileCrane", (37, 38, 39)),
+            ("x_load", "mobileCrane", (53, 54, 55)),
+        ]
+    }
 
+    cases.simulator.init_simulator()
+    assert isinstance(cases.simulator, SystemInterfaceOSP)
     cosim = cases.simulator.simulator
     slave = cosim.slave_index_from_instance_name("mobileCrane")
     assert slave == 0, f"Slave index should be '0', found {slave}"
@@ -229,6 +238,7 @@ def test_step_by_step_cases(mobile_crane_fmu):
 
     #    for idx in range( cosim.num_slave_variables(slave)):
     #        print(f"{cosim.slave_variables(slave)[idx].name.decode()}: {observer.last_real_values(slave, [idx])}")
+    assert isinstance(cases.simulator, SystemInterfaceOSP)
     initial_settings()
     manipulator = cases.simulator.manipulator
     assert isinstance(manipulator, CosimManipulator)
@@ -268,6 +278,7 @@ def test_run_basic():
     path = Path(Path(__file__).parent / "data" / "MobileCrane" / "OspSystemStructure.xml")
     assert path.exists(), "System structure file not found"
     sim = SystemInterfaceOSP(path)
+    sim.init_simulator()
     sim.simulator.simulate_until(1e9)
 
 
@@ -281,11 +292,12 @@ def test_run_cases():
     #     print(v, info)
     static = cases.case_by_name("static")
     assert static is not None
-    assert static.act_get[-1][0].func.__name__ == "get_variable_value"
-    assert static.act_get[-1][0].args == (0, float, (10, 11, 12))
-    assert static.act_get[-1][1].args == (0, float, (21, 22, 23))
-    assert static.act_get[-1][2].args == (0, float, (37, 38, 39))
-    assert static.act_get[-1][3].args == (0, float, (53, 54, 55))
+    assert static.act_get[-1] == [
+        ("T", "mobileCrane", (10, 11, 12)),
+        ("x_pedestal", "mobileCrane", (21, 22, 23)),
+        ("x_boom", "mobileCrane", (37, 38, 39)),
+        ("x_load", "mobileCrane", (53, 54, 55)),
+    ]
 
     print("Running case 'base'...")
     case = cases.case_by_name("base")
@@ -326,5 +338,5 @@ if __name__ == "__main__":
     # test_read_cases()
     # test_step_by_step_cosim(_mobile_crane_fmu())
     # test_step_by_step_cases(_mobile_crane_fmu())
-    # test_run_basic(_mobile_crane_fmu())
+    # test_run_basic()
     # test_run_cases()

@@ -2,7 +2,8 @@
    name        : 'MobileCrane',
    description : 'sim explorer with the MobileCrane FMU (standalone)',
    modelFile : "OspSystemStructure.xml",
-   logLevel : "TRACE",
+   simulator : "OSP",
+   logLevel : 'trace', # possible levels: trace, debug, info, warning, error, fatal
    timeUnit  : "second",
    variables : {
       p     : ['mobileCrane', 'pedestal_boom', "Length and angle of pedestal. Use p[2] to set pedestal azimuth [degrees]"],

@@ -9,43 +9,6 @@ from sim_explorer.json5 import Json5
 from sim_explorer.system_interface_osp import SystemInterfaceOSP
 
 
-def expected_actions(case: Case, act: dict, expect: dict):
-    """Check whether a given action dict 'act' conforms to expectations 'expect',
-    where expectations are specified in human-readable form:
-    ('get/set', instance_name, type, (var_names,)[, (var_values,)])
-    """
-    sim = case.cases.simulator  # the simulatorInterface
-    for time, actions in act.items():
-        assert time in expect, f"time entry {time} not found in expected dict"
-        a_expect = expect[time]
-        for i, action in enumerate(actions):
-            msg = f"Case {case.name}({time})[{i}]"  # , expect: {a_expect[i]}")
-            aname = {
-                "set_initial": "set0",
-                "set_variable_value": "set",
-                "get_variable_value": "get",
-            }[action.func.__name__]
-            assert aname == a_expect[i][0], f"{msg}. Erroneous action type {aname}"
-            # make sure that arguments 2.. are tuples
-            args = [None] * 5
-            for k in range(2, len(action.args)):
-                if isinstance(action.args[k], tuple):
-                    args[k] = action.args[k]
-                else:
-                    args[k] = (action.args[k],)  # type: ignore[call-overload]
-            arg = [
-                sim.component_name_from_id(action.args[0]),
-                action.args[1],
-                tuple(sim.variable_name_from_ref(comp=action.args[0], ref=ref) for ref in args[2]),  # type: ignore[attr-defined]
-            ]
-            for k in range(1, len(action.args)):
-                if k == 3:
-                    assert len(a_expect[i]) == 5, f"{msg}. Need also a value argument in expect:{expect}"
-                    assert args[3] == a_expect[i][4], f"{msg}. Erroneous value argument {action.args[3]}."
-                else:
-                    assert arg[k] == a_expect[i][k + 1], f"{msg}. [{k}]: in {arg} != Expected: {a_expect[i]}"
-
-
 def expect_bounce_at(results: Json5, time: float, eps=0.02):
     previous = None
     falling = True
@@ -53,6 +16,7 @@ def expect_bounce_at(results: Json5, time: float, eps=0.02):
         try:
             _t = float(t)
             if previous is not None:
+                print(results.jspath(f"$.['{t}'].bb.h"), previous[0])
                 falling = results.jspath(f"$.['{t}'].bb.h") < previous[0]
                 # if falling != previous[1]:
                 #     print(f"EXPECT_bounce @{_t}: {previous[1]} -> {falling}")
@@ -76,6 +40,7 @@ def test_step_by_step():
     path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
     assert path.exists(), "System structure file not found"
     sim = SystemInterfaceOSP(path)
+    sim.init_simulator()
     assert sim.simulator.real_initial_value(0, 6, 0.35), "Setting of 'e' did not work"
     for t in np.linspace(1, 1e9, 100):
         sim.simulator.simulate_until(t)
@@ -97,16 +62,13 @@ def test_step_by_step_interface():
     # assert sim.components["bb"] == 0
     # print(f"Variables: {sim.get_variables( 0, as_numbers = False)}")
     # assert sim.get_variables(0)["e"] == {"reference": 6, "type": 0, "causality": 1, "variability": 2}
-    sim.set_variable_value(0, float, (6,), (0.35,))
+    sim.init_simulator()
+    sim.manipulator.slave_real_values(0, (6,), (0.35,))
     for t in np.linspace(1, 1e9, 1):
         sim.simulator.simulate_until(t)
-        assert sim.get_variable_value(instance=0, typ=float, var_refs=(0, 1, 6)) == [0.01, 0.99955855, 0.35]
+        assert sim.observer.last_real_values(0, (0, 1, 6)) == [0.01, 0.99955855, 0.35]
         if t == int(0.11 * 1e9):
-            assert sim.get_variable_value(instance=0, typ=float, var_refs=(0, 1, 6)) == [
-                0.11,
-                0.9411890500000001,
-                0.35,
-            ]
+            assert sim.observer.last_real_values(0, (0, 1, 6)) == [0.11, 0.9411890500000001, 0.35]
 
 
 def test_run_cases():
@@ -119,68 +81,19 @@ def test_run_cases():
     restitutionAndGravity = cases.case_by_name("restitutionAndGravity")
     gravity = cases.case_by_name("gravity")
     assert gravity
-    expected_actions(
-        case=gravity,
-        act=gravity.act_get,
-        expect={
-            -1: [("get", "bb", float, ("h",))],
-            0.0: [
-                ("get", "bb", float, ("e",)),
-                ("get", "bb", float, ("g",)),
-                ("get", "bb", float, ("h",)),
-            ],
-            1e9: [("get", "bb", float, ("v",))],
-        },
-    )
-
+    assert gravity.act_get == {-1: [("h", "bb", (1,))], 1e9: [("v", "bb", (3,))]}
     assert base
-    expected_actions(
-        case=base,
-        act=base.act_set,
-        expect={
-            0: [
-                ("set0", "bb", float, ("g",), (-9.81,)),
-                ("set0", "bb", float, ("e",), (1.0,)),
-                ("set0", "bb", float, ("h",), (1.0,)),
-            ]
-        },
-    )
+    assert base.act_set == {0: [("g", "bb", (5,), (-9.81,)), ("e", "bb", (6,), (1.0,)), ("h", "bb", (1,), (1.0,))]}
     assert restitution
-    expected_actions(
-        case=restitution,
-        act=restitution.act_set,
-        expect={
-            0: [
-                ("set0", "bb", float, ("g",), (-9.81,)),
-                ("set0", "bb", float, ("e",), (0.5,)),
-                ("set0", "bb", float, ("h",), (1.0,)),
-            ]
-        },
-    )
-
+    print("ACTIONS", restitution.act_set)
+    assert restitution.act_set == {
+        0: [("g", "bb", (5,), (-9.81,)), ("e", "bb", (6,), (0.5,)), ("h", "bb", (1,), (1.0,))]
+    }
     assert restitutionAndGravity
-    expected_actions(
-        case=restitutionAndGravity,
-        act=restitutionAndGravity.act_set,
-        expect={
-            0: [
-                ("set0", "bb", float, ("g",), (-1.5,)),
-                ("set0", "bb", float, ("e",), (0.5,)),
-                ("set0", "bb", float, ("h",), (1.0,)),
-            ]
-        },
-    )
-    expected_actions(
-        case=gravity,
-        act=gravity.act_set,
-        expect={
-            0: [
-                ("set0", "bb", float, ("g",), (-1.5,)),
-                ("set0", "bb", float, ("e",), (1.0,)),
-                ("set0", "bb", float, ("h",), (1.0,)),
-            ]
-        },
-    )
+    assert restitutionAndGravity.act_set == {
+        0: [("g", "bb", (5,), (-1.5,)), ("e", "bb", (6,), (0.5,)), ("h", "bb", (1,), (1.0,))]
+    }
+    assert gravity.act_set == {0: [("g", "bb", (5,), (-1.5,)), ("e", "bb", (6,), (1.0,)), ("h", "bb", (1,), (1.0,))]}
     print("Actions checked")
     case = cases.case_by_name("base")
     assert case is not None, "Case 'base' not found"
@@ -216,7 +129,7 @@ def test_run_cases():
     assert expect_bounce_at(results=res, time=t0, eps=0.02), f"Bounce: {t0} != {sqrt(2*h0/9.81)}"
     assert expect_bounce_at(results=res, time=2 * t0, eps=0.02), f"No top point at {2*sqrt(2*h0/9.81)}"
 
-    cases.simulator.reset()
+    cases.simulator.init_simulator()
     print("Run restitution")
     cases.run_case(name="restitution", dump="results_restitution")
     _case = cases.case_by_name("restitution")
@@ -226,17 +139,17 @@ def test_run_cases():
     assert expect_bounce_at(
         res, sqrt(2 * h0 / 9.81) + 0.5 * v_max / 9.81, eps=0.02
     )  # restitution is a factor on speed at bounce
-    cases.simulator.reset()
+    cases.simulator.init_simulator()
     print("Run gravity", cases.run_case("gravity", "results_gravity"))
     assert expect_bounce_at(res, sqrt(2 * h0 / 1.5), eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
-    cases.simulator.reset()
+    cases.simulator.init_simulator()
     print(
         "Run restitutionAndGravity",
         cases.run_case("restitutionAndGravity", "results_restitutionAndGravity"),
     )
     assert expect_bounce_at(res, sqrt(2 * h0 / 1.5), eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
     assert expect_bounce_at(res, sqrt(2 * h0 / 1.5) + 0.5 * sqrt(2 * h0 / 1.5), eps=0.4)
-    cases.simulator.reset()
+    cases.simulator.init_simulator()
 
 
 if __name__ == "__main__":

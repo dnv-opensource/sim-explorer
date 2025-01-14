@@ -2,6 +2,8 @@ from pathlib import Path
 
 import pytest
 from libcosimpy.CosimExecution import CosimExecution
+from libcosimpy.CosimManipulator import CosimManipulator
+from libcosimpy.CosimObserver import CosimObserver
 
 from sim_explorer.system_interface_osp import SystemInterfaceOSP
 from sim_explorer.utils.misc import match_with_wildcard
@@ -119,11 +121,35 @@ def test_simulator_reset():
     """SystemInterfaceOSP from OspSystemStructure.xml"""
     path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
     system = SystemInterfaceOSP(str(path), name="BouncingBall")
+    assert system.init_simulator(), f"Simulator initialization failed {system.simulator.status()}"
+    assert system.simulator.status().current_time == 0.0
+    h0, g0 = (9.9, -4.81)
+    system.simulator.real_initial_value(0, 1, h0)  # initial height h
+    system.simulator.real_initial_value(0, 5, g0)  # g
+    assert system.observer.last_real_values(0, (1, 5)) == [0.0, 0.0], "Values only when the simulation starts!"
     system.simulator.simulate_until(1e9)
-    # print("STATUS", system.simulator.status())
     assert system.simulator.status().current_time == 1e9
-    system.reset()
+    values = system.observer.last_real_values(0, (1, 5))
+    assert values[1] == g0, "Initial values set now"
+    assert abs(values[0] - (h0 + 0.5 * g0 * 1.0 * 1.0)) < 1e-2, "Height calculated (not very accurate!)"
+    system.manipulator.slave_real_values(0, (5,), (0.0,))  # zero gravity
+    system.simulator.simulate_until(2e9)
+    assert system.simulator.status().current_time == 2e9
+    values = system.observer.last_real_values(0, (1, 5))
+    assert values[1] == 0.0
+    assert abs(values[0] - (h0 + 3 / 2 * g0 * 1.0 * 1.0)) < 1e-2, "No acceleration in second step"
+    # reset and start simulator with new values
+    assert system.init_simulator(), f"Simulator resetting failed {system.simulator.status()}"
     assert system.simulator.status().current_time == 0
+    h0, g0 = (19.9, -2.81)
+    system.simulator.real_initial_value(0, 1, h0)  # initial height h
+    system.simulator.real_initial_value(0, 5, g0)  # g
+    assert system.observer.last_real_values(0, (1, 5)) == [0.0, 0.0], "Values only when the simulation starts!"
+    system.simulator.simulate_until(1e9)
+    assert system.simulator.status().current_time == 1e9
+    values = system.observer.last_real_values(0, (1, 5))
+    assert values[1] == g0, "Initial values set now"
+    assert abs(values[0] - (h0 + 0.5 * g0 * 1.0 * 1.0)) < 1e-2, "Height calculated (not very accurate!)"
 
 
 def test_simulator_instantiated():
@@ -131,13 +157,30 @@ def test_simulator_instantiated():
     path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
     sim = CosimExecution.from_osp_config_file(str(path))
     assert sim.status().current_time == 0
-    simulator = SystemInterfaceOSP(
+    system = SystemInterfaceOSP(
         structure_file=str(path),
         name="BouncingBall System",
         description="Testing info retrieval from simulator (without OspSystemStructure)",
         log_level="warning",
     )
-    assert isinstance(simulator, SystemInterfaceOSP)
+    assert isinstance(system, SystemInterfaceOSP)
+    # not yet initialized:
+    with pytest.raises(AttributeError) as _:
+        assert isinstance(system.manipulator, CosimManipulator)
+    with pytest.raises(AttributeError) as _:
+        assert isinstance(system.observer, CosimObserver)
+    assert system.init_simulator()
+    assert isinstance(system.manipulator, CosimManipulator), "Ok now"
+    h0, g0 = (9.9, -4.81)
+    system.simulator.real_initial_value(0, 1, h0)  # initial height h
+    system.simulator.real_initial_value(0, 5, g0)  # g
+    assert system.observer.last_real_values(0, (1, 5)) == [0.0, 0.0]
+    system.run_until(1e9)
+    assert system.simulator.status().current_time == int(1e9), f"STATUS: {system.simulator.status()}"
+    values = system.observer.last_real_values(0, (1, 5))
+    values = system.observer.last_real_values(0, (1, 5))
+    assert values[1] == g0, "Initial values set now"
+    assert abs(values[0] - (h0 + 0.5 * g0 * 1.0 * 1.0)) < 1e-2, "Height calculated (not very accurate!)"
 
 
 if __name__ == "__main__":

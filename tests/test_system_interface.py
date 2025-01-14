@@ -47,8 +47,8 @@ def test_interface():
     vars = sys.variables("simpleTable")
     assert vars["interpolate"]["causality"] == "parameter"
     assert vars["interpolate"]["type"] is bool, f"Found {vars['interpolate']['type']}"
-    assert sys.match_variables("simpleTable", "outs") == (0, 1, 2)
-    assert sys.match_variables("simpleTable", "interpolate") == (3,)
+    assert sys.match_variables("simpleTable", "outs") == (("outs[0]", 0), ("outs[1]", 1), ("outs[2]", 2))
+    assert sys.match_variables("simpleTable", "interpolate") == (("interpolate", 3),)
     assert sys.variable_name_from_ref("simpleTable", 2) == "outs[2]"
     assert sys.variable_name_from_ref("simpleTable", 100) == "", "Not existent"
     default = SystemInterface.default_initial("output", "fixed")
@@ -59,11 +59,29 @@ def test_interface():
     # assert sys.message, "Variable outs of component simpleTable was not found"
 
     with pytest.raises(NotImplementedError) as err:
-        sys.set_variable_value(0, float, (0, 1), (1.0, 2.0))
-    assert str(err.value) == "The method 'set_variable_value()' cannot be used in SystemInterface"
+        sys.do_action(0.0, (0, 1), float)
+    assert str(err.value) == "The method 'do_action()' cannot be used in SystemInterface"
     with pytest.raises(NotImplementedError) as err:
-        _ = sys.get_variable_value(0, float, (0, 1))
-    assert str(err.value) == "The method 'get_variable_value()' cannot be used in SystemInterface"
+        _ = sys.action_step((0, 1), float)
+    assert str(err.value) == "The method 'action_step()' cannot be used in SystemInterface"
+    with pytest.raises(NotImplementedError) as err:
+        _ = sys.init_simulator()
+    assert str(err.value) == "The method 'init_simulator()' cannot be used in SystemInterface"
+    with pytest.raises(NotImplementedError) as err:
+        _ = sys.run_until(9.9)
+    assert str(err.value) == "The method 'run_until()' cannot be used in SystemInterface"
+
+
+def test_update_refs_values():
+    refs, vals = SystemInterface.update_refs_values((1, 3, 5, 7), (1, 5), (1.0, 5.0), (3, 5), (3.1, 5.1))
+    assert refs == (1, 3, 5)
+    assert vals == (1.0, 3.1, 5.1)
+    with pytest.raises(ValueError) as err:
+        refs, vals = SystemInterface.update_refs_values((1, 3, 5, 7), (1, 5), (1.0, 5.0), (3, 6), (3.1, 5.1))
+    assert str(err.value) == "tuple.index(x): x not in tuple"
+    refs, vals = SystemInterface.update_refs_values((1, 3, 5, 7), (1, 3), (1.0, 3.0), (5, 7), (5.1, 7.1))
+    assert refs == (1, 3, 5, 7)
+    assert vals == (1.0, 3.0, 5.1, 7.1)
 
 
 if __name__ == "__main__":
@@ -72,3 +90,4 @@ if __name__ == "__main__":
     # test_read_system_structure()
     # test_pytype()
     # test_interface()
+    # test_update_refs_values()
