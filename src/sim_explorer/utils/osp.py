@@ -72,7 +72,7 @@ def make_osp_system_structure(
             """Make a <InitialValue> element from the provided var dict."""
             typ = {bool: "Boolean", int: "Integer", float: "Real", str: "String"}[type(val)]
             initial = ET.Element("InitialValue", {"variable": var})
-            ET.SubElement(initial, typ, {"value": str(val)})
+            ET.SubElement(initial, typ, {"value": ("false", "true")[int(val)] if isinstance(val, bool) else str(val)})
             return initial
 
         _simulators = ET.Element("Simulators")

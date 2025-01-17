@@ -5,7 +5,7 @@
       <Simulator name="simpleTable" source="../SimpleTable/SimpleTable.fmu" stepSize="0.01">
          <InitialValues>
             <InitialValue variable="interpolate">
-               <Boolean value="True" />
+               <Boolean value="true" />
             </InitialValue>
          </InitialValues>
       </Simulator>
