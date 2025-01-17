@@ -97,9 +97,9 @@ class Json5:
             pos = self.pos
         try:
             line, p = self._get_line_number(pos)
-            return f"Json5 read error at {line}({p}): {pre}: {self.js5[pos : pos+num]}"
+            return f"Json5 read error at {line}({p}): {pre}: {self.js5[pos : pos + num]}"
         except Json5Error as err:  # can happen when self.lines does not yet exist
-            return f"Json5 read error at {pos}: {pre}: {self.js5[pos : pos+num]}: {err}"
+            return f"Json5 read error at {pos}: {pre}: {self.js5[pos : pos + num]}: {err}"
 
     def _lines(self):
         """Map start positions of lines and replace all newline CR-LF combinations with single newline (LF)."""
@@ -260,7 +260,7 @@ class Json5:
                 _js5 += js5[pos : pos + s1.start()]
                 pos += pos + s1.start()
                 s2 = c2.search(js5[pos:])
-                assert s2 is not None, f"No end of comment found for comment starting with '{js5[pos:pos+50]}'"
+                assert s2 is not None, f"No end of comment found for comment starting with '{js5[pos : pos + 50]}'"
                 comments.update({pos + s2.start(): js5[pos : pos + s2.start()]})
                 for p in range(pos, pos + s2.end()):
                     if js5[p] not in ("\r", "\n"):
@@ -362,7 +362,7 @@ class Json5:
             m = re.search(r":", self.js5[self.pos :])
             assert m is not None, self._msg(f"Quoted key {k} found, but no ':'")
             assert not len(self.js5[self.pos : self.pos + m.start()].strip()), self._msg(
-                f"Additional text '{self.js5[self.pos : self.pos+m.start()].strip()}' after key '{k}'"
+                f"Additional text '{self.js5[self.pos : self.pos + m.start()].strip()}' after key '{k}'"
             )
         else:
             m = re.search(r"[:\}]", self.js5[self.pos :])
@@ -395,7 +395,7 @@ class Json5:
             v = self._object() if m.group() == "{" else self._list()
             m = re.search(r"[,\}\]]", self.js5[self.pos :])
             cr, cc = self._get_line_number(self.pos)
-            assert m is not None, self._msg(f"End of value or end of object/list '{str(v)[:50]+'..'}' expected")
+            assert m is not None, self._msg(f"End of value or end of object/list '{str(v)[:50] + '..'}' expected")
         elif m.group() in (
             "]",
             "}",
@@ -404,7 +404,7 @@ class Json5:
             v = self.js5[self.pos : self.pos + m.start()].strip() if q2 < 0 else self.js5[q1 + 1 : q2 - 1]
         else:
             raise Json5Error(
-                f"Unhandled situation. Quoted: ({q1-self.pos},{q2-self.pos}), search: {m}. From pos: {self.js5[self.pos : ]}"
+                f"Unhandled situation. Quoted: ({q1 - self.pos},{q2 - self.pos}), search: {m}. From pos: {self.js5[self.pos :]}"
             )
         # save_pos = self.pos
         self.pos += (

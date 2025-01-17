@@ -163,7 +163,7 @@ class SystemInterface:
             for i, mod in enumerate(self.components.values()):
                 if i == comp:
                     return mod
-            return ""            
+            return ""
         else:
             raise AssertionError(f"Unallowed argument {comp} in 'variables'")
 
@@ -179,7 +179,10 @@ class SystemInterface:
         -------
             A dictionary of variable {names:info, ...}, where info is a dictionary containing reference, type, causality and variability
         """
-        mod = self.model_from_component(comp)
+        try:
+            mod = self.model_from_component(comp)
+        except KeyError as err:
+            raise Exception(f"Component {comp} not found: {err}") from None
         try:
             return self.models[mod]["variables"]
         except Exception:
@@ -237,9 +240,9 @@ class SystemInterface:
             if accept_as_alias(k):
                 if accepted is None:
                     accepted = v
-                assert all(
-                    v[e] == accepted[e] for e in ("type", "causality", "variability")
-                ), f"Variable {k} matches {varname}, but properties do not match"
+                assert all(v[e] == accepted[e] for e in ("type", "causality", "variability")), (
+                    f"Variable {k} matches {varname}, but properties do not match"
+                )
                 var.append((k, v["reference"]))
         return tuple(var)
 
@@ -392,7 +395,7 @@ class SystemInterface:
                     return False
                 if not _check(
                     _causality == var_info["causality"],
-                    _description(name, var_info, _initial) + f" != causality { _causality}",
+                    _description(name, var_info, _initial) + f" != causality {_causality}",
                 ):
                     return False
                 if not _check(

@@ -88,9 +88,9 @@ def test_step_by_step_cosim(mobile_crane_fmu):
                 assert sim.slave_variables(slave)[i].reference == i
                 assert sim.slave_variables(slave)[i].type == 0
                 found_expected[k] = True
-    assert (
-        False not in found_expected
-    ), f"Not all expected names were found: {expected_names[found_expected.index(False)]}"
+    assert False not in found_expected, (
+        f"Not all expected names were found: {expected_names[found_expected.index(False)]}"
+    )
     assert set_initial("pedestal_boom[0]", 3.0)
     assert set_initial("boom_boom[0]", 8.0)
     assert set_initial("boom_boom[1]", 0.7854)
@@ -317,7 +317,7 @@ def test_run_cases():
     print("RES(1.0)", res.jspath("$['1.0'].mobileCrane"))
     assert is_nearly_equal(res.jspath("$['1.0'].mobileCrane.x_pedestal"), [0.0, 0.0, 3.0])
     x_load = res.jspath("$['1.0'].mobileCrane.x_load")
-    print(f"x_load: {x_load} <-> {[0, 8/sqrt(2),0]}")
+    print(f"x_load: {x_load} <-> {[0, 8 / sqrt(2), 0]}")
 
 
 #     print("Running case 'static'...")

@@ -126,8 +126,8 @@ def test_run_cases():
     v_max = sqrt(2 * h0 * 9.81)  # speed when hitting bottom
     # h_v = lambda v, g: 0.5 * v**2 / g  # calculate height
     assert abs(h0 - 1.0) < 1e-2
-    assert expect_bounce_at(results=res, time=t0, eps=0.02), f"Bounce: {t0} != {sqrt(2*h0/9.81)}"
-    assert expect_bounce_at(results=res, time=2 * t0, eps=0.02), f"No top point at {2*sqrt(2*h0/9.81)}"
+    assert expect_bounce_at(results=res, time=t0, eps=0.02), f"Bounce: {t0} != {sqrt(2 * h0 / 9.81)}"
+    assert expect_bounce_at(results=res, time=2 * t0, eps=0.02), f"No top point at {2 * sqrt(2 * h0 / 9.81)}"
 
     cases.simulator.init_simulator()
     print("Run restitution")
@@ -135,19 +135,19 @@ def test_run_cases():
     _case = cases.case_by_name("restitution")
     assert _case is not None
     res = _case.res.res
-    assert expect_bounce_at(results=res, time=sqrt(2 * h0 / 9.81), eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
+    assert expect_bounce_at(results=res, time=sqrt(2 * h0 / 9.81), eps=0.02), f"No bounce at {sqrt(2 * h0 / 9.81)}"
     assert expect_bounce_at(
         res, sqrt(2 * h0 / 9.81) + 0.5 * v_max / 9.81, eps=0.02
     )  # restitution is a factor on speed at bounce
     cases.simulator.init_simulator()
     print("Run gravity", cases.run_case("gravity", "results_gravity"))
-    assert expect_bounce_at(res, sqrt(2 * h0 / 1.5), eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
+    assert expect_bounce_at(res, sqrt(2 * h0 / 1.5), eps=0.02), f"No bounce at {sqrt(2 * h0 / 9.81)}"
     cases.simulator.init_simulator()
     print(
         "Run restitutionAndGravity",
         cases.run_case("restitutionAndGravity", "results_restitutionAndGravity"),
     )
-    assert expect_bounce_at(res, sqrt(2 * h0 / 1.5), eps=0.02), f"No bounce at {sqrt(2*h0/9.81)}"
+    assert expect_bounce_at(res, sqrt(2 * h0 / 1.5), eps=0.02), f"No bounce at {sqrt(2 * h0 / 9.81)}"
     assert expect_bounce_at(res, sqrt(2 * h0 / 1.5) + 0.5 * sqrt(2 * h0 / 1.5), eps=0.4)
     cases.simulator.init_simulator()
 

@@ -28,9 +28,9 @@ def check_expected(value, expected, feature: str):
 
 
 def arrays_equal(res: tuple, expected: tuple, eps=1e-7):
-    assert len(res) == len(
-        expected
-    ), f"Tuples of different lengths cannot be equal. Found {len(res)} != {len(expected)}"
+    assert len(res) == len(expected), (
+        f"Tuples of different lengths cannot be equal. Found {len(res)} != {len(expected)}"
+    )
     for i, (x, y) in enumerate(zip(res, expected, strict=False)):
         assert abs(x - y) < eps, f"Element {i} not nearly equal in {x}, {y}"
 
@@ -130,7 +130,7 @@ def test_oscillator_force_class(show):
     #    _f = partial(force, ampl=1.0, omega=0.1)
     dt = 0.01
     time = 0.0
-    assert abs(2 * pi / sqrt(osc.k / osc.m) - 2 * pi) < 1e-9, f"Period should be {2*pi}"
+    assert abs(2 * pi / sqrt(osc.k / osc.m) - 2 * pi) < 1e-9, f"Period should be {2 * pi}"
     for _ in range(10000):
         osc.f = func(time)
         osc.do_step(time, dt)

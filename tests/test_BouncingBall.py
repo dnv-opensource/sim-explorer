@@ -6,9 +6,9 @@ from fmpy import plot_result, simulate_fmu
 
 
 def nearly_equal(res: tuple, expected: tuple, eps=1e-7):
-    assert len(res) == len(
-        expected
-    ), f"Tuples of different lengths cannot be equal. Found {len(res)} != {len(expected)}"
+    assert len(res) == len(expected), (
+        f"Tuples of different lengths cannot be equal. Found {len(res)} != {len(expected)}"
+    )
     for i, (x, y) in enumerate(zip(res, expected, strict=False)):
         assert abs(x - y) < eps, f"Element {i} not nearly equal in {x}, {y}"
 

@@ -11,7 +11,7 @@ def relative_path(p1: Path, p2: Path) -> str:
         _p2 = p2.parts
         for i in range(len(_p1), 1, -1):
             if _p1[:i] == _p2[:i]:
-                return f"{ '../..' +''.join('/'+p for p in _p1[i:])}"
+                return f"{'../..' + ''.join('/' + p for p in _p1[i:])}"
                 break
     return ""
 

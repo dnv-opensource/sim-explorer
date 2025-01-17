@@ -8,9 +8,9 @@ from sim_explorer.case import Case, Cases
 
 
 def arrays_equal(res: tuple, expected: tuple, eps=1e-7):
-    assert len(res) == len(
-        expected
-    ), f"Tuples of different lengths cannot be equal. Found {len(res)} != {len(expected)}"
+    assert len(res) == len(expected), (
+        f"Tuples of different lengths cannot be equal. Found {len(res)} != {len(expected)}"
+    )
     for i, (x, y) in enumerate(zip(res, expected, strict=False)):
         assert abs(x - y) < eps, f"Element {i} not nearly equal in {x}, {y}"
 
@@ -119,7 +119,7 @@ def check_case(
     ddt = t_before + dt - t_bounce  # time from bounce to end of step
     x_bounce2 = x_bounce + 2 * v_bounce * e * 1.0 * e / g
     arrays_equal(
-        res=results.res.jspath(path=f"$['{t_before+dt}'].bb.x"),
+        res=results.res.jspath(path=f"$['{t_before + dt}'].bb.x"),
         expected=(
             t_bounce * v[0] + v[0] * e * ddt,
             0,
@@ -128,10 +128,10 @@ def check_case(
     )
 
     arrays_equal(
-        res=results.res.jspath(path=f"$['{t_before+dt}'].bb.v"),
+        res=results.res.jspath(path=f"$['{t_before + dt}'].bb.v"),
         expected=(e * v[0], 0, (v_bounce * e - g * ddt)),
     )
-    assert abs(results.res.jspath(path=f"$['{t_before+dt}'].bb.['x_b']")[0] - x_bounce2) < 1e-9
+    assert abs(results.res.jspath(path=f"$['{t_before + dt}'].bb.['x_b']")[0] - x_bounce2) < 1e-9
     # from bounce to bounce
     v_x, v_z, t_b, x_b = (
         v[0],
@@ -148,15 +148,15 @@ def check_case(
         t_b += delta_t
         x_b += v_x * delta_t
         _tb = int(t_b * tfac) / tfac
-        if results.res.jspath(path=f"$['{_tb+dt}']") is None:
+        if results.res.jspath(path=f"$['{_tb + dt}']") is None:
             break
         _z = results.res.jspath(path=f"$['{_tb}'].bb.x")[2]
         # z_ = results.res.jspath(path=f"$['{_tb+dt}'].bb.x")[2]
         _vz = results.res.jspath(path=f"$['{_tb}'].bb.v")[2]
-        vz_ = results.res.jspath(path=f"$['{_tb+dt}'].bb.v")[2]
+        vz_ = results.res.jspath(path=f"$['{_tb + dt}'].bb.v")[2]
         _vx = results.res.jspath(path=f"$['{_tb}'].bb.v")[0]
-        vx_ = results.res.jspath(path=f"$['{_tb+dt}'].bb.v")[0]
-        assert abs(_z) < x[2] * 5e-2, f"Bounce {n}@{t_b}. z-position {_z} should be close to 0 ({x[2]*5e-2})"
+        vx_ = results.res.jspath(path=f"$['{_tb + dt}'].bb.v")[0]
+        assert abs(_z) < x[2] * 5e-2, f"Bounce {n}@{t_b}. z-position {_z} should be close to 0 ({x[2] * 5e-2})"
         if delta_t > 2 * dt:
             assert _vz < 0 and vz_ > 0, f"Bounce {n}@{t_b}. Expected speed sign change {_vz}-{vz_}when bouncing"
             assert _vx * e == vx_, f"Bounce {n}@{t_b}. Reduced speed in x-direction. {_vx}*{e}!={vx_}"

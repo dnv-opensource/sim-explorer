@@ -146,7 +146,7 @@ def main() -> None:
         logger.error(f"Instantiation of {args.cases} not successfull")
         return
 
-    log_msg_stub: str = f"Start sim-explorer.py with following arguments:\n" f"\t cases: \t{cases}\n"
+    log_msg_stub: str = f"Start sim-explorer.py with following arguments:\n\t cases: \t{cases}\n"
 
     case: Case | None = None
 

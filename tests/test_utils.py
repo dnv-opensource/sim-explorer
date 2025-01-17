@@ -18,9 +18,9 @@ def test_relative_path(simexp):
     cases = simexp / "tests" / "data" / "BouncingBall3D" / "BouncingBall3D.cases"
     res = simexp / "tests" / "data" / "BouncingBall3D" / "test_results"
     cases0 = simexp / "tests" / "data" / "BouncingBall0" / "BouncingBall.cases"
-    assert relative_path(cases, res) == "./BouncingBall3D.cases", f"Found {relative_path( cases, res)}"
+    assert relative_path(cases, res) == "./BouncingBall3D.cases", f"Found {relative_path(cases, res)}"
     rel0 = relative_path(cases, cases0)
-    assert rel0 == "../../BouncingBall3D/BouncingBall3D.cases", f"Found {relative_path( cases, cases0)}"
+    assert rel0 == "../../BouncingBall3D/BouncingBall3D.cases", f"Found {relative_path(cases, cases0)}"
 
     expected = simexp / "tests" / "data" / "BouncingBall3D" / "BouncingBall3D.cases"
     found = get_path("BouncingBall3D.cases", res.parent)

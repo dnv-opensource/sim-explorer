@@ -560,9 +560,9 @@ class Cases:
             # The type, causality and variability shall be equal for all variables.
             for n in _varnames:
                 for test in ["type", "causality", "variability"]:
-                    assert (
-                        model_vars[model][n][test] == prototype[test]
-                    ), f"Model {model} variable {n} != {test} as {prototype}"
+                    assert model_vars[model][n][test] == prototype[test], (
+                        f"Model {model} variable {n} != {test} as {prototype}"
+                    )
             starts = []
             for v, info in self.simulator.models[model]["variables"].items():
                 if v in _varnames and "start" in info:
@@ -760,7 +760,7 @@ class Cases:
         if case is None:
             case = self.base
             txt += "Cases "
-            txt += f"{self.js.jspath('$.header.name',str) or 'noName'}. "
+            txt += f"{self.js.jspath('$.header.name', str) or 'noName'}. "
             txt += f"{(self.js.jspath('$.header.description', str) or '')}\n"
             modelfile = self.js.jspath("$.header.modelFile", str)
             if modelfile is not None:
@@ -837,7 +837,7 @@ class Results:
         except ValueError:
             raise CaseInitError(f"Cases {Path(case)} instantiation error") from ValueError
         self.case: Case | None = cases.case_by_name(name=self.res.jspath(path="$.header.case", typ=str, errorMsg=True))
-        assert isinstance(self.case, Case), f"Case {self.res.jspath( '$.header.case', str, True)} not found"
+        assert isinstance(self.case, Case), f"Case {self.res.jspath('$.header.case', str, True)} not found"
         assert isinstance(self.case.cases, Cases), "Cases object not defined"
         self._header_transform(False)
         self.case.add_results_object(self)  # make Results object known to self.case
