@@ -1,6 +1,6 @@
 from enum import Enum
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any, Sequence, TypeAlias
 
 import numpy as np
 
@@ -36,6 +36,9 @@ class SystemInterface:
         description (str)="": Optional possibility to provide a system description
         log_level (str) = 'fatal': Per default the level is set to 'fatal',
            but it can be set to 'trace', 'debug', 'info', 'warning', 'error' or 'fatal' (e.g. for debugging purposes)
+        **kwargs: Optional possibility to supply additional keyword arguments:
+
+            * full_simulator_available=True to overwrite the oposite when called from a superclass
     """
 
     def __init__(
@@ -44,16 +47,23 @@ class SystemInterface:
         name: str | None = None,
         description: str = "",
         log_level: str = "fatal",
+        **kwargs,
     ):
         self.structure_file = Path(structure_file)
         self.name = name  # overwrite if the system includes that
         self.description = description  # overwrite if the system includes that
         self.system_structure = SystemInterface.read_system_structure(self.structure_file)
-        self._models = self._get_models()
+        self._models, self.components = self._get_models_components()
         # self.simulator=None # derived classes override this to instantiate the system simulator
         self.message = ""  # possibility to save additional message for (optional) retrieval by client
         self.log_level = log_level
-        self.full_simulator_available = False  # only system and components specification available. No simulation!
+        if "full_simulator_available" in kwargs:
+            self.full_simulator_available = kwargs["full_simulator_available"]
+        else:
+            self.full_simulator_available = False  # only system and components specification available. No simulation!
+        if not self.full_simulator_available:  # we need a minimal version of variable info (no full ModelDescription)
+            for m, info in self._models.items():
+                self._models[m].update({"variables": self._get_variables(info["source"])})
 
     @property
     def path(self):
@@ -82,36 +92,23 @@ class SystemInterface:
             assert not fmus_exist or comp["source"].exists(), f"FMU {comp['source']} not found"
         return system_structure
 
-    @property
-    def components(self):
-        """Return an iterator over all components (instances).
-        Each component is represented by a dict , together with the stem of their fmu files.
-
-        Note: there can be several instances per model (FMU)
-        """
-        for k, v in self.system_structure["Simulators"].items():
-            source = v["source"]
-            yield (k, {"model": source.stem, "source": source})
-
-    def _get_models(self) -> dict:
-        """Get a dict of the models in the system:
-        {<name> : {'source':<source>, 'components':[component-list], 'variables':{variables-dict}.
+    def _get_models_components(self) -> tuple[dict, dict]:
+        """Get a dict of the models and a dict of components in the system:
+        {model-name : {'source':<source>, 'components':[component-list], 'variables':{variables-dict}
+        {component-name : {'model':'model-name, }, ...}.
         """
         mods = {}
-        for k, v in self.components:
-            if v["model"] not in mods:
-                mods.update(
-                    {
-                        v["model"]: {
-                            "source": v["source"],
-                            "components": [k],
-                            "variables": self._get_variables(v["source"]),
-                        }
-                    }
-                )
+        components = {}
+        for k, v in self.system_structure["Simulators"].items():
+            source = v["source"]
+            model = source.stem
+            if model not in mods:
+                mods.update({model: {"source": source, "components": [k]}})
             else:
-                mods[v["model"]]["components"].append(k)
-        return mods
+                mods[model]["components"].append(k)
+            assert k not in components, f"Duplicate component name {k} related to model {model} encountered"
+            components.update({k: model})
+        return (mods, components)
 
     @property
     def models(self) -> dict:
@@ -127,11 +124,11 @@ class SystemInterface:
         collect = []
         model = None
         for c in comps:
-            for k, v in self.components:
+            for k, m in self.components.items():
                 if match_with_wildcard(c, k):
                     if model is None:
-                        model = v["model"]
-                    if v["model"] == model and k not in collect:
+                        model = m
+                    if m == model and k not in collect:
                         collect.append(k)
         assert model is not None and len(collect), f"No component match for {comps}"
         return (model, tuple(collect))
@@ -141,7 +138,8 @@ class SystemInterface:
 
         Returns
         -------
-            A dictionary of variable {names:info, ...}, where info is a dictionary containing reference, type, causality and variability
+            A dictionary of variable {names:info, ...},
+            where info is a dictionary containing reference, type, causality, variability and initial
         """
         assert source.exists() and source.suffix == ".fmu", f"FMU file {source} not found or wrong suffix"
         md = from_xml(source, sub="modelDescription.xml")
@@ -157,8 +155,22 @@ class SystemInterface:
             variables.update({name: var})
         return variables
 
+    def model_from_component(self, comp: str | int) -> str:
+        """Find the model name from the component name or index."""
+        if isinstance(comp, str):
+            return self.components[comp]
+        elif isinstance(comp, int):
+            for i, mod in enumerate(self.components.values()):
+                if i == comp:
+                    return mod
+            return ""            
+        else:
+            raise AssertionError(f"Unallowed argument {comp} in 'variables'")
+
     def variables(self, comp: str | int) -> dict:
         """Get the registered variables for a given component from the system.
+        This is the default version which works without the full modelDescription inside self._models.
+        Can be overridden by super-classes which have the modelDescription available.
 
         Args:
             comp (str, int): The component name or its index within the model
@@ -167,19 +179,13 @@ class SystemInterface:
         -------
             A dictionary of variable {names:info, ...}, where info is a dictionary containing reference, type, causality and variability
         """
-        if isinstance(comp, str):
-            for k, c in self.components:
-                if k == comp:
-                    return self.models[c["model"]]["variables"]
-        elif isinstance(comp, int):
-            for i, (_, c) in enumerate(self.components):
-                if i == comp:
-                    return self.models[c["model"]]["variables"]
-        else:
-            raise AssertionError(f"Unallowed argument {comp} in 'variables'")
-        raise KeyError(f"Component {comp} not found. Avalable components: {list(self.components)}") from None
+        mod = self.model_from_component(comp)
+        try:
+            return self.models[mod]["variables"]
+        except Exception:
+            raise KeyError(f"Variables for {comp} not found. Components: {list(self.components.keys())}") from None
 
-    def variable_iter(self, variables: dict, flt: int | str | tuple | list):
+    def variable_iter(self, variables: dict, flt: int | str | Sequence):
         """Get the variable dicts of the variables refered to by ids.
 
         Returns: Iterator over the dicts of the selected variables
@@ -248,14 +254,14 @@ class SystemInterface:
         """Retrieve the component name from the given index.
         Return an empty string if not found.
         """
-        for i, (k, _) in enumerate(self.components):
+        for i, k in enumerate(self.components.keys()):
             if i == idx:
                 return k
         return ""
 
     def component_id_from_name(self, name: str) -> int:
         """Get the component id from the name. -1 if not found."""
-        for i, (k, _) in enumerate(self.components):
+        for i, k in enumerate(self.components.keys()):
             if k == name:
                 return i
         return -1
@@ -313,7 +319,7 @@ class SystemInterface:
         else:
             return init if only_default else (init,)
 
-    def allowed_action(self, action: str, comp: int | str, var: int | str | tuple | list, time: float):
+    def allowed_action(self, action: str, comp: int | str, var: int | str | Sequence, time: float):
         """Check whether the action would be allowed according to FMI2 rules, see FMI2.01, p.49.
 
         * if a tuple of variables is provided, the variables shall have equal properties
@@ -417,9 +423,9 @@ class SystemInterface:
     def comp_model_var(self, cref: int, vref: int | tuple[int]):
         """Find the component name and the variable names from the provided reference(s)."""
         model = None
-        for i, (_comp, m) in enumerate(self.components):
+        for i, (_comp, m) in enumerate(self.components.items()):
             if i == cref:
-                model = m["model"]
+                model = m
                 comp = _comp
                 break
         assert model is not None, f"Model for component id {cref} not found"

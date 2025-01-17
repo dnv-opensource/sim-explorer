@@ -189,8 +189,9 @@ def test_case_set_get(simpletable):
 if __name__ == "__main__":
     retcode = pytest.main(["-rA", "-v", __file__])
     assert retcode == 0, f"Non-zero return code {retcode}"
-    # import os
-    # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
+    import os
+
+    os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
     # test_fixture(_simpletable())
     # test_case_at_time(_simpletable())
     # test_case_range(_simpletable())

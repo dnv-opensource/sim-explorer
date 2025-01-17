@@ -5,7 +5,7 @@ import os
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable, List
+from typing import Any, Iterable, Sequence
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -487,7 +487,7 @@ class Cases:
         "assertion",
         "results_print_type",
     )
-    assertion_results: List[AssertionResult] = []
+    assertion_results: list[AssertionResult] = []
 
     def __init__(self, spec: str | Path):
         self.file = Path(spec)  # everything relative to the folder of this file!
@@ -656,7 +656,7 @@ class Cases:
                 return found
         return None
 
-    def disect_variable(self, key: str, err_level: int = 2) -> tuple[str, dict, list | range]:
+    def disect_variable(self, key: str, err_level: int = 2) -> tuple[str, dict, Sequence]:
         """Extract the variable name, definition and explicit variable range, if relevant
         (multi-valued variables, where only some elements are addressed).
         ToDo: handle multi-dimensional arrays (tables, ...).
@@ -668,7 +668,7 @@ class Cases:
         -------
             1. The variable name as defined in the 'variables' section of the spec
             2. The variable definition, which the name refers to
-            3. An Iterable over indices of the variable, i.e. the range
+            3. An Sequence over indices of the variable, i.e. the range
         """
 
         def handle_error(msg: str, err: Exception | None, level: int):
@@ -908,7 +908,7 @@ class Results:
                 get_path(res.jspath("$.header.file", str, True), self.file.parent),
             )
 
-    def add(self, time: float, comp: str, cvar: str, values: tuple | int | float | bool | str):
+    def add(self, time: float, comp: str, cvar: str, values: Sequence | int | float | bool | str):
         """Add the results of a get action to the results dict for the case.
 
         Args:
@@ -918,7 +918,7 @@ class Results:
             values (PyVal, tuple): the value(s) to record
         """
         # print(f"Update ({time}): {comp}: {cvar} : {values}")
-        _values = values[0] if isinstance(values, (tuple, list)) and len(values) == 1 else values
+        _values = values[0] if isinstance(values, Sequence) and len(values) == 1 else values
         self.res.update("$[" + str(time) + "]" + comp, {cvar: _values})
 
     def save(self, jsfile: str | Path = ""):
@@ -984,12 +984,12 @@ class Results:
         """Retrieve from results js5-dict the variables and return (times, values).
 
         Args:
-            comp_var (Iterable): iterable of (<component-name>, <variable_name>[, element])
+            comp_var (Iterator): iterator over (<component-name>, <variable_name>[, element])
                Alternatively, the jspath syntax <component-name>.<variable_name>[[element]] can be used as comp_var.
-               Time is not explicitly including in comp_var
-               A record is only included if all variable are found for a given time
+               Time is not explicitly included in comp_var
+               A record is only included if all variables are found for a given time
         Returns:
-            Data table (list of lists), time and one column per variable
+            Data table (list of lists): time and one column per variable
         """
         data = []
         _comp_var = []
@@ -1022,11 +1022,11 @@ class Results:
                     data.append(record)
         return data
 
-    def plot_time_series(self, comp_var: Iterable, title: str = ""):
+    def plot_time_series(self, comp_var: Sequence, title: str = ""):
         """Extract the provided alias variables and plot the data found in the same plot.
 
         Args:
-            comp_var (Iterable): Iterable of (<component-instance>,<variable>) tuples (as used in retrieve)
+            comp_var (Sequence): Sequence of (<component-instance>,<variable>) tuples (as used in retrieve)
                Alternatively, the jspath syntax <component>.<variable> is also accepted
             title (str): optional title of the plot
         """

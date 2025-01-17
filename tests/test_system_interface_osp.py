@@ -87,14 +87,13 @@ def test_simulator_from_system_structure():
     path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
     system = SystemInterfaceOSP(str(path), name="BouncingBall")
     assert system.name == "BouncingBall", f"System.name should be BouncingBall. Found {system.name}"
-    comps = {k: v for (k, v) in system.components}
-    assert "bb" in comps, f"Instance name 'bb' expected. Found instances {list(comps.keys())}"
-    assert len(comps) == 3
+    assert "bb" in system.components, f"Instance name 'bb' expected. Found instances {list(system.components.keys())}"
+    assert len(system.components) == 3
     assert len(system.models) == 1
     assert "BouncingBall" in system.models
     #    system.check_instances_variables()
     variables = system.variables("bb")
-    print(f"g: {variables['g']}")
+    # print(f"g: {variables['g']}")
     assert variables["g"]["reference"] == 5
     assert variables["g"]["type"] is float
     assert variables["g"]["causality"] == "parameter"

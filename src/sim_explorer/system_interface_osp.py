@@ -21,6 +21,9 @@ class SystemInterfaceOSP(SystemInterface):
        description (str)="": Optional possibility to provide a system description
        log_level (str) = 'fatal': Per default the level is set to 'fatal',
           but it can be set to 'trace', 'debug', 'info', 'warning', 'error' or 'fatal' (e.g. for debugging purposes)
+        **kwargs: Optional possibility to supply additional keyword arguments:
+
+            * full_simulator_available=True to overwrite the oposite when called from a superclass
     """
 
     def __init__(
@@ -29,6 +32,7 @@ class SystemInterfaceOSP(SystemInterface):
         name: str | None = None,
         description: str = "",
         log_level: str = "fatal",
+        **kwargs,
     ):
         super().__init__(structure_file, name, description, log_level)
         self.full_simulator_available = True  # system and components specification + simulation capabilities

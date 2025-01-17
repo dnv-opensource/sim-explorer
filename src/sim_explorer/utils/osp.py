@@ -78,7 +78,6 @@ def make_osp_system_structure(
         _simulators = ET.Element("Simulators")
         if simulators is not None:
             for m, props in simulators.items():
-                print("COMPONENT", m, props)
                 simulator = ET.Element(
                     "Simulator",
                     {

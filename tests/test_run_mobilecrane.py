@@ -147,9 +147,9 @@ def test_step_by_step_cases(mobile_crane_fmu):
     assert system.exists(), f"OspSystemStructure file {system} not found"
     sim = SystemInterfaceOSP(system)
     sim.init_simulator()
-    print("COMP", {k: v for k, v in sim.components})
-    expected = {k: v for k, v in sim.components}
-    assert isinstance(expected["mobileCrane"], dict), f"Found components {expected}"
+    print("COMP", {k: v for k, v in sim.components.items()})
+    expected = {k: v for k, v in sim.components.items()}
+    assert isinstance(expected["mobileCrane"], str), f"Found components {expected}"
 
     path = Path(Path(__file__).parent, "data/MobileCrane/MobileCrane.cases")
     assert path.exists(), "Cases file not found"

@@ -33,17 +33,18 @@ def test_pytype():
 
 def test_interface():
     sys = SystemInterface(Path(__file__).parent / "data" / "MobileCrane" / "crane_table.js5")
-    st = Path(__file__).parent / "data" / "SimpleTable" / "SimpleTable.fmu"
-    sys.system_structure["Simulators"].update({"simpleTable2": {"source": st, "stepSize": "0.01"}})
-    assert [k for k, _ in sys.components] == ["simpleTable", "mobileCrane", "simpleTable2"]
+    # manually adding another SimpleTable to the system
+    sys._models["SimpleTable"]["components"].append("simpleTable2")
+    sys.components.update({"simpleTable2": "SimpleTable"})
+    assert isinstance(sys, SystemInterface)
+    assert list(sys.components.keys()) == ["simpleTable", "mobileCrane", "simpleTable2"]
     assert len(sys.models) == 2
     assert tuple(sys.models.keys()) == ("SimpleTable", "MobileCrane"), f"Found:{sys.models}"
     m = sys.match_components("simple*")
     assert m[0] == "SimpleTable", f"Found {m[0]}"
     assert m[1] == ("simpleTable", "simpleTable2")
-    for k, _ in sys.components:
+    for k in sys.components.keys():
         assert sys.component_name_from_id(sys.component_id_from_name(k)) == k
-
     vars = sys.variables("simpleTable")
     assert vars["interpolate"]["causality"] == "parameter"
     assert vars["interpolate"]["type"] is bool, f"Found {vars['interpolate']['type']}"
