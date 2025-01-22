@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from sim_explorer.cli import sim_explorer
-from sim_explorer.cli.sim_explorer import _argparser, main
+from sim_explorer.cli import __main__
+from sim_explorer.cli.__main__ import _argparser, main
 
 # *****Test commandline interface (CLI)************************************************************
 
@@ -120,7 +120,7 @@ def test_logging_configuration(
         args.log_file = log_file
         args.log_level_file = log_level_file
 
-    monkeypatch.setattr(sim_explorer, "configure_logging", fake_configure_logging)
+    monkeypatch.setattr(__main__, "configure_logging", fake_configure_logging)
     # Execute
     if isinstance(expected, ConfigureLoggingArgs):
         args_expected: ConfigureLoggingArgs = expected
