@@ -42,6 +42,12 @@ extensions = [
     "sphinxcontrib.mermaid",
 ]
 
+# Extenstion for myst_parser
+myst_enable_extensions = [
+    "dollarmath",
+    "attrs_inline",
+]
+
 # The file extensions of source files.
 source_suffix = {
     ".rst": "restructuredtext",
@@ -72,6 +78,8 @@ autodoc_default_options = {
 autodoc_preserve_defaults = True
 
 myst_heading_anchors = 3
+
+todo_include_todos = False
 
 # add markdown mermaid support
 myst_fence_as_directive = ["mermaid"]
