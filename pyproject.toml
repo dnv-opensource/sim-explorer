@@ -53,7 +53,7 @@ classifiers = [
 ]
 dependencies = [
     "numpy>=1.26",
-    "matplotlib>=3.9.1",
+    "matplotlib>=3.10",
     "pint>=0.24",
     "sympy>=1.13",
     "jsonpath-ng>=1.7.0",
@@ -68,7 +68,7 @@ dependencies = [
 [project.optional-dependencies]
 modelTest = [
     "fmpy>=0.3.21",
-    "matplotlib>=3.9.1",
+    "matplotlib>=3.10",
 ]
 rest = [
     "docutils>=0.21",
