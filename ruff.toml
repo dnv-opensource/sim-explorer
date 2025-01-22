@@ -4,7 +4,7 @@ exclude = [
     "dist",
     "*cache",
     "**/__pycache__",
-    "./tests/data",
+    "tests/data",
 ]
 src = [
     "src",
@@ -17,16 +17,10 @@ target-version = "py310"
 # Start by including _all_ Ruff lint rules, then ignore selected rules as needed
 # https://docs.astral.sh/ruff/rules/
 select = [
-    "E",
-    "D",
-    "F",
-    "N",
-    "W",
-    "I",
-    "B",
+    "ALL",
 ]
 ignore = [
-    # Ruff lint rules temporarily ignored to match the ruff configuration used so far in this repo
+    # Ruff lint rules temporarily ignored, but which should be reactivated and resolved in the future.
     "E501", # Line length too long
     "D100", # Missing docstring in public module
     "D101", # Missing docstring in public class
@@ -56,6 +50,9 @@ ignore = [
     "TRY003",  # Avoid specifying long messages outside the exception class
     "PLR1711", # Useless `return` statement at end of function
     "G00",     # Logging statement uses string formatting ('G00' covers all rules flagging string formatting in logging, e.g. G001, G002, etc.)
+    "S311",    # Standard pseudo-random generators are not suitable for cryptographic purposes
+    "PLW0603", # Using the global statement to update {name} is discouraged
+    "PYI041",  # Use `float` instead of `int | float`
 
     # Ruff lint rules recommended to keep enabled,
     # but which are typical candidates you might have a need to ignore,
@@ -65,8 +62,8 @@ ignore = [
     # (uncomment to ignore)
     # "N803",   # Argument name should be lowercase (NOTE: ignore to allow capital arguments (e.g X) in scientific code)
     # "N806",   # Variable in function should be lowercase (NOTE: ignore to allow capital variables (e.g X) in scientific code)
-    # "TCH002", # Move third-party import into a type-checking block
-    # "TCH003", # Move standard library import into a type-checking block
+    # "TC002", # Move third-party import into a type-checking block
+    # "TC003", # Move standard library import into a type-checking block
 
     # Ruff lint rules known to be in conflict with Ruff formatter.
     # https://docs.astral.sh/ruff/formatter/#conflicting-lint-rules
@@ -97,8 +94,6 @@ allowed-confusables = [
 [lint.pep8-naming]
 ignore-names = [
     "test_*",
-    "setUp",
-    "tearDown",
 ]
 
 [lint.pylint]
@@ -117,8 +112,9 @@ raises-require-match-for = [
 [lint.per-file-ignores]
 # `__init__.py` specific ignores
 "__init__.py" = [
-    "F401", # {name} imported but unused (NOTE: ignored as imports in `__init__.py` files are almost never used inside the module, but are intended for namespaces)
-    "I001", # Import block is un-sorted or un-formatted
+    "F401",    # {name} imported but unused (NOTE: ignored as imports in `__init__.py` files are almost never used inside the module, but are intended for namespaces)
+    "I001",    # Import block is un-sorted or un-formatted
+    "PLC0414", # Import alias does not rename original package
 ]
 # `tests` specific ignores
 "tests/**/*" = [
@@ -129,6 +125,8 @@ raises-require-match-for = [
     "PLR2004", # Magic value used in comparison
     "ANN201",  # Missing return type annotation for public function
     "ANN202",  # Missing return type annotation for private function
+    "ARG001",  # Unused function argument: {name}
+    "ARG002",  # Unused method argument: {name}
     "INP001",  # File is part of an implicit namespace package. Add an `__init__.py`. (NOTE: tests are not intended to be a module, __init__.py hence not required.)
     "SLF001",  # Private member accessed
     "TRY004",  # Prefer `TypeError` exception for invalid type
@@ -165,6 +163,11 @@ raises-require-match-for = [
     "T201",    # `print` found
     "E402",    # Module level import not at top of cell
 ]
+# utils/logging specific ignores
+"**/utils/logging.py" = [
+    "A005", # Module `logging` shadows a Python standard-library module
+]
+
 
 [lint.pydocstyle]
 convention = "numpy"

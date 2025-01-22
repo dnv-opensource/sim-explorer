@@ -1,3 +1,23 @@
+.. image:: https://img.shields.io/pypi/v/sim-explorer.svg?color=blue
+   :target: https://pypi.org/project/sim-explorer
+   :alt: pypi
+
+.. image:: https://img.shields.io/pypi/pyversions/sim-explorer.svg?color=blue
+   :target: https://pypi.org/project/sim-explorer
+   :alt: versions
+
+.. image:: https://img.shields.io/pypi/l/sim-explorer.svg
+   :target: https://github.com/dnv-opensource/sim-explorer/blob/main/LICENSE
+   :alt: license
+
+.. image:: https://img.shields.io/github/actions/workflow/status/dnv-opensource/sim-explorer/.github%2Fworkflows%2Fnightly_build.yml?label=ci
+   :alt: ci
+
+.. image:: https://img.shields.io/github/actions/workflow/status/dnv-opensource/sim-explorer/.github%2Fworkflows%2Fpush_to_release.yml?label=docs
+   :target: https://dnv-opensource.github.io/sim-explorer/README.html
+   :alt: docs
+
+
 Introduction
 ============
 The package includes tools for experimentation on simulation models.
@@ -78,11 +98,22 @@ Clone the sim-explorer repository into your local development directory:
 
 ``git clone https://github.com/dnv-opensource/sim-explorer path/to/your/dev/sim-explorer``
 
+Change into the project directory after cloning:
+
+``cd sim-explorer``
+
 4. Install dependencies
 ^^^^^^^^^^^^^^^^^^^^^^^
 Run ``uv sync`` to create a virtual environment and install all project dependencies into it:
 
 ``uv sync``
+
+Note: Using ``--no-dev`` will omit installing development dependencies.
+
+Note: ``uv`` will create a new virtual environment called ``.venv`` in the project root directory when running
+``uv sync`` the first time. Optionally, you can create your own virtual environment using e.g. ``uv venv``, before running
+``uv sync``.
+
 
 5. (Optional) Activate the virtual environment
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -112,6 +143,18 @@ To install the pre-commit hooks defined therein in your local git repository, ru
 ``uv run pre-commit install``
 
 All pre-commit hooks configured in ``.pre-commit-config.yam`` will now run each time you commit changes.
+
+pre-commit can also manually be invoked, at anytime, using:
+
+``uv run pre-commit run --all-files``
+
+To skip the pre-commit validation on commits (e.g. when intentionally committing broken code), run:
+
+``uv run git commit -m <MSG> --no-verify``
+
+To update the hooks configured in `.pre-commit-config.yaml` to their newest versions, run:
+
+``uv run pre-commit autoupdate``
 
 7. Test that the installation works
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
