@@ -1,11 +1,16 @@
+"""
+Python module to manage cases
+with respect to reading *.cases files, running cases and storing results.
+"""
+
 from __future__ import annotations
 
 import copy
 import os
-from collections.abc import Callable
+from collections.abc import Callable, Iterable, Sequence
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable, Sequence
+from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -47,7 +52,7 @@ class Case:
 
     def __init__(
         self,
-        cases: "Cases",
+        cases: Cases,
         name: str,
         spec: dict,
         special: dict | None = None,
@@ -69,7 +74,7 @@ class Case:
 
         if self.name == "results":
             raise ValueError("'results' should not be used as case name. Add general results to 'base'")
-        elif self.name == "base":  # take over the results info and activities
+        if self.name == "base":  # take over the results info and activities
             assert special is not None, "startTime and stopTime settings needed for 'base'"
             self.special = special
             self.act_get: dict = {}
@@ -113,7 +118,7 @@ class Case:
         while len(h):
             yield h.pop()
 
-    def case_by_name(self, name: str) -> "Case" | None:
+    def case_by_name(self, name: str) -> Case | None:
         """Find the case 'name' within sub-hierarchy of this case. Return None if not found.
 
         Args:
@@ -124,13 +129,12 @@ class Case:
         for c in self.subs:
             if c.name == name:
                 return c
-            else:
-                found = c.case_by_name(name)
-                if found is not None:
-                    return found
+            found = c.case_by_name(name)
+            if found is not None:
+                return found
         return None
 
-    def append(self, case: "Case"):
+    def append(self, case: Case):
         """Append a case as sub-case to this case."""
         self.subs.append(case)
 
@@ -151,12 +155,11 @@ class Case:
     def _num_elements(obj) -> int:
         if obj is None:
             return 0
-        elif isinstance(obj, (tuple, list, np.ndarray)):
+        if isinstance(obj, (tuple, list, np.ndarray)):
             return len(obj)
-        elif isinstance(obj, str):
+        if isinstance(obj, str):
             return int(len(obj) > 0)
-        else:
-            return 1
+        return 1
 
     def _disect_at_time_tl(self, txt: str, value: Any | None = None) -> tuple[str, Temporal, tuple]:
         """Disect the @txt argument into 'at_time_type' and 'at_time_arg' for Temporal specification.
@@ -187,10 +190,9 @@ class Case:
                     else:
                         if at[i + 1 :].strip() == "":
                             return (typ, ())
-                        elif typ == Temporal.T:
+                        if typ == Temporal.T:
                             return (typ, (float(at[i + 1 :].strip()),))
-                        else:
-                            return (typ, (at[i + 1 :].strip(),))
+                        return (typ, (at[i + 1 :].strip(),))
                 raise ValueError(f"Unknown Temporal specification {at}") from None
 
         pre, _, at = txt.partition("@")
@@ -198,9 +200,8 @@ class Case:
         assert isinstance(value, list), f"Assertion spec expected: [expression, description]. Found {value}"
         if not len(at):  # no @time spec. Assume 'A'lways
             return (pre, Temporal.ALWAYS, ())
-        else:
-            typ, arg = time_spec(at)
-            return (pre, typ, arg)
+        typ, arg = time_spec(at)
+        return (pre, typ, arg)
 
     def _disect_at_time_spec(self, txt: str, value: Any | None = None) -> tuple[str, str, float]:
         """Disect the @txt argument into 'at_time_type' and 'at_time_arg'.
@@ -239,13 +240,12 @@ class Case:
         if not len(at):  # no @time spec
             if value is None:
                 return (pre, "get", self.special["stopTime"])  # report final value
-            else:
-                msg = f"Value required for 'set' in _disect_at_time('{txt}','{self.name}','{value}')"
-                assert Case._num_elements(value), msg
-                return (pre, "set", 0)  # set at startTime
-        else:  # time spec provided
-            typ, arg = time_spec(at)
-            return (pre, typ, arg)
+            msg = f"Value required for 'set' in _disect_at_time('{txt}','{self.name}','{value}')"
+            assert Case._num_elements(value), msg
+            return (pre, "set", 0)  # set at startTime
+        # time spec provided
+        typ, arg = time_spec(at)
+        return (pre, typ, arg)
 
     def read_assertion(self, key: str, expr_descr: list | None = None):
         """Read an assert statement, compile as sympy expression, register and store the key..
@@ -327,17 +327,17 @@ class Case:
             # print(f"CASE.read_spec, {key}@{at_time_arg}({at_time_type}):{value}[{rng}], alias={cvar_info}")
             if not self.cases.simulator.allowed_action(at_time_type, cvar_info["instances"][0], varnames, at_time_arg):
                 raise AssertionError(self.cases.simulator.message) from None
-            else:  # action allowed. Ask simulator to add actions appropriately
-                self.cases.simulator.add_actions(
-                    self.act_get if at_time_type in ("get", "step") else self.act_set,
-                    at_time_type,
-                    key,
-                    cvar_info,
-                    value,
-                    at_time_arg if at_time_arg <= 0 else at_time_arg * self.cases.timefac,
-                    self.special["stopTime"],
-                    tuple(rng),
-                )
+            # action allowed. Ask simulator to add actions appropriately
+            self.cases.simulator.add_actions(
+                self.act_get if at_time_type in ("get", "step") else self.act_set,
+                at_time_type,
+                key,
+                cvar_info,
+                value,
+                at_time_arg if at_time_arg <= 0 else at_time_arg * self.cases.timefac,
+                self.special["stopTime"],
+                tuple(rng),
+            )
 
     def list_cases(self, as_name: bool = True, flat: bool = False) -> list[str] | list[Case]:
         """List this case and all sub-cases recursively, as name or case objects."""
@@ -477,15 +477,15 @@ class Cases:
     """
 
     __slots__ = (
+        "assertion",
+        "base",
         "file",
         "js",
-        "spec",
+        "results_print_type",
         "simulator",
+        "spec",
         "timefac",
         "variables",
-        "base",
-        "assertion",
-        "results_print_type",
     )
     assertion_results: list[AssertionResult] = []
 
@@ -591,7 +591,7 @@ class Cases:
                         rng.append(i)
                 if len(rng) == len(variables):  # perfect match
                     return (var, ())
-                elif len(rng) > 0:
+                if len(rng) > 0:
                     return (var, tuple(rng))
         raise KeyError(f"Undefined case variable with component {component}, variables {variables}") from None
 
@@ -648,12 +648,11 @@ class Cases:
         """
         if name == "header":
             raise ValueError("The name 'header' is reserved and not allowed as case name") from None
-        elif name == "base":
+        if name == "base":
             return self.base
-        else:
-            found = self.base.case_by_name(name)
-            if found is not None:
-                return found
+        found = self.base.case_by_name(name)
+        if found is not None:
+            return found
         return None
 
     def disect_variable(self, key: str, err_level: int = 2) -> tuple[str, dict, Sequence]:
@@ -677,7 +676,7 @@ class Cases:
                     print(msg)
                 else:
                     raise AssertionError(msg) from err
-            return ("", None, range(0, 0))
+            return ("", None, range(0))
 
         pre, _, r = key.partition("[")
         try:
@@ -739,11 +738,10 @@ class Cases:
                             err_level,
                         )
                     rng = range(idx0, idx1)
-        else:  # no expicit range
-            if cvar_len == 1:  # scalar variable
-                rng = [0]
-            else:  # all elements
-                rng = range(cvar_len)
+        elif cvar_len == 1:  # scalar variable
+            rng = [0]
+        else:  # all elements
+            rng = range(cvar_len)
         return (pre, cvar_info, rng)
 
     def get_starts(self):
@@ -794,7 +792,7 @@ class Cases:
             self.assertion.do_assert_case(c.res)
 
         if not run_subs:
-            return None
+            return
 
         for _c in c.subs:
             self.run_case(_c, dump, run_subs, run_assertions)

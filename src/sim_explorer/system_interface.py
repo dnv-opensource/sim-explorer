@@ -1,6 +1,11 @@
+"""Python module providing the interface to the simulator.
+Currently only Open Simulation Platform (OSP) is supported.
+"""
+
+from collections.abc import Sequence
 from enum import Enum
 from pathlib import Path
-from typing import Any, Sequence, TypeAlias
+from typing import Any, TypeAlias
 
 import numpy as np
 
@@ -159,13 +164,12 @@ class SystemInterface:
         """Find the model name from the component name or index."""
         if isinstance(comp, str):
             return self.components[comp]
-        elif isinstance(comp, int):
+        if isinstance(comp, int):
             for i, mod in enumerate(self.components.values()):
                 if i == comp:
                     return mod
             return ""
-        else:
-            raise AssertionError(f"Unallowed argument {comp} in 'variables'")
+        raise AssertionError(f"Unallowed argument {comp} in 'variables'")
 
     def variables(self, comp: str | int) -> dict:
         """Get the registered variables for a given component from the system.
@@ -284,15 +288,13 @@ class SystemInterface:
 
         if val is None:
             return typ
-        elif typ is bool:
+        if typ is bool:
             if isinstance(val, str):
                 return "true" in val.lower()  # should be fmi2True and fmi2False
-            elif isinstance(val, int):
+            if isinstance(val, int):
                 return bool(val)
-            else:
-                raise KeyError(f"The value {val} could not be converted to boolean")
-        else:
-            return typ(val)
+            raise KeyError(f"The value {val} could not be converted to boolean")
+        return typ(val)
 
     @staticmethod
     def default_initial(causality: str, variability: str, only_default: bool = True) -> str | int | tuple:
@@ -313,14 +315,13 @@ class SystemInterface:
         )[row][col]
         if init < 0:  # "Unallowed combination {variability}, {causality}. See '{chr(96-init)}' in FMI standard"
             return init if only_default else (init,)
-        elif init in (1, 2, 7, 10):
+        if init in (1, 2, 7, 10):
             return "exact" if only_default else ("exact",)
-        elif init in (3, 4, 11, 12):
+        if init in (3, 4, 11, 12):
             return "calculated" if only_default else ("calculated", "approx")
-        elif init in (8, 9, 13, 14):
+        if init in (8, 9, 13, 14):
             return "calculated" if only_default else ("calculated", "exact", "approx")
-        else:
-            return init if only_default else (init,)
+        return init if only_default else (init,)
 
     def allowed_action(self, action: str, comp: int | str, var: int | str | Sequence, time: float):
         """Check whether the action would be allowed according to FMI2 rules, see FMI2.01, p.49.
@@ -365,27 +366,26 @@ class SystemInterface:
                     pass
                 elif action == "set":
                     if (
-                        time < 0  # before EnterInitializationMode
-                        and not _check(
-                            (_variability != "constant" and _initial in ("exact", "approx")),
-                            f"Change of {name} before EnterInitialization",
+                        (
+                            time < 0  # before EnterInitializationMode
+                            and not _check(
+                                (_variability != "constant" and _initial in ("exact", "approx")),
+                                f"Change of {name} before EnterInitialization",
+                            )
                         )
-                    ):
-                        return False
-
-                    elif (
-                        time == 0  # before ExitInitializationMode
-                        and not _check(
-                            (_variability != "constant" and (_initial == "exact" or _causality == "input")),
-                            f"Change of {name} during Initialization",
+                        or (
+                            time == 0  # before ExitInitializationMode
+                            and not _check(
+                                (_variability != "constant" and (_initial == "exact" or _causality == "input")),
+                                f"Change of {name} during Initialization",
+                            )
                         )
-                    ):
-                        return False
-                    elif (
-                        time > 0  # at communication points
-                        and not _check(
-                            (_causality == "parameter" and _variability == "tunable") or _causality == "input",
-                            f"Change of {name} at communication point",
+                        or (
+                            time > 0  # at communication points
+                            and not _check(
+                                (_causality == "parameter" and _variability == "tunable") or _causality == "input",
+                                f"Change of {name} at communication point",
+                            )
                         )
                     ):
                         return False
@@ -420,7 +420,7 @@ class SystemInterface:
         for i, v in enumerate(allvals):
             if v is not None:
                 _refs.append(allrefs[i])
-                _vals.append(allvals[i])
+                _vals.append(v)
         return (tuple(_refs), tuple(_vals))
 
     def comp_model_var(self, cref: int, vref: int | tuple[int]):
@@ -554,7 +554,7 @@ class SystemInterface:
         so that it can be called at communication points.
         """
         raise NotImplementedError("The method 'action_step()' cannot be used in SystemInterface") from None
-        return None
+        return
 
     def init_simulator(self):
         """Instantiate and initialize the simulator, so that simulations can be run.

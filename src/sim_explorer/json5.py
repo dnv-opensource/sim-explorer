@@ -1,3 +1,5 @@
+"""Python module for working with json5 files."""
+
 from __future__ import annotations
 
 # from jsonpath_ng.ext.filter import Expression#, Filter
@@ -13,8 +15,6 @@ from jsonpath_ng.jsonpath import DatumInContext  # type: ignore
 class Json5Error(Exception):
     """Special error indicating that something was not conformant to json5 code."""
 
-    pass
-
 
 class Json5:
     """Work with json5 files (e.g. cases specification and results).
@@ -29,8 +29,8 @@ class Json5:
         auto (bool)=True: Determine whether running to_py automatically
         comments_eol (tuple)= ('//', '#') : tuple of end-of-line comment strings which shall be recognised
         comments_ml (tuple)= ('/*', "'''") : tuple of multi-line comment strings which shall be recognised.
-          End of comment is always the reversed of the start of comment.
-          Double-quote ml comments are also supported per default
+            End of comment is always the reversed of the start of comment.
+            Double-quote ml comments are also supported per default
     """
 
     __slots__ = (
@@ -67,7 +67,7 @@ class Json5:
                     path = Path(js5)
                 elif Path(Path(js5).name).exists():
                     path = Path(Path(js5).name)
-                with open(path, "r") as file:  # read file into string
+                with open(path) as file:  # read file into string
                     self.js5 = file.read()
             except Exception:
                 pass
@@ -167,12 +167,11 @@ class Json5:
         L = len(self.lines)
         if num == -1 or num == L - 1:
             return self.js5[self.lines[-1] :].strip()
-        elif -L + 1 < num < -1:
+        if -L + 1 < num < -1:
             return self.js5[L + num : L + num + 1]
-        elif len(self.lines) > num - 1:
+        if len(self.lines) > num - 1:
             return self.js5[self.lines[num] : self.lines[num + 1]].strip()
-        else:
-            return ""
+        return ""
 
     def _comments(self, js5: str = "") -> tuple[str, dict[int, str]]:
         """Take the raw json5 text 'js5' (default: self.js5) as input and replace comments with whitespace.
@@ -202,7 +201,7 @@ class Json5:
                 if s is None:
                     _js5 += js5[pos:]
                     break
-                elif (sq is None or s.start() < sq.start() or s.start() > sq.end()) and (
+                if (sq is None or s.start() < sq.start() or s.start() > sq.end()) and (
                     sq2 is None or s.start() < sq2.start() or s.start() > sq2.end()
                 ):
                     # no quote or comments starts before or after quote. Handle comment
@@ -284,8 +283,7 @@ class Json5:
             txt = txt.strip()
             if len(txt) == len0:
                 return txt
-            else:
-                len0 = len(txt)
+            len0 = len(txt)
 
     def _object(self) -> dict[str, Any]:
         """Start reading a json5 object { ... } at current position."""
@@ -302,15 +300,14 @@ class Json5:
                 self.pos += 1
                 assert dct is not None, f"Cannot extract js5 object from {self.js5}"
                 return dct
+            assert k != "" and v != "", self._msg(f"No proper key:value: {k}:{v} within object.")
+            assert dct is None or k not in dct, self._msg(
+                f"Duplicate key '{k}' within object starting at line {r0}({c0}). Not allowed."
+            )
+            if dct is None:
+                dct = {k: v}
             else:
-                assert k != "" and v != "", self._msg(f"No proper key:value: {k}:{v} within object.")
-                assert dct is None or k not in dct, self._msg(
-                    f"Duplicate key '{k}' within object starting at line {r0}({c0}). Not allowed."
-                )
-                if dct is None:
-                    dct = {k: v}
-                else:
-                    dct.update({k: v})
+                dct.update({k: v})
 
     def _list(self) -> list:
         """Read and return a list object at the current position."""
@@ -370,8 +367,7 @@ class Json5:
             assert m is not None, self._msg("key expected")
             if m.group() == "}":  # end of object, e.g. due to trailing ','
                 return ""
-            else:
-                k = self.js5[self.pos : self.pos + m.start()]
+            k = self.js5[self.pos : self.pos + m.start()]
         self.pos += m.end()
         return str(self._strip(k))
 
@@ -418,7 +414,7 @@ class Json5:
         # print(f"VALUE {v} @ {self.pos}:'{self.js5[self.pos:self.pos+50]}'")
         if isinstance(v, (dict, list)):
             return v
-        elif isinstance(v, str) and not len(v):  # might be empty due to trailing ','
+        if isinstance(v, str) and not len(v):  # might be empty due to trailing ','
             return ""
 
         if q2 >= 0:  # explicitly quoted values are treated as strings!
@@ -439,8 +435,7 @@ class Json5:
                     if v.upper() == "-INFINITY":
                         return float("-inf")
                     return str(v)
-                else:
-                    raise Json5Error(f"This should not happen. v:{v}") from None
+                raise Json5Error(f"This should not happen. v:{v}") from None
 
     def jspath(self, path: str, typ: type | None = None, errorMsg: bool = False):
         """Evaluate a JsonPath expression on the Json5 code and return the result.
@@ -477,9 +472,8 @@ class Json5:
             msg = f"No match for {path}"
         elif len(data) == 1:  # found a single element
             val = data[0].value
-        else:  # multiple elements
-            if isinstance(data[0], DatumInContext):
-                val = [x.value for x in data]
+        elif isinstance(data[0], DatumInContext):
+            val = [x.value for x in data]
 
         if val is not None and typ is not None:  # check also the type
             if not isinstance(val, typ):
@@ -524,10 +518,9 @@ class Json5:
             for itm in lst:
                 if isinstance(itm, dict):
                     return Json5.check_valid_js(itm, print_msg=False)
-                elif isinstance(itm, list):
+                if isinstance(itm, list):
                     return check_valid_js_list(itm)
-                else:  # accept as Json atom
-                    pass
+                # accept as Json atom
             return True
 
         if not isinstance(js_py, dict):
@@ -565,9 +558,8 @@ class Json5:
                 for j in range(len(keys) - 1, i - 1, -1):
                     data = {keys[j]: data}
                 break
-            else:
-                parent = path
-                path = path[k]  # type: ignore [assignment]
+            parent = path
+            path = path[k]  # type: ignore [assignment]
         # print(f"UPDATE path:{path}, parent:{parent}, k:{k}: {data}")
         if isinstance(path, list):
             path.append(data)
