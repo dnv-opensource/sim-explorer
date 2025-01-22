@@ -1,0 +1,27 @@
+title: sim-explorer
+version: 0.2.0
+abstract: >-
+  Experimentation tools on top of OSP simulation models.
+type: software
+authors:
+  - name: DNV AS
+    address: 'Veritasveien 1'
+    post-code: '1363'
+    city: Høvik
+    country: NO
+    website: 'https://www.dnv.com/'
+  - given-names: Siegfried
+    family-names: Eisinger
+    affiliation: DNV
+    email: Siegfried.Eisinger@dnv.com
+keywords:
+  - simulation
+  - model
+  - FMI
+  - OSP
+license: MIT
+license-url: 'https://dnv-opensource.github.io/sim-explorer/LICENSE.html'
+url: 'https://dnv-opensource.github.io/sim-explorer/README.html'
+repository-code: 'https://github.com/dnv-opensource/sim-explorer'
+message: 'Please cite this software using these metadata.'
+cff-version: 1.2.0
