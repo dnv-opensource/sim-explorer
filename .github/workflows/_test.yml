@@ -16,22 +16,21 @@ jobs:
           - version: '3.10'
           - version: '3.11'
           - version: '3.12'
+          - version: '3.13'
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
-          enable-cache: true
+          enable-cache: false
           cache-dependency-glob: "uv.lock"
       - name: Install Python ${{ matrix.python.version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python.version }}
       - name: Install the project
-        run: uv sync --upgrade -p ${{ matrix.python.version }} --no-dev
-      - name: Install pytest
-        run: |
-          uv pip install pytest
-          uv pip install pytest-cov
+        run: uv sync -p ${{ matrix.python.version }} -U --no-dev
       - name: Run pytest
-        run: uv run pytest --cov
+        run: >
+          uv run --with pytest --with pytest-cov
+          pytest --cov
