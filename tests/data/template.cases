@@ -4,7 +4,7 @@
    modelFile : "OspSystemStructure.xml", # this will often be ok
    simulator : "OSP"
    logLevel : 'fatal', # possible levels: trace, debug, info, warning, error, fatal
-   timeUnit  : "second", # possible units: ns, us, ms, sec, min, h, d, or extensions of that, like 'second'  
+   timeUnit  : "second", # possible units: ns, us, ms, sec, min, h, d, or extensions of that, like 'second'
    variables : {
       <variable-key> : [<model-name>, <variab-name>, <optional-description>],
       # ...
