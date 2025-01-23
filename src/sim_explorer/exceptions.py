@@ -6,10 +6,8 @@ from __future__ import annotations
 class CaseInitError(Exception):
     """Special error indicating that something is wrong during initialization of cases."""
 
-    pass
 
 
 class CaseUseError(Exception):
     """Special error indicating that something is wrong during usage of cases."""
 
-    pass

@@ -1,4 +1,4 @@
-import xml.etree.ElementTree as ET  # noqa: N817
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Any
 
@@ -115,17 +115,17 @@ def do_case_at_time(txt, casename, value, expected, simpletable):
 def test_case_range(simpletable):
     x_inf = simpletable.variables["x"]
     # print("RNG", simpletable.case_by_name("results").cases.disect_variable("x"))
-    do_case_range("x", "base", ("x", x_inf, range(0, 3)), simpletable)
+    do_case_range("x", "base", ("x", x_inf, range(3)), simpletable)
     do_case_range("x[2]", "base", ("x", x_inf, [2]), simpletable)
     do_case_range("x[2]", "caseX", ("x", x_inf, [2]), simpletable)
     do_case_range("x[1..2]", "base", ("x", x_inf, range(1, 2)), simpletable)
     do_case_range("x[0,1,2]", "base", ("x", x_inf, [0, 1, 2]), simpletable)
-    do_case_range("x[0...2]", "caseX", ("x", x_inf, range(0, 2)), simpletable)
-    do_case_range("x", "caseX", ("x", x_inf, range(0, 3)), simpletable)  # assume all values
+    do_case_range("x[0...2]", "caseX", ("x", x_inf, range(2)), simpletable)
+    do_case_range("x", "caseX", ("x", x_inf, range(3)), simpletable)  # assume all values
     do_case_range("x[3]", "caseX", "Index 3 of variable x out of range", simpletable)
     do_case_range("x[1,2,4]", "caseX", "Index 4 of variable x out of range", simpletable)
     do_case_range("x[1.3]", "caseX", "Unhandled index", simpletable)
-    assert simpletable.case_by_name("caseX").cases.disect_variable("x[99]", err_level=0) == ("", None, range(0, 0))
+    assert simpletable.case_by_name("caseX").cases.disect_variable("x[99]", err_level=0) == ("", None, range(0))
     assert simpletable.case_by_name("caseX").cases.disect_variable("x[1]")[2] == [1]
     assert simpletable.case_by_name("caseX").cases.disect_variable("i")[1]["instances"] == ("tab",)
 
@@ -137,7 +137,7 @@ def do_case_range(txt: str, casename: str, expected: tuple | str, simpletable):
         with pytest.raises(Exception) as err:
             case.cases.disect_variable(txt)
         # print(f"ERROR:{err.value}")
-        assert str(err.value).startswith(expected), f"{str(err.value)} does not start with {expected}"
+        assert str(err.value).startswith(expected), f"{err.value!s} does not start with {expected}"
     else:
         assert case.cases.disect_variable(txt) == expected, f"Found {case.cases.disect_variable(txt)}"
 

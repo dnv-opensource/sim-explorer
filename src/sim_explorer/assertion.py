@@ -1,5 +1,6 @@
 import ast
-from typing import Any, Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
+from typing import Any
 
 import numpy as np
 
@@ -58,20 +59,18 @@ class Assertion:
                     instance = parts[0] + "".join("_" + x for x in parts[1:])
                     assert instance in self._cases_variables[var]["instances"], f"No instance {instance} of {var}"
                 break
-            else:
-                if not len(parts):
-                    raise KeyError(f"The symbol {sym} does not seem to represent a registered variable") from None
-                var = parts.pop() + "_" + var
+            if not len(parts):
+                raise KeyError(f"The symbol {sym} does not seem to represent a registered variable") from None
+            var = parts.pop() + "_" + var
         if typ == "instance":  # get the instance
             return instance
-        elif typ == "variable":  # get the generic variable name
+        if typ == "variable":  # get the generic variable name
             return var
-        elif typ == "length":  # get the number of elements
+        if typ == "length":  # get the number of elements
             return len(self._cases_variables[var]["refs"])
-        elif typ == "model":  # get the basic (FMU) model
+        if typ == "model":  # get the basic (FMU) model
             return self._cases_variables[var]["model"]
-        else:
-            raise KeyError(f"Unknown typ {typ} within info()") from None
+        raise KeyError(f"Unknown typ {typ} within info()") from None
 
     def symbol(self, name: str, length: int = 1):
         """Get or set a symbol.
@@ -271,12 +270,12 @@ class Assertion:
                 if isinstance(v, Iterable):
                     kvargs[k] = np.array(v, float)
             return func(**kvargs)
-        elif isinstance(kvargs, list):
+        if isinstance(kvargs, list):
             for i, v in enumerate(kvargs):
                 if isinstance(v, Iterable):
                     kvargs[i] = np.array(v, dtype=float)
             return func(*kvargs)
-        elif isinstance(kvargs, tuple):
+        if isinstance(kvargs, tuple):
             _args = []  # make new, because tuple is not mutable
             for v in kvargs:
                 if isinstance(v, Iterable):
@@ -355,7 +354,7 @@ class Assertion:
                 if v:
                     return (t, True)
             return (times[-1], False)
-        elif (ret is None and _temp == Temporal.F) or (isinstance(ret, str) and ret == "F"):  # finally True
+        if (ret is None and _temp == Temporal.F) or (isinstance(ret, str) and ret == "F"):  # finally True
             t_true = times[-1]
             for t, v in zip(times, results, strict=False):
                 if v and t_true > t:
@@ -363,9 +362,9 @@ class Assertion:
                 elif not v and t_true < t:  # detected False after expression became True
                     t_true = times[-1]
             return (t_true, t_true < times[-1])
-        elif isinstance(ret, str) and ret == "bool-list":
+        if isinstance(ret, str) and ret == "bool-list":
             return (times, results)
-        elif (ret is None and _temp == Temporal.T) or (isinstance(ret, float)):
+        if (ret is None and _temp == Temporal.T) or (isinstance(ret, float)):
             if isinstance(ret, float):
                 t0 = ret
             else:
@@ -377,10 +376,9 @@ class Assertion:
             # else:
             interpolated = np.interp(t0, times, results)
             return (t0, bool(interpolated) if all(isinstance(res, bool) for res in results) else interpolated)
-        elif callable(ret):
+        if callable(ret):
             return (times, ret(results))
-        else:
-            raise ValueError(f"Unknown return type '{ret}'") from None
+        raise ValueError(f"Unknown return type '{ret}'") from None
 
     def do_assert(self, key: str, result: Any, case_name: str | None = None):
         """Perform assert action 'key' on data of 'result' object."""

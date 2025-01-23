@@ -70,20 +70,20 @@ class SystemInterfaceOSP(SystemInterface):
                 str: self.simulator.string_initial_value,
                 bool: self.simulator.boolean_initial_value,
             }[var_type]
-        elif act_type == 1:  # other set actions
+        if act_type == 1:  # other set actions
             return {
                 float: self.manipulator.slave_real_values,
                 int: self.manipulator.slave_integer_values,
                 bool: self.manipulator.slave_boolean_values,
                 str: self.manipulator.slave_string_values,
             }[var_type]
-        else:  # get actions
-            return {
-                float: self.observer.last_real_values,
-                int: self.observer.last_integer_values,
-                bool: self.observer.last_boolean_values,
-                str: self.observer.last_string_values,
-            }[var_type]
+        # get actions
+        return {
+            float: self.observer.last_real_values,
+            int: self.observer.last_integer_values,
+            bool: self.observer.last_boolean_values,
+            str: self.observer.last_string_values,
+        }[var_type]
 
     def do_action(self, time: int | float, act_info: tuple, typ: type):
         """Do the action described by the tuple using OSP functions."""
@@ -97,13 +97,12 @@ class SystemInterfaceOSP(SystemInterface):
                         return False
                 return True
 
-            else:
-                return self._action_func(1, typ)(_comp, refs, values)
-        else:  # get action
-            cvar, comp, refs = act_info
-            _comp = self.component_id_from_name(comp)
-            assert time >= 0, "Get actions for all communication points shall be pre-compiled"
-            return self._action_func(2, typ)(_comp, refs)
+            return self._action_func(1, typ)(_comp, refs, values)
+        # get action
+        cvar, comp, refs = act_info
+        _comp = self.component_id_from_name(comp)
+        assert time >= 0, "Get actions for all communication points shall be pre-compiled"
+        return self._action_func(2, typ)(_comp, refs)
 
     def action_step(self, act_info: tuple, typ: type):
         """Pre-compile the step action and return the partial function

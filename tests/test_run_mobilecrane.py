@@ -27,15 +27,13 @@ def is_nearly_equal(x: float | list, expected: float | list, eps: float = 1e-10)
         assert isinstance(expected, float), f"Argument `expected` is not a float. Found: {expected}"
         if abs(x - expected) < eps:
             return True
-        else:
-            raise AssertionError(f"{x} is not nealry equal to {expected}") from None
-    else:
-        assert isinstance(expected, list), f"Argument `expected` is not a list. Found: {expected}"
-        for i, y in enumerate(x):
-            if not abs(y - expected[i]) < eps:
-                raise AssertionError(f"{x}[{i}] is not as expected: {expected}")
-                return False
-        return True
+        raise AssertionError(f"{x} is not nealry equal to {expected}") from None
+    assert isinstance(expected, list), f"Argument `expected` is not a list. Found: {expected}"
+    for i, y in enumerate(x):
+        if not abs(y - expected[i]) < eps:
+            raise AssertionError(f"{x}[{i}] is not as expected: {expected}")
+            return False
+    return True
 
 
 # @pytest.mark.skip("Basic reading of js5 cases  definition")
@@ -108,7 +106,7 @@ def test_step_by_step_cosim(mobile_crane_fmu):
             raise AssertionError(f"Error state at time {status.current_time}") from None
         if step_count > 10:
             break
-        elif step_count == 9:
+        if step_count == 9:
             manipulator.slave_real_values(slave, [34], [0.1])
         # sim.step()  #
         sim.simulate_until(step_count * 1e9)
@@ -254,7 +252,7 @@ def test_step_by_step_cases(mobile_crane_fmu):
             raise AssertionError(f"Error state at time {status.current_time}") from None
         if step_count > 10:
             break
-        elif step_count == 8:
+        if step_count == 8:
             manipulator.slave_real_values(slave, [i_bav], [0.1])
         print(f"Step {step_count}, time {status.current_time}, state: {status.state}")
         cosim.step()
@@ -304,7 +302,7 @@ def test_run_cases():
     assert case is not None
     case.run(dump="results_base")
     res = case.res.res
-    # ToDo: expected Torque?
+    # TODO: expected Torque?
     assert is_nearly_equal(res.jspath("$['1.0'].mobileCrane.x_pedestal"), [0.0, 0.0, 3.0])
     # assert is_nearly_equal(res[1.0]["mobileCrane"]["x_boom"], [8, 0.0, 3], 1e-5)
     # assert is_nearly_equal(res[1.0]["mobileCrane"]["x_load"], [8, 0, 3.0 - 1e-6], 1e-5)

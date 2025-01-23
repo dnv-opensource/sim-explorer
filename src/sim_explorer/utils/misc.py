@@ -1,5 +1,5 @@
 import re
-import xml.etree.ElementTree as ET  # noqa: N817
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from zipfile import BadZipFile, ZipFile, is_zipfile
 
@@ -14,9 +14,9 @@ def match_with_wildcard(findtxt: str, matchtxt: str) -> bool:
     """
     if "*" not in findtxt:  # no wildcard characters
         return matchtxt == findtxt
-    else:  # there are wildcards
-        m = re.search(findtxt.replace("*", ".*"), matchtxt)
-        return m is not None
+    # there are wildcards
+    m = re.search(findtxt.replace("*", ".*"), matchtxt)
+    return m is not None
 
 
 def from_xml(file: Path, sub: str | None = None) -> ET.Element:

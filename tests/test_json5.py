@@ -97,9 +97,9 @@ def test_jpath(ex):
     assert len(found) == 2, f"The first two books: {found}"
     # found = ex.jspath( '$..book[0,1]', list) #!! does not seem to work, but [:2] works
     # assert len(found)==2, f"The first two books: {found}"
-    assert 2 == len(ex.jspath("$..book[?@.isbn]", list)), "All books with an ISBN number"
-    assert 2 == len(ex.jspath("$..book[?@.price<10]", None)), "All books cheaper than 10"
-    assert 23 == len(ex.jspath("$..*", list)), "All member values and array elements contained in the input value"
+    assert len(ex.jspath("$..book[?@.isbn]", list)) == 2, "All books with an ISBN number"
+    assert len(ex.jspath("$..book[?@.price<10]", None)) == 2, "All books cheaper than 10"
+    assert len(ex.jspath("$..*", list)) == 23, "All member values and array elements contained in the input value"
     # working with expected match and expected type, raising an error message, or not
     assert ex.jspath("$..book[2].authors", typ=str, errorMsg=False) is None, "Fail silently"
     with pytest.raises(ValueError) as err:

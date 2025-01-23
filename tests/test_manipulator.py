@@ -84,7 +84,7 @@ def test_from_override_set():
     assert observer.last_integer_values(slave_index=slave_index, variable_references=variable_references) == [0]
     assert observer.last_boolean_values(slave_index=slave_index, variable_references=variable_references) == [False]
     assert observer.last_string_values(slave_index=slave_index, variable_references=variable_references) == [
-        "".encode()
+        b""
     ]
     assert manipulator.slave_real_values(
         slave_index=slave_index, variable_references=variable_references, values=[99.9]
