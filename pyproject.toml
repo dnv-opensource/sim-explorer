@@ -177,7 +177,7 @@ reportUntypedFunctionDecorator = "warning"
 reportUntypedClassDecorator = "warning"
 reportUntypedBaseClass = false                 # TODO @EisDNV: Consider to resolve and set back to "error". ClaasRostock, 2025-01-24
 reportUntypedNamedTuple = "warning"
-reportUnnecessaryTypeIgnoreComment = "information"
+reportUnnecessaryTypeIgnoreComment = false     # TODO @EisDNV: Consider to set back to "information" once all other pyright and mypy issues have been resolved. ClaasRostock, 2025-01-24
 # Activate the following rules only locally and temporary, i.e. for a QA session.
 # (For server side CI they are considered too strict.)
 # reportMissingTypeStubs = true
