@@ -130,6 +130,8 @@ raises-require-match-for = [
     "INP001",  # File is part of an implicit namespace package. Add an `__init__.py`. (NOTE: tests are not intended to be a module, __init__.py hence not required.)
     "SLF001",  # Private member accessed
     "TRY004",  # Prefer `TypeError` exception for invalid type
+    "T201",    # `print` found
+    "FBT001",  # Boolean-typed positional argument in function definition
 ]
 # `stubs` specific ignores
 "stubs/**/*" = [
@@ -166,6 +168,10 @@ raises-require-match-for = [
 # utils/logging specific ignores
 "**/utils/logging.py" = [
     "A005", # Module `logging` shadows a Python standard-library module
+]
+# utils/types specific ignores
+"**/utils/types.py" = [
+    "A005", # Module `types` shadows a Python standard-library module
 ]
 
 
