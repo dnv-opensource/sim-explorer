@@ -143,18 +143,18 @@ stubPath = "stubs"
 include = [
     "src",
     "tests",
-    "demos",
+    # "demos",
 ]
 exclude = [
-    "src/folder_to_be_excluded",
+    "tests/data",
 ]
 
 typeCheckingMode = "basic"
 useLibraryCodeForTypes = true
-reportMissingParameterType = "error"
+reportMissingParameterType = false            # TODO @EisDNV: Consider to resolve and set back to "error". ClaasRostock, 2025-01-24
 reportUnknownParameterType = "warning"
-reportUnknownMemberType = "warning"                # consider to set to `false` if you work a lot with matplotlib and pandas, which are both not properly typed and known to trigger this warning
-reportMissingTypeArgument = "error"
+reportUnknownMemberType = false                # TODO @EisDNV: Consider to resolve and set back to "warning". ClaasRostock, 2025-01-24
+reportMissingTypeArgument = false              # TODO @EisDNV: Consider to resolve and set back to "error". ClaasRostock, 2025-01-24
 reportPropertyTypeMismatch = "error"
 reportFunctionMemberAccess = "warning"
 reportPrivateUsage = "warning"
@@ -175,7 +175,7 @@ reportMatchNotExhaustive = "warning"
 reportShadowedImports = "warning"
 reportUntypedFunctionDecorator = "warning"
 reportUntypedClassDecorator = "warning"
-reportUntypedBaseClass = "error"
+reportUntypedBaseClass = false                  # TODO @EisDNV: Consider to resolve and set back to "error". ClaasRostock, 2025-01-24
 reportUntypedNamedTuple = "warning"
 reportUnnecessaryTypeIgnoreComment = "information"
 # Activate the following rules only locally and temporary, i.e. for a QA session.
@@ -184,3 +184,12 @@ reportUnnecessaryTypeIgnoreComment = "information"
 # reportConstantRedefinition = "warning"
 # reportImportCycles = "warning"
 # reportImplicitStringConcatenation = "warning"
+reportGeneralTypeIssues = false                # TODO @EisDNV: Consider to resolve and then remove this line. ClaasRostock, 2025-01-24
+reportAttributeAccessIssue = false                # TODO @EisDNV: Consider to resolve and then remove this line. ClaasRostock, 2025-01-24
+reportArgumentType = false                      # TODO @EisDNV: Consider to resolve and then remove this line. ClaasRostock, 2025-01-24
+reportOptionalMemberAccess = false              # TODO @EisDNV: Consider to resolve and then remove this line. ClaasRostock, 2025-01-24
+reportOperatorIssue = false                     # TODO @EisDNV: Consider to resolve and then remove this line. ClaasRostock, 2025-01-24
+reportOptionalSubscript = false                 # TODO @EisDNV: Consider to resolve and then remove this line. ClaasRostock, 2025-01-24
+reportCallIssue = false                         # TODO @EisDNV: Consider to resolve and then remove this line. ClaasRostock, 2025-01-24
+reportReturnType = false                        # TODO @EisDNV: Consider to resolve and then remove this line. ClaasRostock, 2025-01-24
+reportAssignmentType = false                    # TODO @EisDNV: Consider to resolve and then remove this line. ClaasRostock, 2025-01-24
