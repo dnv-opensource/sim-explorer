@@ -1,6 +1,7 @@
+from collections.abc import Callable
 from functools import partial
 from pathlib import Path
-from typing import TypeAlias
+from typing import Any
 
 from libcosimpy.CosimExecution import CosimExecution
 from libcosimpy.CosimLogging import CosimLogLevel, log_output_level  # type: ignore
@@ -8,8 +9,6 @@ from libcosimpy.CosimManipulator import CosimManipulator  # type: ignore
 from libcosimpy.CosimObserver import CosimObserver  # type: ignore
 
 from sim_explorer.system_interface import SystemInterface
-
-PyVal: TypeAlias = str | float | int | bool  # simple python types / Json5 atom
 
 
 class SystemInterfaceOSP(SystemInterface):
@@ -85,7 +84,7 @@ class SystemInterfaceOSP(SystemInterface):
             str: self.observer.last_string_values,
         }[var_type]
 
-    def do_action(self, time: int | float, act_info: tuple, typ: type):
+    def do_action(self, time: int | float, act_info: tuple[Any, ...], typ: type) -> bool:
         """Do the action described by the tuple using OSP functions."""
         if len(act_info) == 4:  # set action
             cvar, comp, refs, values = act_info
@@ -104,14 +103,14 @@ class SystemInterfaceOSP(SystemInterface):
         assert time >= 0, "Get actions for all communication points shall be pre-compiled"
         return self._action_func(2, typ)(_comp, refs)
 
-    def action_step(self, act_info: tuple, typ: type):
+    def action_step(self, act_info: tuple[Any, ...], typ: type) -> Callable[..., Any]:
         """Pre-compile the step action and return the partial function
         so that it can be called at communication points.
         """
-        assert len(act_info) == 3, f"Exactly 3 arguments exected. Found {act_info}"
+        assert len(act_info) == 3, f"Exactly 3 arguments expected. Found {act_info}"  # noqa: PLR2004
         cvar, comp, refs = act_info
         _comp = self.component_id_from_name(comp)
-        return partial(self._action_func(2, typ), _comp, refs)
+        return partial(self._action_func(act_type=2, var_type=typ), _comp, refs)
 
     def run_until(self, time: int | float):
         """Instruct the simulator to simulate until the given time."""

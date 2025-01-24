@@ -2,18 +2,20 @@
 Currently only Open Simulation Platform (OSP) is supported.
 """
 
-from collections.abc import Sequence
+from collections.abc import Callable, Generator, Sequence
 from enum import Enum
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
 from sim_explorer.json5 import Json5
 from sim_explorer.utils.misc import from_xml, match_with_wildcard
 from sim_explorer.utils.osp import read_system_structure_xml
+from sim_explorer.utils.types import TValue
 
-PyVal: TypeAlias = str | float | int | bool  # simple python types / Json5 atom
+if TYPE_CHECKING:
+    from xml.etree.ElementTree import Element
 
 
 class SystemInterface:
@@ -52,36 +54,37 @@ class SystemInterface:
         name: str | None = None,
         description: str = "",
         log_level: str = "fatal",
-        **kwargs,
+        **kwargs: Any,  # noqa: ANN401
     ):
         self.structure_file = Path(structure_file)
         self.name = name  # overwrite if the system includes that
         self.description = description  # overwrite if the system includes that
         self.system_structure = SystemInterface.read_system_structure(self.structure_file)
         self._models, self.components = self._get_models_components()
-        # self.simulator=None # derived classes override this to instantiate the system simulator
+        # self.simulator=None # derived classes override this to instantiate the system simulator  # noqa: ERA001
         self.message = ""  # possibility to save additional message for (optional) retrieval by client
         self.log_level = log_level
-        if "full_simulator_available" in kwargs:
-            self.full_simulator_available = kwargs["full_simulator_available"]
-        else:
-            self.full_simulator_available = False  # only system and components specification available. No simulation!
+        self.full_simulator_available = kwargs.get("full_simulator_available", False)
         if not self.full_simulator_available:  # we need a minimal version of variable info (no full ModelDescription)
             for m, info in self._models.items():
                 self._models[m].update({"variables": self._get_variables(info["source"])})
 
     @property
-    def path(self):
+    def path(self) -> Path:
         return self.structure_file.resolve().parent
 
     @staticmethod
-    def read_system_structure(file: Path, fmus_exist: bool = True):
+    def read_system_structure(
+        file: Path,
+        fmus_exist: bool = True,
+    ) -> dict[str, Any]:
         """Read the systemStructure file and perform checks.
 
         Returns
         -------
             The system structure as (json) dict as if the structure was read through osp_system_structure_from_js5
         """
+        system_structure: dict[str, Any] | Json5
         assert file.exists(), f"System structure {file} not found"
         if file.suffix == ".xml":  # assume the standard OspSystemStructure.xml file
             system_structure = read_system_structure_xml(file)
@@ -97,37 +100,40 @@ class SystemInterface:
             assert not fmus_exist or comp["source"].exists(), f"FMU {comp['source']} not found"
         return system_structure
 
-    def _get_models_components(self) -> tuple[dict, dict]:
+    def _get_models_components(self) -> tuple[dict[str, dict[str, Any]], dict[str, tuple[str, str]]]:
         """Get a dict of the models and a dict of components in the system:
         {model-name : {'source':<source>, 'components':[component-list], 'variables':{variables-dict}
         {component-name : {'model':'model-name, }, ...}.
         """
-        mods = {}
-        components = {}
+        mods: dict[str, dict[str, Any]] = {}
+        components: dict[str, tuple[str, str]] = {}
         for k, v in self.system_structure["Simulators"].items():
             source = v["source"]
             model = source.stem
             if model not in mods:
-                mods.update({model: {"source": source, "components": [k]}})
+                mods[model] = {
+                    "source": source,
+                    "components": [k],
+                }
             else:
                 mods[model]["components"].append(k)
             assert k not in components, f"Duplicate component name {k} related to model {model} encountered"
-            components.update({k: model})
+            components[k] = model
         return (mods, components)
 
     @property
-    def models(self) -> dict:
+    def models(self) -> dict[str, dict[str, Any]]:
         return self._models
 
-    def match_components(self, comps: str | tuple[str, ...]) -> tuple[str, tuple]:
+    def match_components(self, comps: str | tuple[str, ...]) -> tuple[str, tuple[str, ...]]:
         """Identify component (instances) based on 'comps' (component alias or tuple of aliases).
         comps can be a (tuple of) full component names or component names with wildcards.
         Returned components shall be based on the same model.
         """
         if isinstance(comps, str):
             comps = (comps,)
-        collect = []
-        model = None
+        collect: list[str] = []
+        model: str | None = None
         for c in comps:
             for k, m in self.components.items():
                 if match_with_wildcard(c, k):
@@ -135,10 +141,11 @@ class SystemInterface:
                         model = m
                     if m == model and k not in collect:
                         collect.append(k)
-        assert model is not None and len(collect), f"No component match for {comps}"
+        assert model is not None, f"No model match for {comps}"
+        assert len(collect), f"No component match for {comps}"
         return (model, tuple(collect))
 
-    def _get_variables(self, source: Path) -> dict[str, dict]:
+    def _get_variables(self, source: Path) -> dict[str, dict[int | str, Any]]:
         """Get the registered variables for a given model (added to _models dict).
 
         Returns
@@ -146,18 +153,21 @@ class SystemInterface:
             A dictionary of variable {names:info, ...},
             where info is a dictionary containing reference, type, causality, variability and initial
         """
-        assert source.exists() and source.suffix == ".fmu", f"FMU file {source} not found or wrong suffix"
-        md = from_xml(source, sub="modelDescription.xml")
-        variables = {}
+        assert source.exists(), f"FMU file {source} not found"
+        assert source.suffix == ".fmu", f"FMU file {source} not found or wrong suffix"
+        md: Element = from_xml(source, sub="modelDescription.xml")
+        variables: dict[str, dict[int | str, Any]] = {}
+        var: dict[int | str, Any]
+        typ: Element
         for sv in md.findall(".//ScalarVariable"):
             name = sv.attrib.pop("name")
             vr = int(sv.attrib.pop("valueReference"))
-            var: dict[str, Any] = {k: v for k, v in sv.attrib.items()}
-            var.update({"reference": vr})
+            var = dict(sv.attrib.items())
+            var["reference"] = vr
             typ = sv[0]
-            var.update({"type": SystemInterface.pytype(typ.tag)})
-            var.update(typ.attrib)
-            variables.update({name: var})
+            var["type"] = SystemInterface.pytype(typ.tag)
+            var |= typ.attrib  # type: ignore[arg-type]
+            variables[name] = var
         return variables
 
     def model_from_component(self, comp: str | int) -> str:
@@ -165,13 +175,13 @@ class SystemInterface:
         if isinstance(comp, str):
             return self.components[comp]
         if isinstance(comp, int):
-            for i, mod in enumerate(self.components.values()):
-                if i == comp:
-                    return mod
-            return ""
+            return next(
+                (mod for i, mod in enumerate(self.components.values()) if i == comp),
+                "",
+            )
         raise AssertionError(f"Unallowed argument {comp} in 'variables'")
 
-    def variables(self, comp: str | int) -> dict:
+    def variables(self, comp: str | int) -> dict[int | str, Any]:
         """Get the registered variables for a given component from the system.
         This is the default version which works without the full modelDescription inside self._models.
         Can be overridden by super-classes which have the modelDescription available.
@@ -185,24 +195,28 @@ class SystemInterface:
         """
         try:
             mod = self.model_from_component(comp)
-        except KeyError as err:
-            raise Exception(f"Component {comp} not found: {err}") from None
+        except KeyError as e:
+            raise KeyError(f"Component {comp} not found: {e}") from e
         try:
             return self.models[mod]["variables"]
-        except Exception:
-            raise KeyError(f"Variables for {comp} not found. Components: {list(self.components.keys())}") from None
+        except Exception as e:
+            raise KeyError(f"Variables for {comp} not found. Components: {list(self.components.keys())}") from e
 
-    def variable_iter(self, variables: dict, flt: int | str | Sequence):
+    def variable_iter(
+        self,
+        variables: dict[int | str, Any],
+        flt: int | str | Sequence[int | str],
+    ) -> Generator[tuple[str, dict[str, Any]], None, None]:
         """Get the variable dicts of the variables refered to by ids.
 
         Returns: Iterator over the dicts of the selected variables
         """
-        if isinstance(flt, (int, str)):
+        if isinstance(flt, int | str):
             ids = [flt]
-        elif isinstance(flt, (tuple, list)):
+        elif isinstance(flt, tuple | list):
             ids = list(flt)
         else:
-            raise ValueError(f"Unknown filter specification {flt} for variables") from None
+            raise TypeError(f"Unknown filter specification {flt} for variables")
         if isinstance(ids[0], str):  # by name
             for i in ids:
                 if i in variables:
@@ -212,7 +226,11 @@ class SystemInterface:
                 if info["reference"] in ids:
                     yield (v, info)
 
-    def match_variables(self, component: str, varname: str) -> tuple:
+    def match_variables(
+        self,
+        component: str,
+        varname: str,
+    ) -> tuple[tuple[int | str, Any], ...]:
         """Based on an example component (instance), identify unique variables starting with 'varname'.
         The returned information applies to all instances of the same model.
         The variables shall all be of the same type, causality and variability.
@@ -232,11 +250,9 @@ class SystemInterface:
             if not org.startswith(varname):  # necessary requirement
                 return False
             rest = org[len(varname) :]
-            if not len(rest) or any(rest.startswith(c) for c in ("[", ".")):
-                return True
-            return False
+            return not len(rest) or any(rest.startswith(c) for c in ("[", "."))
 
-        var = []
+        var: list[tuple[int | str, Any]] = []
         assert hasattr(self, "components"), "Need the dictionary of components before maching variables"
 
         accepted = None
@@ -252,33 +268,27 @@ class SystemInterface:
 
     def variable_name_from_ref(self, comp: int | str, ref: int) -> str:
         """Get the variable name from its component instant (id or name) and its valueReference."""
-        for name, info in self.variables(comp).items():
-            if info["reference"] == ref:
-                return name
-        return ""
+        return next(
+            (str(name) for name, info in self.variables(comp).items() if info["reference"] == ref),
+            "",
+        )
 
     def component_name_from_id(self, idx: int) -> str:
         """Retrieve the component name from the given index.
         Return an empty string if not found.
         """
-        for i, k in enumerate(self.components.keys()):
-            if i == idx:
-                return k
-        return ""
+        return next((k for i, k in enumerate(self.components.keys()) if i == idx), "")
 
     def component_id_from_name(self, name: str) -> int:
         """Get the component id from the name. -1 if not found."""
-        for i, k in enumerate(self.components.keys()):
-            if k == name:
-                return i
-        return -1
+        return next((i for i, k in enumerate(self.components.keys()) if k == name), -1)
 
     @staticmethod
-    def pytype(fmu_type: str, val: PyVal | None = None):
+    def pytype(fmu_type: str, val: TValue | None = None) -> type | bool:
         """Return the python type of the FMU type provided as string.
         If val is None, the python type object is returned. Else if boolean, true or false is returned.
         """
-        typ = {
+        typ: type = {
             "real": float,
             "integer": int,
             "boolean": bool,
@@ -297,7 +307,12 @@ class SystemInterface:
         return typ(val)
 
     @staticmethod
-    def default_initial(causality: str, variability: str, only_default: bool = True) -> str | int | tuple:
+    def default_initial(
+        causality: str,
+        variability: str,
+        *,
+        only_default: bool = True,
+    ) -> str | int | tuple:
         """Return default initial setting as str. See p.50 FMI2.
         With only_default, the single allowed value, or '' is returned.
         Otherwise a tuple of possible values is returned where the default value is always listed first.
@@ -323,7 +338,13 @@ class SystemInterface:
             return "calculated" if only_default else ("calculated", "exact", "approx")
         return init if only_default else (init,)
 
-    def allowed_action(self, action: str, comp: int | str, var: int | str | Sequence, time: float):
+    def allowed_action(
+        self,
+        action: str,
+        comp: int | str,
+        var: int | str | Sequence[int | str],
+        time: float,
+    ) -> bool:
         """Check whether the action would be allowed according to FMI2 rules, see FMI2.01, p.49.
 
         * if a tuple of variables is provided, the variables shall have equal properties
@@ -336,13 +357,17 @@ class SystemInterface:
             time (float): The time at which the action will be performed
         """
 
-        def _description(name: str, info: dict, initial: int) -> str:
+        def _description(
+            name: str,
+            info: dict[str, Any],  # noqa: ARG001
+            initial: int,  # noqa: ARG001
+        ) -> str:
             descr = f"Variable {name}, causality {var_info['causality']}"
             descr += f", variability {var_info['variability']}"
             descr += f", initial {_initial}"
             return descr
 
-        def _check(cond, msg):
+        def _check(*, cond: bool, msg: str) -> bool:
             if not cond:
                 self.message = msg
                 return False
@@ -352,101 +377,116 @@ class SystemInterface:
 
         variables = self.variables(comp)
         for name, var_info in self.variable_iter(variables, var):
-            # if not _check(name in variables, f"Variable {name} of component {comp} was not found"):
-            #    print("VARIABLES", variables)
-            #    return False
-            # var_info = variables[name]
             if _type == "" or _causality == "" or _variability == "":  # define the properties and check whether allowed
                 _type = var_info["type"]
                 _causality = var_info["causality"]
                 _variability = var_info["variability"]
                 _initial = var_info.get("initial", SystemInterface.default_initial(_causality, _variability))
 
-                if action in ("get", "step"):  # no restrictions on get
+                if action in {"get", "step"}:  # no restrictions on get
                     pass
-                elif action == "set":
-                    if (
-                        (
-                            time < 0  # before EnterInitializationMode
-                            and not _check(
-                                (_variability != "constant" and _initial in ("exact", "approx")),
-                                f"Change of {name} before EnterInitialization",
-                            )
+                elif action == "set" and (
+                    (
+                        time < 0  # before EnterInitializationMode
+                        and not _check(
+                            cond=(_variability != "constant" and _initial in ("exact", "approx")),
+                            msg=f"Change of {name} before EnterInitialization",
                         )
-                        or (
-                            time == 0  # before ExitInitializationMode
-                            and not _check(
-                                (_variability != "constant" and (_initial == "exact" or _causality == "input")),
-                                f"Change of {name} during Initialization",
-                            )
+                    )
+                    or (
+                        time == 0  # before ExitInitializationMode
+                        and not _check(
+                            cond=(_variability != "constant" and (_initial == "exact" or _causality == "input")),
+                            msg=f"Change of {name} during Initialization",
                         )
-                        or (
-                            time > 0  # at communication points
-                            and not _check(
-                                (_causality == "parameter" and _variability == "tunable") or _causality == "input",
-                                f"Change of {name} at communication point",
-                            )
+                    )
+                    or (
+                        time > 0  # at communication points
+                        and not _check(
+                            cond=(_causality == "parameter" and _variability == "tunable") or _causality == "input",
+                            msg=f"Change of {name} at communication point",
                         )
-                    ):
-                        return False
+                    )
+                ):
+                    return False
                     # additional rule for ModelExchange, not listed here
             else:  # check whether the properties are equal
-                if not _check(_type == var_info["type"], _description(name, var_info, _initial) + f" != type {_type}"):
-                    return False
                 if not _check(
-                    _causality == var_info["causality"],
-                    _description(name, var_info, _initial) + f" != causality {_causality}",
+                    cond=_type == var_info["type"],
+                    msg=f"{_description(name, var_info, _initial)} != type {_type}",
                 ):
                     return False
                 if not _check(
-                    _variability == var_info["variability"],
-                    _description(name, var_info, _initial) + f" != variability {_variability}",
+                    cond=_causality == var_info["causality"],
+                    msg=f"{_description(name, var_info, _initial)} != causality {_causality}",
+                ):
+                    return False
+                if not _check(
+                    cond=_variability == var_info["variability"],
+                    msg=f"{_description(name, var_info, _initial)} != variability {_variability}",
                 ):
                     return False
         return True
 
     @classmethod
     def update_refs_values(
-        cls, allrefs: tuple[int, ...], baserefs: tuple[int, ...], basevals: tuple, refs: tuple[int, ...], values: tuple
-    ):
+        cls,
+        allrefs: tuple[int, ...],
+        baserefs: tuple[int, ...],
+        basevals: tuple[TValue, ...],
+        refs: tuple[int, ...],
+        values: tuple[TValue, ...],
+    ) -> tuple[tuple[int, ...], tuple[TValue, ...]]:
         """Update baserefs and basevals with refs and values according to all possible refs."""
-        allvals = [None] * len(allrefs)
+        allvals: list[TValue | None] = [None] * len(allrefs)
         for i, r in enumerate(baserefs):
             allvals[allrefs.index(r)] = basevals[i]
         for i, r in enumerate(refs):
             allvals[allrefs.index(r)] = values[i]
-        _refs: list = []
-        _vals: list = []
+        _refs: list[int] = []
+        _vals: list[TValue] = []
         for i, v in enumerate(allvals):
             if v is not None:
                 _refs.append(allrefs[i])
                 _vals.append(v)
         return (tuple(_refs), tuple(_vals))
 
-    def comp_model_var(self, cref: int, vref: int | tuple[int]):
+    def comp_model_var(
+        self,
+        cref: int,
+        vref: int | tuple[int],
+    ) -> tuple[str, str, list[str]]:
         """Find the component name and the variable names from the provided reference(s)."""
-        model = None
+        comp: str | None = None
+        model: str | None = None
         for i, (_comp, m) in enumerate(self.components.items()):
             if i == cref:
                 model = m
                 comp = _comp
                 break
         assert model is not None, f"Model for component id {cref} not found"
+        assert comp is not None, f"Component id {cref} not found"
         refs = (vref,) if isinstance(vref, int) else vref
-        var_names = []
+        var_names: list[str] = []
         for vr in refs:
-            var = None
-            for v, info in self.models[model]["variables"].items():
-                if info["reference"] == vr:
-                    var = v
-                    break
+            var = next(
+                (v for v, info in self.models[model]["variables"].items() if info["reference"] == vr),
+                None,
+            )
             assert var is not None, f"Reference {vr} not found in model {model}"
             var_names.append(var)
         return (comp, model, var_names)
 
     def _add_set(
-        self, actions: dict, time: float, cvar: str, comp: str, cvar_info: dict, values: tuple, rng: tuple | None = None
-    ):
+        self,
+        actions: dict,
+        time: float,
+        cvar: str,
+        comp: str,
+        cvar_info: dict,
+        values: tuple,
+        rng: tuple | None = None,
+    ) -> None:
         """Perform final processing and add the set action to the list (if appropriate).
 
         Properties of set actions:
@@ -514,7 +554,7 @@ class SystemInterface:
             cvar (str): name of the case variable
             cvar_info (dict): dict of variable info: {model, instances, names, refs, type, causality, variability}
                 see Cases.get_case_variables() for details.
-            values (PyVal) = None: Optional values (mandatory for 'set' actions)
+            values (TValue) = None: Optional values (mandatory for 'set' actions)
             at_time (float): time at which actions shall be triggered (may be scaled)
             stoptime (float): simulation stop time (needed to handle 'step' actions)
             rng (Iterable)=None: Optional range specification for compound variables (indices to address)
@@ -539,22 +579,26 @@ class SystemInterface:
             elif act_type == "set":
                 assert values is not None, f"Variable {cvar}: Value needed for 'set' actions."
                 self._add_set(
-                    actions, at_time, cvar, comp, cvar_info, tuple([cvar_info["type"](x) for x in values]), rng
+                    actions=actions,
+                    time=at_time,
+                    cvar=cvar,
+                    comp=comp,
+                    cvar_info=cvar_info,
+                    values=tuple([cvar_info["type"](x) for x in values]),
+                    rng=rng,
                 )
             else:
                 raise KeyError(f"Unknown action type {act_type} at time {at_time}")
 
-    def do_action(self, time: int | float, act_info: tuple, typ: type):
+    def do_action(self, time: int | float, act_info: tuple[Any, ...], typ: type) -> bool:
         """Do the action described by the tuple using OSP functions."""
         raise NotImplementedError("The method 'do_action()' cannot be used in SystemInterface") from None
-        return False
 
-    def action_step(self, act_info: tuple, typ: type):
+    def action_step(self, act_info: tuple[Any, ...], typ: type) -> Callable[..., Any]:
         """Pre-compile the step action and return the partial function
         so that it can be called at communication points.
         """
         raise NotImplementedError("The method 'action_step()' cannot be used in SystemInterface") from None
-        return
 
     def init_simulator(self):
         """Instantiate and initialize the simulator, so that simulations can be run.

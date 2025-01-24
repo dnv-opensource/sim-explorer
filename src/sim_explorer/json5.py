@@ -83,7 +83,7 @@ class Json5:
             self.js5, self.lines = self._lines()  # map the lines first so that error messages work
             self.js5, self.comments = self._comments()
             self.js5, _ = self._newline()  # replace unnecessary LFs and return start position per line
-            self.js_py = {}  # is replaced by the python json5 dict when to_py() is run
+            self.js_py: dict[str, Any] = {}  # is replaced by the python json5 dict when to_py() is run
             if auto:
                 self.js_py = self.to_py()
 

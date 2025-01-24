@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import copy
 import os
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -15,7 +15,7 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sim_explorer.assertion import Assertion  # type: ignore
+from sim_explorer.assertion import Assertion
 from sim_explorer.exceptions import CaseInitError
 from sim_explorer.json5 import Json5
 from sim_explorer.models import AssertionResult, Temporal
@@ -23,6 +23,7 @@ from sim_explorer.system_interface import SystemInterface
 from sim_explorer.system_interface_osp import SystemInterfaceOSP
 from sim_explorer.utils.misc import from_xml
 from sim_explorer.utils.paths import get_path, relative_path
+from sim_explorer.utils.types import TValue
 
 """
 sim_explorer module for definition and execution of simulation experiments
@@ -54,14 +55,15 @@ class Case:
         self,
         cases: Cases,
         name: str,
-        spec: dict,
-        special: dict | None = None,
-    ):
+        spec: dict[str, Any],
+        special: dict[str, Any] | None = None,
+    ) -> None:
         self.cases = cases
         self.name = name
         self.js = Json5(spec)
         self.description = self.js.jspath("$.description", str) or ""
         self.subs: list = []  # own subcases
+        self.res: Results | None = None
 
         if name == "base":
             self.parent = None
@@ -74,11 +76,15 @@ class Case:
 
         if self.name == "results":
             raise ValueError("'results' should not be used as case name. Add general results to 'base'")
+
+        self.special: dict[str, Any] = {}
+        self.act_get: dict[float, list[tuple[float, list[tuple[Any, ...]]]]] = {}
+        self.act_set: dict[float, list[tuple[float, list[tuple[Any, ...]]]]] = {}
         if self.name == "base":  # take over the results info and activities
             assert special is not None, "startTime and stopTime settings needed for 'base'"
             self.special = special
-            self.act_get: dict = {}
-            self.act_set: dict = {}  # no set actions during results collection
+            self.act_get = {}
+            self.act_set = {}  # no set actions during results collection
         else:
             assert isinstance(self.parent, Case), f"Parent case expected for case {self.name}"
             self.special = dict(self.parent.special)
@@ -86,7 +92,7 @@ class Case:
             self.act_set = copy.deepcopy(self.parent.act_set)
 
         if self.cases.simulator.full_simulator_available:
-            for k, v in self.js.jspath("$.spec", dict, True).items():
+            for k, v in self.js.jspath(path="$.spec", typ=dict, errorMsg=True).items():
                 self.read_spec_item(k, v)
             _results = self.js.jspath("$.results", list)
             if _results is not None:
@@ -103,10 +109,10 @@ class Case:
             self.act_set = dict(sorted(self.act_set.items()))
         # self.res represents the Results object and is added when collecting results or when evaluating results
 
-    def add_results_object(self, res: Results):
+    def add_results_object(self, res: Results) -> None:
         self.res = res
 
-    def iter(self):
+    def iter(self) -> Generator[Case, None, None]:
         """Construct an iterator, allowing iteration from base case to this case through the hierarchy."""
         h = []
         nxt = self
@@ -134,34 +140,35 @@ class Case:
                 return found
         return None
 
-    def append(self, case: Case):
+    def append(self, case: Case) -> None:
         """Append a case as sub-case to this case."""
         self.subs.append(case)
 
-    def _add_actions(self, act_type: str, at_time: float, act_list: list[Callable]):
+    def _add_actions(self, act_type: str, at_time: float, act_list: list[Callable]) -> None:
         """Add actions to one of the properties act_get, act_set.
         The act_list should be prepared by the system_interface in the way it is needed there.
         """
-        if act_type == "get":
-            dct = self.act_get
-        else:
-            dct = self.act_set
+        dct = self.act_get if act_type == "get" else self.act_set
 
         if at_time not in dct:
             dct.update({at_time: []})
         dct[at_time].extend(act_list)
 
     @staticmethod
-    def _num_elements(obj) -> int:
+    def _num_elements(obj: object) -> int:
         if obj is None:
             return 0
-        if isinstance(obj, (tuple, list, np.ndarray)):
+        if isinstance(obj, tuple | list | np.ndarray):
             return len(obj)
         if isinstance(obj, str):
             return int(len(obj) > 0)
         return 1
 
-    def _disect_at_time_tl(self, txt: str, value: Any | None = None) -> tuple[str, Temporal, tuple]:
+    def _disect_at_time_tl(
+        self,
+        txt: str,
+        value: Any | None = None,  # noqa: ANN401
+    ) -> tuple[str, Temporal, tuple[str | float, ...]]:
         """Disect the @txt argument into 'at_time_type' and 'at_time_arg' for Temporal specification.
 
         Args:
@@ -176,7 +183,7 @@ class Case:
             args is the tuple of temporal arguments (may be empty)
         """
 
-        def time_spec(at: str):
+        def time_spec(at: str) -> tuple[Temporal, tuple[str | float, ...]]:
             """Analyse the specification after '@' and disect into typ and arg."""
             try:
                 arg_float = float(at)
@@ -185,7 +192,7 @@ class Case:
                 for i in range(len(at) - 1, -1, -1):
                     try:
                         typ = Temporal[at[i]]
-                    except KeyError:
+                    except KeyError:  # noqa: PERF203
                         pass
                     else:
                         if at[i + 1 :].strip() == "":
@@ -203,7 +210,11 @@ class Case:
         typ, arg = time_spec(at)
         return (pre, typ, arg)
 
-    def _disect_at_time_spec(self, txt: str, value: Any | None = None) -> tuple[str, str, float]:
+    def _disect_at_time_spec(
+        self,
+        txt: str,
+        value: Any | None = None,  # noqa: ANN401
+    ) -> tuple[str, str, float]:
         """Disect the @txt argument into 'at_time_type' and 'at_time_arg'.
 
         Args:
@@ -218,7 +229,7 @@ class Case:
             arg is the time argument, or -1
         """
 
-        def time_spec(at: str):
+        def time_spec(at: str) -> tuple[str, float]:
             """Analyse the specification after '@' and disect into typ and arg."""
             try:
                 arg_float = float(at)
@@ -228,7 +239,7 @@ class Case:
                 if at.startswith("step"):
                     try:
                         return ("step", float(at[4:]))
-                    except Exception:
+                    except Exception:  # noqa: BLE001
                         return ("step", -1)  # this means 'all macro steps'
                 else:
                     raise AssertionError(f"Unknown '@{txt}'. Case:{self.name}, value:'{value}'") from None
@@ -239,6 +250,7 @@ class Case:
             value = None
         if not len(at):  # no @time spec
             if value is None:
+                assert self.special is not None
                 return (pre, "get", self.special["stopTime"])  # report final value
             msg = f"Value required for 'set' in _disect_at_time('{txt}','{self.name}','{value}')"
             assert Case._num_elements(value), msg
@@ -247,7 +259,7 @@ class Case:
         typ, arg = time_spec(at)
         return (pre, typ, arg)
 
-    def read_assertion(self, key: str, expr_descr: list | None = None):
+    def read_assertion(self, key: str, expr_descr: list[str] | None = None) -> str:
         """Read an assert statement, compile as sympy expression, register and store the key..
 
         Args:
@@ -263,14 +275,18 @@ class Case:
         key, at_time_type, at_time_arg = self._disect_at_time_tl(key, expr_descr)
         assert isinstance(expr_descr, list), f"Assertion expression {expr_descr} should include a description."
         expr, descr = expr_descr
-        self.cases.assertion.expr(key, expr)
-        self.cases.assertion.description(key, descr)
-        self.cases.assertion.temporal(key, at_time_type, at_time_arg)
+        _ = self.cases.assertion.expr(key, expr)
+        _ = self.cases.assertion.description(key, descr)
+        _ = self.cases.assertion.temporal(key, at_time_type, at_time_arg)
         if key not in self.asserts:
             self.asserts.append(key)
         return key
 
-    def read_spec_item(self, key: str, value: Any | None = None):
+    def read_spec_item(
+        self,
+        key: str,
+        value: Any | None = None,  # noqa: ANN401
+    ) -> None:
         """Use the alias variable information (key) and the value to construct an action function,
         which is run when this variable is set/read.
 
@@ -311,6 +327,7 @@ class Case:
             updated self.act_*** actions through add_actions() of the SystemInterface***
         """
         if key in ("startTime", "stopTime", "stepSize"):
+            assert self.special is not None
             self.special.update({key: value})  # just keep these as a dictionary so far
         else:  # expect a  variable-alias : value(s) specificator
             key, at_time_type, at_time_arg = self._disect_at_time_spec(key, value)
@@ -319,27 +336,33 @@ class Case:
             key, cvar_info, rng = self.cases.disect_variable(key)
             key = key.strip()
             if value is not None:  # check also the number of supplied values
-                if isinstance(value, (str, float, int, bool)):  # make sure that there are always lists
+                if isinstance(value, str | float | int | bool):  # make sure that there are always lists
                     value = [value]
                 # assert sum(1 for _ in rng) == Case._num_elements(value), f"Variable {key}: # values {value} != # vars {rng}",
                 assert len(rng) == Case._num_elements(value), f"Variable {key}: # values {value} != # vars {rng}"
             varnames = tuple([cvar_info["names"][r] for r in rng])
-            # print(f"CASE.read_spec, {key}@{at_time_arg}({at_time_type}):{value}[{rng}], alias={cvar_info}")
+            # print(f"CASE.read_spec, {key}@{at_time_arg}({at_time_type}):{value}[{rng}], alias={cvar_info}")  # noqa: ERA001
             if not self.cases.simulator.allowed_action(at_time_type, cvar_info["instances"][0], varnames, at_time_arg):
                 raise AssertionError(self.cases.simulator.message) from None
             # action allowed. Ask simulator to add actions appropriately
+            assert self.special is not None
             self.cases.simulator.add_actions(
-                self.act_get if at_time_type in ("get", "step") else self.act_set,
-                at_time_type,
-                key,
-                cvar_info,
-                value,
-                at_time_arg if at_time_arg <= 0 else at_time_arg * self.cases.timefac,
-                self.special["stopTime"],
-                tuple(rng),
+                actions=self.act_get if at_time_type in ("get", "step") else self.act_set,
+                act_type=at_time_type,
+                cvar=key,
+                cvar_info=cvar_info,
+                values=value,
+                at_time=at_time_arg if at_time_arg <= 0 else at_time_arg * self.cases.timefac,
+                stoptime=self.special["stopTime"],
+                rng=tuple(rng),
             )
 
-    def list_cases(self, as_name: bool = True, flat: bool = False) -> list[str] | list[Case]:
+    def list_cases(
+        self,
+        *,
+        as_name: bool = True,
+        flat: bool = False,
+    ) -> list[str] | list[Case]:
         """List this case and all sub-cases recursively, as name or case objects."""
         lst: list[str] | list[Case]
         lst = [self.name] if as_name else [self]  # type: ignore[list-item]
@@ -357,18 +380,17 @@ class Case:
         The values of the base case ensure that critical values are always avalable.
         """
 
-        def get_from_config(element: str, default: float | None = None):
-            if isinstance(self.cases.simulator.structure_file, Path):
-                info = from_xml(self.cases.simulator.structure_file, sub=None).findall(".//{*}" + element)
-                if not len(info):
-                    return default
-                txt = info[0].text
-                if txt is None:
-                    return default
-                try:
-                    return float(txt)
-                except Exception:
-                    return default
+        def get_from_config(element: str, default: float | None = None) -> float | None:
+            info = from_xml(self.cases.simulator.structure_file, sub=None).findall(".//{*}" + element)
+            if not len(info):
+                return default
+            txt = info[0].text
+            if txt is None:
+                return default
+            try:
+                return float(txt)
+            except Exception:  # noqa: BLE001
+                return default
 
         if "startTime" not in special:
             special.update({"startTime": get_from_config("StartTime", 0.0)})
@@ -381,7 +403,7 @@ class Case:
                 raise CaseInitError("'stepSize' should be specified as part of the 'base' specification.") from None
         return special
 
-    def run(self, dump: str | None = ""):
+    def run(self, dump: str | None = "") -> None:
         """Set up case and run it.
 
         All get action are recorded in results and get actions always concern whole case variables.
@@ -393,21 +415,37 @@ class Case:
                 None: do not save, '': use default file name, str (with or without '.js5'): save with that file name
         """
 
-        def do_actions(_t: float, actions, _iter, time: int | float):
+        def do_actions(
+            _t: float,
+            actions: list[tuple[Any, ...]],
+            _iter: Iterator[tuple[float, list[tuple[Any, ...]]]],
+            time: int | float,
+        ) -> tuple[float, list[tuple[Any, ...]]]:
             while time >= _t:  # issue the actions - actions
                 if len(actions):
                     for _act in actions:
-                        res = self.cases.simulator.do_action(time, _act, self.cases.variables[_act[0]]["type"])
-                        if len(_act) == 3:  # get action. Report
-                            self.res.add(time / self.cases.timefac, _act[1], _act[0], res)
+                        res = self.cases.simulator.do_action(
+                            time=time,
+                            act_info=_act,
+                            typ=self.cases.variables[_act[0]]["type"],
+                        )
+                        if len(_act) == 3:  # get action. Report  # noqa: PLR2004
+                            assert self.res is not None
+                            self.res.add(
+                                time=time / self.cases.timefac,
+                                comp=_act[1],
+                                cvar=_act[0],
+                                values=res,
+                            )
                     try:
                         _t, actions = next(_iter)
                     except StopIteration:
                         _t, actions = 10 * tstop, []
             return (_t, actions)
 
-        self.cases.simulator.init_simulator()
+        _ = self.cases.simulator.init_simulator()
         # Note: final actions are included as _get at stopTime
+        assert self.special is not None
         tstart: int = int(self.special["startTime"] * self.cases.timefac)
         time = tstart
         tstop: int = int(self.special["stopTime"] * self.cases.timefac)
@@ -418,7 +456,7 @@ class Case:
         try:
             t_set, a_set = next(set_iter)
         except StopIteration:
-            t_set, a_set = (float("inf"), [])  # satisfy linter
+            t_set, a_set = (float(np.inf), [])  # satisfy linter
         get_iter = self.act_get.items().__iter__()  # iterator over get actions => time, action_list
         act_step = []
         self.add_results_object(Results(self))
@@ -906,14 +944,20 @@ class Results:
                 get_path(res.jspath("$.header.file", str, True), self.file.parent),
             )
 
-    def add(self, time: float, comp: str, cvar: str, values: Sequence | int | float | bool | str):
+    def add(
+        self,
+        time: float,
+        comp: str,
+        cvar: str,
+        values: TValue | Sequence[TValue],
+    ):
         """Add the results of a get action to the results dict for the case.
 
         Args:
             time (float): the time of the results
             comp (str): the component name
             cvar (str): the case variable name
-            values (PyVal, tuple): the value(s) to record
+            values (TValue, Sequence[TValue]): the value(s) to record
         """
         # print(f"Update ({time}): {comp}: {cvar} : {values}")
         _values = values[0] if isinstance(values, Sequence) and len(values) == 1 else values
