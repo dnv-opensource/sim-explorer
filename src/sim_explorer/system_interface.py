@@ -55,7 +55,7 @@ class SystemInterface:
         description: str = "",
         log_level: str = "fatal",
         **kwargs: Any,  # noqa: ANN401
-    ):
+    ) -> None:
         self.structure_file = Path(structure_file)
         self.name = name  # overwrite if the system includes that
         self.description = description  # overwrite if the system includes that
@@ -76,6 +76,7 @@ class SystemInterface:
     @staticmethod
     def read_system_structure(
         file: Path,
+        *,
         fmus_exist: bool = True,
     ) -> dict[str, Any]:
         """Read the systemStructure file and perform checks.
@@ -338,7 +339,7 @@ class SystemInterface:
             return "calculated" if only_default else ("calculated", "exact", "approx")
         return init if only_default else (init,)
 
-    def allowed_action(
+    def allowed_action(  # noqa: C901
         self,
         action: str,
         comp: int | str,
@@ -513,7 +514,14 @@ class SystemInterface:
         # new set action
         actions[time].append((cvar, comp, refs, values))
 
-    def _add_get(self, actions: dict, time: float, cvar: str, comp: str, cvar_info: dict):
+    def _add_get(
+        self,
+        actions: dict[float, list[tuple[str, str, Any]]],
+        time: float,
+        cvar: str,
+        comp: str,
+        cvar_info: dict[str, Any],
+    ) -> None:
         """Perform final processing and add the get action to the list (if appropriate).
 
         Properties of get actions:
@@ -534,17 +542,17 @@ class SystemInterface:
                 return  # the get action is already registered
         actions[time].append((cvar, comp, cvar_info["refs"]))
 
-    def add_actions(
+    def add_actions(  # noqa: PLR0913
         self,
-        actions: dict,
+        actions: dict[float, list[tuple[str, str, Any]]],
         act_type: str,
         cvar: str,
-        cvar_info: dict,
-        values: tuple | None,
+        cvar_info: dict[str, Any],
+        values: tuple[TValue] | None,
         at_time: float,
         stoptime: float,
         rng: tuple[int, ...] | None = None,
-    ):
+    ) -> None:
         """Add specified actions to the provided action dict.
         The action list is simulator-agnostic and need 'compilation' before they are used in a simulation.
 
@@ -566,15 +574,27 @@ class SystemInterface:
             where value-list and rng are only present for set actions
             at-time=-1 for get actions denote step actions
         """
-        assert isinstance(at_time, (float, int)), f"Actions require a defined time as float. Found {at_time}"
+        assert isinstance(at_time, float | int), f"Actions require a defined time as float. Found {at_time}"
         if at_time not in actions:
-            actions.update({at_time: []})  # make sure that there is a suitable slot
+            actions[at_time] = []  # make sure that there is a suitable slot
         for comp in cvar_info["instances"]:
             if act_type == "get" or (act_type == "step" and at_time == -1):  # normal get or step without time spec
-                self._add_get(actions, at_time, cvar, comp, cvar_info)
+                self._add_get(
+                    actions=actions,
+                    time=at_time,
+                    cvar=cvar,
+                    comp=comp,
+                    cvar_info=cvar_info,
+                )
             elif act_type == "step" and at_time >= 0:  # step actions with specified interval
                 for time in np.arange(start=at_time, stop=stoptime, step=at_time):
-                    self._add_get(actions, time, cvar, comp, cvar_info)
+                    self._add_get(
+                        actions=actions,
+                        time=time,
+                        cvar=cvar,
+                        comp=comp,
+                        cvar_info=cvar_info,
+                    )
 
             elif act_type == "set":
                 assert values is not None, f"Variable {cvar}: Value needed for 'set' actions."
@@ -584,7 +604,7 @@ class SystemInterface:
                     cvar=cvar,
                     comp=comp,
                     cvar_info=cvar_info,
-                    values=tuple([cvar_info["type"](x) for x in values]),
+                    values=tuple(cvar_info["type"](x) for x in values),
                     rng=rng,
                 )
             else:
@@ -600,14 +620,12 @@ class SystemInterface:
         """
         raise NotImplementedError("The method 'action_step()' cannot be used in SystemInterface") from None
 
-    def init_simulator(self):
+    def init_simulator(self) -> bool:
         """Instantiate and initialize the simulator, so that simulations can be run.
         Perforemd separately from __init__ so that it can be repeated before simulation runs.
         """
         raise NotImplementedError("The method 'init_simulator()' cannot be used in SystemInterface") from None
-        return False
 
-    def run_until(self, time: int | float):
+    def run_until(self, time: int | float) -> bool:
         """Instruct the simulator to simulate until the given time."""
         raise NotImplementedError("The method 'run_until()' cannot be used in SystemInterface") from None
-        return False

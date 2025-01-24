@@ -58,12 +58,12 @@ class Assertion:
                     assert len(self._cases_variables[var]["instances"]) == 1, f"Non-unique instance for variable {var}"
                     instance = self._cases_variables[var]["instances"][0]  # use the unique instance
                 else:
-                    instance = parts[0] + "".join("_" + x for x in parts[1:])
+                    instance = parts[0] + "".join(f"_{x}" for x in parts[1:])
                     assert instance in self._cases_variables[var]["instances"], f"No instance {instance} of {var}"
                 break
             if not len(parts):
                 raise KeyError(f"The symbol {sym} does not seem to represent a registered variable") from None
-            var = parts.pop() + "_" + var
+            var = f"{parts.pop()}_{var}"
         if typ == "instance":  # get the instance
             return instance
         if typ == "variable":  # get the generic variable name
@@ -107,11 +107,11 @@ class Assertion:
 
         def make_func(name: str, args: dict, body: str) -> str:
             """Make a python function from the body."""
-            code = "def _" + name + "("
+            code = f"def _{name}("
             for a in args:
-                code += a + ", "
+                code += f"{a}, "
             code += "):\n"
-            code += "    return " + body + "\n"
+            code += f"    return {body}" + "\n"
             return code
 
         if ex is None:  # getter
@@ -146,7 +146,7 @@ class Assertion:
         else:
             return syms
 
-    def expr_get_symbols_functions(self, expr: str) -> tuple[list[str], list[str]]:
+    def expr_get_symbols_functions(self, expr: str) -> tuple[list[str], list[str]]:  # noqa: C901
         """Get the symbols used in the expression.
 
         1. Symbol as listed in expression and function body. In general <instant>_<variable>[<index>]
@@ -255,7 +255,7 @@ class Assertion:
             for inst in info["instances"]:
                 if len(info["instances"]) == 1:  # the instance is unique
                     _ = self.symbol(key, len(info["names"]))  # we allow to use the 'short name' if unique
-                _ = self.symbol(inst + "_" + key, len(info["names"]))  # fully qualified name can always be used
+                _ = self.symbol(f"{inst}_{key}", len(info["names"]))
 
     def make_locals(self, loc: dict[str, Any]) -> dict[str, Any]:
         """Adapt the locals with 'allowed' functions."""
@@ -307,9 +307,9 @@ class Assertion:
         loc = self.make_locals(locals())
         exec(self._compiled[key], loc, loc)  # noqa: S102
         # print("kvargs", kvargs, self._syms[key], self.expr_get_symbols_functions(key))  # noqa: ERA001
-        return self._eval(locals()["_" + key], kvargs)
+        return self._eval(locals()[f"_{key}"], kvargs)
 
-    def eval_series(
+    def eval_series(  # noqa: C901, PLR0912
         self,
         key: str,
         data: list[list[int | float | bool]],
@@ -346,7 +346,7 @@ class Assertion:
         argnames = self._syms[key]
         loc = self.make_locals(locals())
         exec(self._compiled[key], loc, loc)  # the function is then available as _<key> among locals()  # noqa: S102
-        func = locals()["_" + key]  # scalar function of all used arguments
+        func = locals()[f"_{key}"]
         _temp = self._temporal[key]["type"] if ret is None else Temporal.UNDEFINED
 
         for _row in data:

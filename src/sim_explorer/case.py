@@ -854,8 +854,14 @@ class Results:
             If "" default file name is used, if None, results are not stored.
     """
 
-    def __init__(self, case: Case | str | Path | None = None, file: str | Path | None = None):
+    def __init__(
+        self,
+        case: Case | str | Path | None = None,
+        file: str | Path | None = None,
+    ) -> None:
         self.file: Path | None  # None denotes that results are not automatically saved
+        self.case: Case | None = None
+        self.res: Json5
         if (case is None or isinstance(case, (str, Path))) and file is not None:
             self._init_from_existing(file)  # instantiating from existing results file (work with data)
         elif isinstance(case, Case):  # instantiating from cases file (for data collection)
@@ -863,7 +869,7 @@ class Results:
         else:
             raise ValueError(f"Inconsistent init arguments case:{case}, file:{file}")
 
-    def _init_from_existing(self, file: str | Path):
+    def _init_from_existing(self, file: str | Path) -> None:
         self.file = Path(file)
         assert self.file.exists(), f"File {file} is expected to exist."
         self.res = Json5(self.file)
@@ -872,13 +878,17 @@ class Results:
             cases = Cases(Path(case))
         except ValueError:
             raise CaseInitError(f"Cases {Path(case)} instantiation error") from ValueError
-        self.case: Case | None = cases.case_by_name(name=self.res.jspath(path="$.header.case", typ=str, errorMsg=True))
+        self.case = cases.case_by_name(name=self.res.jspath(path="$.header.case", typ=str, errorMsg=True))
         assert isinstance(self.case, Case), f"Case {self.res.jspath('$.header.case', str, True)} not found"
         assert isinstance(self.case.cases, Cases), "Cases object not defined"
-        self._header_transform(False)
+        self._header_transform(tostring=False)
         self.case.add_results_object(self)  # make Results object known to self.case
 
-    def _init_new(self, case: Case, file: str | Path | None = ""):
+    def _init_new(
+        self,
+        case: Case,
+        file: str | Path | None = "",
+    ) -> None:
         assert isinstance(case, Case), f"Case object expected as 'case' in Results. Found {type(case)}"
         self.case = case
         if file is not None:  # use that for storing results data as Json5

@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import Any
 
 from libcosimpy.CosimExecution import CosimExecution
-from libcosimpy.CosimLogging import CosimLogLevel, log_output_level  # type: ignore
-from libcosimpy.CosimManipulator import CosimManipulator  # type: ignore
-from libcosimpy.CosimObserver import CosimObserver  # type: ignore
+from libcosimpy.CosimLogging import CosimLogLevel, log_output_level
+from libcosimpy.CosimManipulator import CosimManipulator
+from libcosimpy.CosimObserver import CosimObserver
 
 from sim_explorer.system_interface import SystemInterface
 
@@ -31,19 +31,19 @@ class SystemInterfaceOSP(SystemInterface):
         name: str | None = None,
         description: str = "",
         log_level: str = "fatal",
-        **kwargs,
-    ):
+        **kwargs: Any,  # noqa: ANN401, ARG002
+    ) -> None:
         super().__init__(structure_file, name, description, log_level)
         self.full_simulator_available = True  # system and components specification + simulation capabilities
         # Note: The initialization of the OSP simulator itself is performed in init_simulator()
         #      Since this needs to be repeated before every simulation
 
-    def init_simulator(self):
+    def init_simulator(self) -> bool:
         """Instantiate and initialize the simulator, so that simulations can be run.
         Perforemd separately from __init__ so that it can be repeated before simulation runs.
         """
         log_output_level(CosimLogLevel[self.log_level.upper()])
-        # ck, msg = self._check_system_structure(self.sysconfig)
+        # ck, msg = self._check_system_structure(self.sysconfig)  # noqa: ERA001
         # assert ck, msg
         assert self.structure_file.exists(), "Simulator initialization requires the structure file."
         self.simulator = CosimExecution.from_osp_config_file(str(self.structure_file))
@@ -60,7 +60,7 @@ class SystemInterfaceOSP(SystemInterface):
         assert self.simulator.status().current_time == 0
         return not self.simulator.status().error_code
 
-    def _action_func(self, act_type: int, var_type: type):
+    def _action_func(self, act_type: int, var_type: type) -> Callable[..., Any]:
         """Determine the correct action function and return it."""
         if act_type == 0:  # initial settings
             return {
@@ -86,15 +86,12 @@ class SystemInterfaceOSP(SystemInterface):
 
     def do_action(self, time: int | float, act_info: tuple[Any, ...], typ: type) -> bool:
         """Do the action described by the tuple using OSP functions."""
-        if len(act_info) == 4:  # set action
+        if len(act_info) == 4:  # set action  # noqa: PLR2004
             cvar, comp, refs, values = act_info
             _comp = self.component_id_from_name(comp)
             if time <= 0:  # initial setting
                 func = self._action_func(0, typ)
-                for r, v in zip(refs, values, strict=False):
-                    if not func(_comp, r, v):
-                        return False
-                return True
+                return all(func(_comp, r, v) for r, v in zip(refs, values, strict=False))
 
             return self._action_func(1, typ)(_comp, refs, values)
         # get action
@@ -112,6 +109,6 @@ class SystemInterfaceOSP(SystemInterface):
         _comp = self.component_id_from_name(comp)
         return partial(self._action_func(act_type=2, var_type=typ), _comp, refs)
 
-    def run_until(self, time: int | float):
+    def run_until(self, time: int | float) -> bool:
         """Instruct the simulator to simulate until the given time."""
         return self.simulator.simulate_until(time)
