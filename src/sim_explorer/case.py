@@ -10,7 +10,7 @@ import os
 from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,7 +23,9 @@ from sim_explorer.system_interface import SystemInterface
 from sim_explorer.system_interface_osp import SystemInterfaceOSP
 from sim_explorer.utils.misc import from_xml
 from sim_explorer.utils.paths import get_path, relative_path
-from sim_explorer.utils.types import TValue
+
+if TYPE_CHECKING:
+    from sim_explorer.utils.types import TActionArgs, TValue
 
 """
 sim_explorer module for definition and execution of simulation experiments
@@ -51,7 +53,7 @@ class Case:
         spec (dict): the dictionary of the case specification
     """
 
-    def __init__(
+    def __init__(  # noqa: C901
         self,
         cases: Cases,
         name: str,
@@ -403,7 +405,7 @@ class Case:
                 raise CaseInitError("'stepSize' should be specified as part of the 'base' specification.") from None
         return special
 
-    def run(self, dump: str | None = "") -> None:
+    def run(self, dump: str | None = "") -> None:  # noqa: C901, PLR0912, PLR0915
         """Set up case and run it.
 
         All get action are recorded in results and get actions always concern whole case variables.
@@ -417,7 +419,7 @@ class Case:
 
         def do_actions(
             _t: float,
-            actions: list[tuple[Any, ...]],
+            actions: list[TActionArgs],
             _iter: Iterator[tuple[float, list[tuple[Any, ...]]]],
             time: int | float,
         ) -> tuple[float, list[tuple[Any, ...]]]:
@@ -462,13 +464,23 @@ class Case:
         self.add_results_object(Results(self))
 
         while True:
+            t_get: float | int
+            a_get: list[TActionArgs]
             try:
                 t_get, a_get = next(get_iter)
             except StopIteration:
                 t_get, a_get = (tstop + 1, [])
             if t_get < 0:  # negative time indicates 'always'
                 for a in a_get:
-                    act_step.append((*a, self.cases.simulator.action_step(a, self.cases.variables[a[0]]["type"])))
+                    act_step.append(
+                        (
+                            *a,
+                            self.cases.simulator.action_step(
+                                act_info=a,
+                                typ=self.cases.variables[a[0]]["type"],
+                            ),
+                        )
+                    )
             else:
                 break
 

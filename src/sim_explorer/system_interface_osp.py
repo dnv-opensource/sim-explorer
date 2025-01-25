@@ -9,6 +9,7 @@ from libcosimpy.CosimManipulator import CosimManipulator
 from libcosimpy.CosimObserver import CosimObserver
 
 from sim_explorer.system_interface import SystemInterface
+from sim_explorer.utils.types import TActionArgs
 
 
 class SystemInterfaceOSP(SystemInterface):
@@ -84,7 +85,7 @@ class SystemInterfaceOSP(SystemInterface):
             str: self.observer.last_string_values,
         }[var_type]
 
-    def do_action(self, time: int | float, act_info: tuple[Any, ...], typ: type) -> bool:
+    def do_action(self, time: int | float, act_info: TActionArgs, typ: type) -> bool:
         """Do the action described by the tuple using OSP functions."""
         if len(act_info) == 4:  # set action  # noqa: PLR2004
             cvar, comp, refs, values = act_info
@@ -100,7 +101,7 @@ class SystemInterfaceOSP(SystemInterface):
         assert time >= 0, "Get actions for all communication points shall be pre-compiled"
         return self._action_func(2, typ)(_comp, refs)
 
-    def action_step(self, act_info: tuple[Any, ...], typ: type) -> Callable[..., Any]:
+    def action_step(self, act_info: TActionArgs, typ: type) -> Callable[..., Any]:
         """Pre-compile the step action and return the partial function
         so that it can be called at communication points.
         """

@@ -12,7 +12,7 @@ import numpy as np
 from sim_explorer.json5 import Json5
 from sim_explorer.utils.misc import from_xml, match_with_wildcard
 from sim_explorer.utils.osp import read_system_structure_xml
-from sim_explorer.utils.types import TValue
+from sim_explorer.utils.types import TActionArgs, TValue
 
 if TYPE_CHECKING:
     from xml.etree.ElementTree import Element
@@ -610,11 +610,11 @@ class SystemInterface:
             else:
                 raise KeyError(f"Unknown action type {act_type} at time {at_time}")
 
-    def do_action(self, time: int | float, act_info: tuple[Any, ...], typ: type) -> bool:
+    def do_action(self, time: int | float, act_info: TActionArgs, typ: type) -> bool:
         """Do the action described by the tuple using OSP functions."""
         raise NotImplementedError("The method 'do_action()' cannot be used in SystemInterface") from None
 
-    def action_step(self, act_info: tuple[Any, ...], typ: type) -> Callable[..., Any]:
+    def action_step(self, act_info: TActionArgs, typ: type) -> Callable[..., Any]:
         """Pre-compile the step action and return the partial function
         so that it can be called at communication points.
         """
