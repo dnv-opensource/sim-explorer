@@ -1,4 +1,4 @@
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import (
     TypeAlias,
 )
@@ -23,20 +23,20 @@ TSetActionArgs: TypeAlias = tuple[str, str, tuple[int, ...], tuple[TValue, ...]]
 TActionArgs: TypeAlias = TGetActionArgs | TSetActionArgs
 
 #: Function signature for action functions
-TActionFunc: TypeAlias = callable[[int | float, TActionArgs, type], bool]
+TActionFunc: TypeAlias = Callable[[int | float, TActionArgs, type], bool]
 #: Function signature for action step functions
-TActionStepFunc: TypeAlias = callable[[TActionArgs, type], callable[..., TValue]]
+TActionStepFunc: TypeAlias = Callable[[TActionArgs, type], Callable[..., TValue]]
 
 #: Function signature for initial action functions
-TInitialActionFunc: TypeAlias = callable[[int | float, TSetActionArgs], bool]
+TInitialActionFunc: TypeAlias = Callable[[int | float, TSetActionArgs], bool]
 #: Function signature for initial action functions
-TInitialActionStepFunc: TypeAlias = callable[[TSetActionArgs], callable[..., TValue]]
+TInitialActionStepFunc: TypeAlias = Callable[[TSetActionArgs], Callable[..., TValue]]
 
 #: Function signature for get action functions
-TGetActionFunc: TypeAlias = callable[[TGetActionArgs], TValue]
+TGetActionFunc: TypeAlias = Callable[[TGetActionArgs], TValue]
 #: Function signature for set action functions
-TSetActionFunc: TypeAlias = callable[[TSetActionArgs], bool]
+TSetActionFunc: TypeAlias = Callable[[TSetActionArgs], bool]
 #: Function signature for get action step functions
-TGetActionStepFunc: TypeAlias = callable[[TGetActionArgs], callable[..., TValue]]
+TGetActionStepFunc: TypeAlias = Callable[[TGetActionArgs], Callable[..., TValue]]
 #: Function signature for set action step functions
-TSetActionStepFunc: TypeAlias = callable[[TSetActionArgs], callable[..., TValue]]
+TSetActionStepFunc: TypeAlias = Callable[[TSetActionArgs], Callable[..., TValue]]

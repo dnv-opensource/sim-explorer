@@ -10,7 +10,7 @@ import os
 from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, overload
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,9 +23,10 @@ from sim_explorer.system_interface import SystemInterface
 from sim_explorer.system_interface_osp import SystemInterfaceOSP
 from sim_explorer.utils.misc import from_xml
 from sim_explorer.utils.paths import get_path, relative_path
+from sim_explorer.utils.types import TValue
 
 if TYPE_CHECKING:
-    from sim_explorer.utils.types import TActionArgs, TValue
+    from sim_explorer.utils.types import TActionArgs, TGetActionArgs, TSetActionArgs, TValue
 
 """
 sim_explorer module for definition and execution of simulation experiments
@@ -80,8 +81,10 @@ class Case:
             raise ValueError("'results' should not be used as case name. Add general results to 'base'")
 
         self.special: dict[str, Any] = {}
-        self.act_get: dict[float, list[tuple[float, list[tuple[Any, ...]]]]] = {}
-        self.act_set: dict[float, list[tuple[float, list[tuple[Any, ...]]]]] = {}
+        # self.act_get: dict[float, list[tuple[float, list[TGetActionArgs]]]] = {}  # noqa: ERA001
+        # self.act_set: dict[float, list[tuple[float, list[TSetActionArgs]]]] = {}  # noqa: ERA001
+        self.act_get: dict[float, list[TGetActionArgs]] = {}
+        self.act_set: dict[float, list[TSetActionArgs]] = {}
         if self.name == "base":  # take over the results info and activities
             assert special is not None, "startTime and stopTime settings needed for 'base'"
             self.special = special
@@ -146,7 +149,15 @@ class Case:
         """Append a case as sub-case to this case."""
         self.subs.append(case)
 
-    def _add_actions(self, act_type: str, at_time: float, act_list: list[Callable]) -> None:
+    # TODO @EisDNV: This method is nowhere used in the code base. Mabe remove?
+    #      ClaasRostock, 2025-01-26
+    '''
+    def _add_actions(
+        self,
+        act_type: str,
+        at_time: float,
+        act_list: list[Callable],
+    ) -> None:
         """Add actions to one of the properties act_get, act_set.
         The act_list should be prepared by the system_interface in the way it is needed there.
         """
@@ -155,6 +166,7 @@ class Case:
         if at_time not in dct:
             dct.update({at_time: []})
         dct[at_time].extend(act_list)
+    '''
 
     @staticmethod
     def _num_elements(obj: object) -> int:
@@ -417,12 +429,28 @@ class Case:
                 None: do not save, '': use default file name, str (with or without '.js5'): save with that file name
         """
 
+        @overload
         def do_actions(
             _t: float,
-            actions: list[TActionArgs],
-            _iter: Iterator[tuple[float, list[tuple[Any, ...]]]],
+            actions: list[TGetActionArgs],
+            _iter: Iterator[tuple[float, list[TGetActionArgs]]],
             time: int | float,
-        ) -> tuple[float, list[tuple[Any, ...]]]:
+        ) -> tuple[float, list[TGetActionArgs]]: ...
+
+        @overload
+        def do_actions(
+            _t: float,
+            actions: list[TSetActionArgs],
+            _iter: Iterator[tuple[float, list[TSetActionArgs]]],
+            time: int | float,
+        ) -> tuple[float, list[TSetActionArgs]]: ...
+
+        def do_actions(
+            _t: float,
+            actions: list[TGetActionArgs] | list[TSetActionArgs],
+            _iter: Iterator[tuple[float, list[TGetActionArgs]]] | Iterator[tuple[float, list[TSetActionArgs]]],
+            time: int | float,
+        ) -> tuple[float, list[TGetActionArgs]] | tuple[float, list[TSetActionArgs]]:
             while time >= _t:  # issue the actions - actions
                 if len(actions):
                     for _act in actions:
@@ -454,61 +482,94 @@ class Case:
         tstep: int = int(self.special["stepSize"] * self.cases.timefac)
         starts = self.cases.get_starts()  # start value of all case variables (where defined)
 
-        set_iter = self.act_set.items().__iter__()  # iterator over set actions => time, action_list
+        set_iter: Iterator[tuple[float, list[TSetActionArgs]]] = (
+            self.act_set.items().__iter__()
+        )  # iterator over set actions => time, action_list
         try:
             t_set, a_set = next(set_iter)
         except StopIteration:
             t_set, a_set = (float(np.inf), [])  # satisfy linter
-        get_iter = self.act_get.items().__iter__()  # iterator over get actions => time, action_list
-        act_step = []
+        get_iter: Iterator[tuple[float, list[TGetActionArgs]]] = (
+            self.act_get.items().__iter__()
+        )  # iterator over get actions => time, action_list
         self.add_results_object(Results(self))
 
-        while True:
-            t_get: float | int
-            a_get: list[TActionArgs]
+        act_step: list[tuple[str, str, tuple[int, ...], Callable[[], list[TValue]]]] = []
+        t_get: float | int
+        a_get: list[TActionArgs]
+        try:
+            t_get, a_get = next(get_iter)
+        except StopIteration:
+            t_get = tstop + 1  # ensure loop termination
+
+        while t_get < 0:  # negative time indicates 'always'
+            act_step.extend(
+                (
+                    *a,
+                    self.cases.simulator.action_step(
+                        act_info=a,
+                        typ=self.cases.variables[a[0]]["type"],
+                    ),
+                )
+                for a in a_get
+            )
             try:
                 t_get, a_get = next(get_iter)
             except StopIteration:
-                t_get, a_get = (tstop + 1, [])
-            if t_get < 0:  # negative time indicates 'always'
-                for a in a_get:
-                    act_step.append(
-                        (
-                            *a,
-                            self.cases.simulator.action_step(
-                                act_info=a,
-                                typ=self.cases.variables[a[0]]["type"],
-                            ),
-                        )
-                    )
-            else:
-                break
+                t_get = tstop + 1  # ensure loop termination
 
-        for cvar, _comp, refs, values in a_set:  # since there is no hook to get initial values we keep track
-            refs, values = self.cases.simulator.update_refs_values(
-                self.cases.variables[cvar]["refs"], self.cases.variables[cvar]["refs"], starts[cvar], refs, values
+        for cvar, _comp, refs, _values in a_set:  # since there is no hook to get initial values we keep track
+            _refs, values = self.cases.simulator.update_refs_values(
+                allrefs=self.cases.variables[cvar]["refs"],
+                baserefs=self.cases.variables[cvar]["refs"],
+                basevals=starts[cvar],
+                refs=refs,
+                values=_values,
             )
             starts[cvar] = values
 
         for v, s in starts.items():  # report the start values
             for c in self.cases.variables[cvar]["instances"]:
-                self.res.add(tstart, c, v, s if len(s) > 1 else s[0])
+                assert self.res is not None
+                self.res.add(
+                    time=tstart,
+                    comp=c,
+                    cvar=v,
+                    values=s if len(s) > 1 else s[0],
+                )
 
         while True:  # main simulation loop
-            t_set, a_set = do_actions(t_set, a_set, set_iter, time)
+            t_set, a_set = do_actions(
+                _t=t_set,
+                actions=a_set,
+                _iter=set_iter,
+                time=time,
+            )
 
             time += tstep
             if time > tstop:
                 break
             if not self.cases.simulator.run_until(time):
                 break
-            t_get, a_get = do_actions(t_get, a_get, get_iter, time)  # issue the current get actions
+            t_get, a_get = do_actions(  # issue the current get actions
+                _t=t_get,
+                actions=a_get,
+                _iter=get_iter,
+                time=time,
+            )
 
             if len(act_step):  # there are step-always actions
                 for cvar, comp, _refs, a in act_step:
-                    self.res.add(time / self.cases.timefac, comp, cvar, a())
+                    assert self.res is not None
+                    self.res.add(
+                        time=time / self.cases.timefac,
+                        comp=comp,
+                        cvar=cvar,
+                        values=a(),
+                    )
 
         if dump is not None:
+            assert self.res is not None
             self.res.save(dump)
 
 

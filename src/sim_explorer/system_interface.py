@@ -544,7 +544,7 @@ class SystemInterface:
 
     def add_actions(  # noqa: PLR0913
         self,
-        actions: dict[float, list[tuple[str, str, Any]]],
+        actions: dict[float, list[TActionArgs]],
         act_type: str,
         cvar: str,
         cvar_info: dict[str, Any],
