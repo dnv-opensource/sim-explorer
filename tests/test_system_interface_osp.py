@@ -54,32 +54,38 @@ def test_component_variable_name():
 
 
 def test_default_initial():
-    def di(var: str, caus: str, expected: str | int | tuple, only_default: bool = True):
+    def di(
+        var: str,
+        caus: str,
+        expected: str | int | tuple[str, ...],
+        *,
+        only_default: bool = True,
+    ):
         res = SystemInterfaceOSP.default_initial(caus, var, only_default)
         assert res == expected, f"default_initial({var}, {caus}): Found {res} but expected {expected}"
 
-    di("constant", "parameter", -1)
-    di("constant", "calculated_parameter", -1)
-    di("constant", "input", -1)
-    di("constant", "output", "exact")
-    di("constant", "local", "exact")
-    di("constant", "independent", -3)
-    di("fixed", "parameter", "exact")
-    di("fixed", "calculated_parameter", "calculated")
-    di("fixed", "local", "calculated")
-    di("fixed", "input", -4)
-    di("tunable", "parameter", "exact")
-    di("tunable", "calculated_parameter", "calculated")
-    di("tunable", "output", -5)
-    di("tunable", "local", "calculated")
-    di("tunable", "input", -4)
-    di("discrete", "calculated_parameter", -2)
-    di("discrete", "input", 5)
-    di("discrete", "output", "calculated")
-    di("discrete", "local", "calculated")
-    di("continuous", "calculated_parameter", -2)
-    di("continuous", "independent", 15)
-    di("discrete", "output", ("calculated", "exact", "approx"), False)
+    di(var="constant", caus="parameter", expected=-1)
+    di(var="constant", caus="calculated_parameter", expected=-1)
+    di(var="constant", caus="input", expected=-1)
+    di(var="constant", caus="output", expected="exact")
+    di(var="constant", caus="local", expected="exact")
+    di(var="constant", caus="independent", expected=-3)
+    di(var="fixed", caus="parameter", expected="exact")
+    di(var="fixed", caus="calculated_parameter", expected="calculated")
+    di(var="fixed", caus="local", expected="calculated")
+    di(var="fixed", caus="input", expected=-4)
+    di(var="tunable", caus="parameter", expected="exact")
+    di(var="tunable", caus="calculated_parameter", expected="calculated")
+    di(var="tunable", caus="output", expected=-5)
+    di(var="tunable", caus="local", expected="calculated")
+    di(var="tunable", caus="input", expected=-4)
+    di(var="discrete", caus="calculated_parameter", expected=-2)
+    di(var="discrete", caus="input", expected=5)
+    di(var="discrete", caus="output", expected="calculated")
+    di(var="discrete", caus="local", expected="calculated")
+    di(var="continuous", caus="calculated_parameter", expected=-2)
+    di(var="continuous", caus="independent", expected=15)
+    di(var="discrete", caus="output", expected=("calculated", "exact", "approx"), only_default=False)
 
 
 def test_simulator_from_system_structure():

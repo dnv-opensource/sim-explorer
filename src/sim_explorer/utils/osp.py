@@ -180,7 +180,7 @@ def make_osp_system_structure(
     osp.append(make_connections(connections_variable, connections_signal, connections_group, connections_signalgroup))
     tree = ET.ElementTree(osp)
     ET.indent(tree, space="   ", level=0)
-    file = Path(path).absolute() / (name + ".xml")
+    file = Path(path).absolute() / f"{name}.xml"
     tree.write(file, encoding="utf-8")
     return file
 

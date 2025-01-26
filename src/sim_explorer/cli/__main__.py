@@ -151,7 +151,8 @@ def main() -> None:
     case: Case | None = None
 
     if args.info is not None and args.info:
-        print(cases.info())
+        # TODO @EisDNV: Consider to use logging instead of printing. ClaasRostock, 2025-01-26.
+        print(cases.info())  # noqa: T201
 
     elif args.run is not None:
         case = cases.case_by_name(args.run)
@@ -165,7 +166,7 @@ def main() -> None:
         cases.run_case(case, run_subs=False, run_assertions=True)
 
         # Display assertion results
-        assertion_results = [assertion for assertion in cases.assertion.report()]
+        assertion_results = list(cases.assertion.report())
         grouped_results = group_assertion_results(assertion_results)
         log_assertion_results(grouped_results)
 
@@ -179,7 +180,7 @@ def main() -> None:
         cases.run_case(case, run_subs=True, run_assertions=True)
 
         # Display assertion results
-        assertion_results = [assertion for assertion in cases.assertion.report()]
+        assertion_results = list(cases.assertion.report())
         grouped_results = group_assertion_results(assertion_results)
         log_assertion_results(grouped_results)
 

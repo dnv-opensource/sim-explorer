@@ -1,5 +1,6 @@
 from math import sqrt
 from pathlib import Path
+from typing import Any
 
 import pytest
 from fmpy import plot_result, simulate_fmu
@@ -7,7 +8,7 @@ from fmpy import plot_result, simulate_fmu
 from sim_explorer.case import Case, Cases
 
 
-def arrays_equal(res: tuple, expected: tuple, eps=1e-7):
+def arrays_equal(res: tuple[Any, ...], expected: tuple[Any, ...], eps: float = 1e-7):
     assert len(res) == len(expected), (
         f"Tuples of different lengths cannot be equal. Found {len(res)} != {len(expected)}"
     )
@@ -15,7 +16,7 @@ def arrays_equal(res: tuple, expected: tuple, eps=1e-7):
         assert abs(x - y) < eps, f"Element {i} not nearly equal in {x}, {y}"
 
 
-def test_run_fmpy(show):
+def test_run_fmpy(show: bool):
     """Test and validate the basic BouncingBall using fmpy and not using OSP or sim_explorer."""
     path = Path(__file__).parent / "data" / "BouncingBall3D" / "BouncingBall3D.fmu"
     assert path.exists(), f"File {path} does not exist"
@@ -43,7 +44,7 @@ def test_run_fmpy(show):
     # no more testing than that. This is done in component-model tests
 
 
-def check_case(
+def check_case(  # noqa: C901, PLR0913, PLR0915
     cases: Cases,
     casename: str,
     stepSize: float = 0.01,
@@ -61,7 +62,7 @@ def check_case(
     print(f"Run case {case.name}. g={g}, e={e}, x_z={x_z}, dt={dt}")
     case.run()  # run the case and return results as results object
     results = case.res  # the results object
-    assert results.res.jspath(path="$.header.case", typ=str, errorMsg=True) == case.name
+    assert results.res.jspath(path="$.header.case", typ=str, error_msg=True) == case.name
     # default initial settings, superceeded by base case values
     x = [0, 0, x_z]  # z-value is in inch =! 1m!
     v = [1.0, 0, 0]
@@ -158,7 +159,8 @@ def check_case(
         vx_ = results.res.jspath(path=f"$['{_tb + dt}'].bb.v")[0]
         assert abs(_z) < x[2] * 5e-2, f"Bounce {n}@{t_b}. z-position {_z} should be close to 0 ({x[2] * 5e-2})"
         if delta_t > 2 * dt:
-            assert _vz < 0 and vz_ > 0, f"Bounce {n}@{t_b}. Expected speed sign change {_vz}-{vz_}when bouncing"
+            assert _vz < 0, f"Bounce {n}@{t_b}. Expected speed sign change {_vz}-{vz_}when bouncing"
+            assert vz_ > 0, f"Bounce {n}@{t_b}. Expected speed sign change {_vz}-{vz_}when bouncing"
             assert _vx * e == vx_, f"Bounce {n}@{t_b}. Reduced speed in x-direction. {_vx}*{e}!={vx_}"
 
 

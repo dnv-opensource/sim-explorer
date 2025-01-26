@@ -1,17 +1,20 @@
 """Python module for working with json5 files."""
 
+# ruff: noqa: ERA001  # TODO @EisDNV: Consider removing commented out code in this module. ClaasRostock, 2025-01-26
+
 from __future__ import annotations
 
 import contextlib
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 from jsonpath_ng.ext import parse
 from jsonpath_ng.jsonpath import DatumInContext
 
 if TYPE_CHECKING:
     import os
+    from collections.abc import Sequence
 
 
 class Json5Error(Exception):
@@ -52,7 +55,7 @@ class Json5:
         auto: bool | int = True,
         comments_eol: tuple[str, ...] = ("//", "#"),
         comments_ml: tuple[str, ...] = ("/*", "'" * 3, '"' * 3),
-        # keys_unique: bool = True,  # TODO @EisDNV: `keys_unique` is nowhere used. Remove?  ClaasRostock, 2025-01-26  # noqa: ERA001
+        # keys_unique: bool = True,  # TODO @EisDNV: `keys_unique` is nowhere used. Remove?  ClaasRostock, 2025-01-26
     ) -> None:
         self.pos: int = 0
         self.comments_eol: tuple[str, ...] = comments_eol
@@ -196,7 +199,7 @@ class Json5:
             while s := c.search(js5[pos:]):
                 sq = cq.search(js5[pos:])
                 sq2 = cq2.search(js5[pos:])
-                # print("_COMMENTS", pos, s, sq, sq2)  # noqa: ERA001
+                # print("_COMMENTS", pos, s, sq, sq2)
                 if (sq is None or s.start() < sq.start() or s.start() > sq.end()) and (
                     sq2 is None or s.start() < sq2.start() or s.start() > sq2.end()
                 ):
@@ -284,7 +287,11 @@ class Json5:
         #        print(f"OBJECT({self.pos}): {self.js5[self.pos:]}")
         assert self.js5[self.pos] == "{", self._msg("object start '{' expected")
         self.pos += 1
-        dct = None  # {}: dict[str,Any] = {}
+        dct: dict[str, Any] | None = None
+        r0: int
+        c0: int
+        k: str
+        v: int | float | str | dict[str, Any] | list[Any]
         while True:
             r0, c0 = self._get_line_number(self.pos)
             k = self._key()  # read until ':'
@@ -294,7 +301,8 @@ class Json5:
                 self.pos += 1
                 assert dct is not None, f"Cannot extract js5 object from {self.js5}"
                 return dct
-            assert k != "" and v != "", self._msg(f"No proper key:value: {k}:{v} within object.")
+            assert k != "", self._msg(f"No proper key: {k}:{v} within object.")
+            assert v != "", self._msg(f"No proper value: {k}:{v} within object.")
             assert dct is None or k not in dct, self._msg(
                 f"Duplicate key '{k}' within object starting at line {r0}({c0}). Not allowed."
             )
@@ -303,7 +311,7 @@ class Json5:
             else:
                 dct.update({k: v})
 
-    def _list(self) -> list:
+    def _list(self) -> list[Any]:
         """Read and return a list object at the current position."""
         #        print(f"LIST({self.pos}): {self.js5[self.pos:]}")
         assert self.js5[self.pos] == "[", self._msg("List start '[' expected")
@@ -365,10 +373,11 @@ class Json5:
         self.pos += m.end()
         return str(self._strip(k))
 
-    def _value(self):
+    def _value(self) -> int | float | str | dict[str, Any] | list[Any]:  # noqa: C901, PLR0911, PLR0912
         """Read and return a value at the current position, i.e. expect ,'...', "...",}."""
         v: str | dict[str, Any] | list[Any]
         q1, q2 = self._quoted()
+        m: re.Match[str] | None = None
         if q2 < 0:  # no quotation found. Include also [ and { in search
             m = re.search(r"[\[,\{\}\]]", self.js5[self.pos :])
         else:  # quoted value. Should find , ] or } after the value
@@ -376,62 +385,80 @@ class Json5:
             m = re.search(r"[,\}\]]", self.js5[self.pos :])
         #            print("Found quoted", self.js5[q1:q2], m)
         assert m is not None, self._msg("value expected")
-        if m.group() in (
-            "{",
-            "[",
-        ):  # found an object or a list start (quotation not allowed!)
+        if m.group() in ("{", "["):  # found an object or a list start (quotation not allowed!)
             assert ":" not in self.js5[self.pos : self.pos + m.start()], self._msg("Found ':'. Forgot ','?")
             self.pos += m.start()
             v = self._object() if m.group() == "{" else self._list()
             m = re.search(r"[,\}\]]", self.js5[self.pos :])
             cr, cc = self._get_line_number(self.pos)
-            assert m is not None, self._msg(f"End of value or end of object/list '{str(v)[:50] + '..'}' expected")
-        elif m.group() in (
-            "]",
-            "}",
-            ",",
-        ):  # any allowed value separator (also last list/object value)
+            assert m is not None, self._msg(f"End of value or end of object/list '{str(v)[:50]}..' expected")
+        elif m.group() in ("]", "}", ","):  # any allowed value separator (also last list/object value)
             v = self.js5[self.pos : self.pos + m.start()].strip() if q2 < 0 else self.js5[q1 + 1 : q2 - 1]
         else:
             raise Json5Error(
                 f"Unhandled situation. Quoted: ({q1 - self.pos},{q2 - self.pos}), search: {m}. From pos: {self.js5[self.pos :]}"
             )
-        # save_pos = self.pos
-        self.pos += (
-            m.start() if m.group() in ("}", "]") else m.end()
-        )  # leave the '}', ']', but make sure that ',' is eaten
-        # print(f"VALUE. Jump:{self.js5[save_pos:self.pos]}, return:{v}")
+        # leave the '}', ']', but make sure that ',' is eaten
+        self.pos += m.start() if m.group() in ("}", "]") else m.end()
+
         if isinstance(v, str):
             v = v.strip().strip("'").strip('"').strip()
             if q2 < 0:  # no quotation was used. Key separator not allowed.
                 assert ":" not in v, self._msg(f"Key separator ':' in value: {v}. Forgot ','?")
-        # print(f"VALUE {v} @ {self.pos}:'{self.js5[self.pos:self.pos+50]}'")
-        if isinstance(v, (dict, list)):
+
+        if isinstance(v, dict | list):
             return v
-        if isinstance(v, str) and not len(v):  # might be empty due to trailing ','
+        if not v:  # might be an empty string due to trailing ','
             return ""
 
         if q2 >= 0:  # explicitly quoted values are treated as strings!
             return str(v)
-        try:
-            return int(v)  # type: ignore
-        except Exception:
-            try:
-                return float(v)  # type: ignore
-            except Exception:
-                if isinstance(v, str):
-                    if v.upper() == "FALSE":
-                        return False
-                    if v.upper() == "TRUE":
-                        return True
-                    if v.upper() == "INFINITY":
-                        return float("inf")
-                    if v.upper() == "-INFINITY":
-                        return float("-inf")
-                    return str(v)
-                raise Json5Error(f"This should not happen. v:{v}") from None
 
-    def jspath(self, path: str, typ: type | None = None, errorMsg: bool = False):
+        try:
+            return int(v)
+        except Exception:  # noqa: BLE001
+            try:
+                return float(v)
+            except Exception:  # noqa: BLE001
+                # sourcery skip: assign-if-exp, reintroduce-else
+                if v.upper() == "FALSE":
+                    return False
+                if v.upper() == "TRUE":
+                    return True
+                if v.upper() == "INFINITY":
+                    return float("inf")
+                if v.upper() == "-INFINITY":
+                    return float("-inf")
+                return str(v)
+
+    _VT = TypeVar("_VT", bound=Any)
+
+    @overload
+    def jspath(
+        self,
+        path: str,
+        typ: type[_VT],
+        *,
+        error_msg: bool = False,
+    ) -> _VT: ...
+
+    @overload
+    def jspath(
+        self,
+        path: str,
+        typ: None = None,
+        *,
+        error_msg: bool = False,
+    ) -> Any | None:  # noqa: ANN401
+        ...
+
+    def jspath(
+        self,
+        path: str,
+        typ: type[_VT] | None = None,
+        *,
+        error_msg: bool = False,
+    ) -> _VT | Any | None:
         """Evaluate a JsonPath expression on the Json5 code and return the result.
 
         Syntax see `RFC9535 <https://datatracker.ietf.org/doc/html/rfc9535>`_
@@ -458,10 +485,10 @@ class Json5:
             errMsg (bool)=False: specify whether an error should be raised, or None returned (default)
         """
         compiled = parse(path)
-        data = compiled.find(self.js_py)
+        data: Sequence[Any] = compiled.find(self.js_py)
         #        print("DATA", data)
-        val = None
-        msg = ""
+        val: Any | list[Any] | None = None
+        msg: str = ""
         if not len(data):  # not found
             msg = f"No match for {path}"
         elif len(data) == 1:  # found a single element
@@ -469,46 +496,44 @@ class Json5:
         elif isinstance(data[0], DatumInContext):
             val = [x.value for x in data]
 
-        if val is not None and typ is not None:  # check also the type
-            if not isinstance(val, typ):
-                try:  # try to convert
-                    val = typ(val)
-                except Exception:
-                    msg = f"{path} matches, but type {typ} does not match {type(val)}."
-                    val = None
-        if val is None and errorMsg:
+        if val is not None and typ is not None and not isinstance(val, typ):
+            try:  # try to convert
+                val = typ(val)
+            except Exception:  # noqa: BLE001
+                msg = f"{path} matches, but type {typ} does not match {type(val)}."
+                val = None
+        if val is None and error_msg:
             raise ValueError(msg)
         return val
 
     @staticmethod
-    def _spath_to_keys(spath):
+    def _spath_to_keys(spath: str) -> list[str]:
         """Extract the keys from path.
-        So far this is a minimum implementation for adding data. Probably this could be done using jysonpath-ng.
+        So far this is a minimum implementation for adding data. Probably this could be done using jsonpath-ng.
         """
-        keys = []
+        keys: list[str] = []
         spath = spath.lstrip("$.")
         if spath.startswith("$["):
             spath = spath[1:]
-        c = re.compile(r"\[(.*?)\]")
-        while True:
-            m = c.search(spath)
-            if m is not None:
-                if m.start() > 0:
-                    keys.extend(spath[: m.start()].split("."))
-                keys.append(spath[m.start() + 1 : m.end() - 1])
-                spath = spath[m.end() :]
-            elif not len(spath.strip()):
-                break
-            else:
-                keys.extend(spath.split("."))
-                break
+        c: re.Pattern = re.compile(r"\[(.*?)\]")
+        while m := c.search(spath):
+            if m.start() > 0:
+                keys.extend(spath[: m.start()].split("."))
+            keys.append(spath[m.start() + 1 : m.end() - 1])
+            spath = spath[m.end() :]
+        if len(spath.strip()):
+            keys.extend(spath.split("."))
         return keys
 
     @staticmethod
-    def check_valid_js(js_py, print_msg=False):
+    def check_valid_js(  # noqa: C901
+        js_py: dict[str, Any] | Any,  # noqa: ANN401
+        *,
+        print_msg: bool = False,
+    ) -> bool:
         """Check whether the dict js_py is a valid Json dict."""
 
-        def check_valid_js_list(lst):
+        def check_valid_js_list(lst: list[Any]) -> bool:
             for itm in lst:
                 if isinstance(itm, dict):
                     return Json5.check_valid_js(itm, print_msg=False)
@@ -519,41 +544,47 @@ class Json5:
 
         if not isinstance(js_py, dict):
             if print_msg:
-                print(f"Error Not a (sub-)dict. Found type {type(js_py)}: {js_py}")
+                # TODO @EisDNV: Consider using logging instead of print statements.
+                print(f"Error Not a (sub-)dict. Found type {type(js_py)}: {js_py}")  # noqa: T201
             return False
         for k, v in js_py.items():
             if not isinstance(k, str):
                 if print_msg:
-                    print(f"Error: Key {k} is not a string. (sub-)dict:{js_py}")
+                    # TODO @EisDNV: Consider using logging instead of print statements.
+                    print(f"Error: Key {k} is not a string. (sub-)dict:{js_py}")  # noqa: T201
                 return False
-            if isinstance(v, dict):  # a sub-Json dict
-                if not Json5.check_valid_js(v, print_msg):
-                    if print_msg:
-                        print(f"Error: Not a valid Json dict: {v}")
-            elif isinstance(v, list):
-                if not check_valid_js_list(v):
-                    if print_msg:
-                        print(f"Error: Not a valid Json list: {v}")
-                    return False
-            else:  # accept as atom
-                pass
+            if isinstance(v, dict) and not Json5.check_valid_js(js_py=v, print_msg=print_msg):
+                if print_msg:
+                    # TODO @EisDNV: Consider using logging instead of print statements.
+                    print(f"Error: Not a valid Json dict: {v}")  # noqa: T201
+                return False
+            if isinstance(v, list) and not check_valid_js_list(lst=v):
+                if print_msg:
+                    # TODO @EisDNV: Consider using logging instead of print statements.
+                    print(f"Error: Not a valid Json list: {v}")  # noqa: T201
+                return False
+            # accept as atom
         return True
 
-    def update(self, spath: str, data: Any):
+    def update(self, spath: str, data: Any) -> None:  # noqa: ANN401
         """Append data to the js_py dict at the path pointed to by keys.
         So far this is a minimum implementation for adding data. Probably this could be done using jysonpath-ng.
         """
 
-        keys = Json5._spath_to_keys(spath)
-        path = self.js_py
-        parent = path
+        keys: list[str] = Json5._spath_to_keys(spath)
+        path: dict[str, Any] | list[Any] | Any = self.js_py
+        parent: dict[str, Any] | list[Any] | Any = self.js_py
         for i, k in enumerate(keys):
             if k not in path:
                 for j in range(len(keys) - 1, i - 1, -1):
                     data = {keys[j]: data}
                 break
             parent = path
-            path = path[k]  # type: ignore [assignment]
+            # NOTE: `assert` is necessary as `path[k]` will be an invalid get operation if `path` is not a dict.
+            # TODO @EisDNV: Check and possibly improve code to allow accessing also indexed elements in lists.
+            #      ClaasRostock, 2025-01-26.
+            assert isinstance(path, dict)
+            path = path[k]
         # print(f"UPDATE path:{path}, parent:{parent}, k:{k}: {data}")
         if isinstance(path, list):
             path.append(data)
@@ -561,10 +592,13 @@ class Json5:
             path.update(data)
         elif isinstance(parent, dict):  # update the parent dict (replace a value)
             parent.update({k: data})
-        else:
-            raise ValueError(f"Unknown type of path: {path}")
 
-    def write(self, file: str | os.PathLike[str] | None = None, pretty_print: bool = True):
+    def write(  # noqa: C901
+        self,
+        file: str | os.PathLike[str] | None = None,
+        *,
+        pretty_print: bool = True,
+    ) -> str:
         """Write a Json(5) tree to string or file.
 
         Args:
@@ -580,7 +614,12 @@ class Json5:
                     return txt[:i]
             return ""
 
-        def print_js5(sub: Any, level: int = 0, pretty: bool = True) -> str:
+        def print_js5(
+            sub: dict[str, Any] | list[Any] | Any,  # noqa: ANN401
+            level: int = 0,
+            *,
+            pretty: bool = True,
+        ) -> str:
             """Print the Json5 object recursively. Return the formated string.
 
             Args:
@@ -603,23 +642,23 @@ class Json5:
             elif isinstance(sub, list):
                 res = "["
                 for v in sub:
-                    sub_res = print_js5(v, level=level, pretty=pretty)
-                    res += "" if sub_res is None else sub_res
+                    sub_res = print_js5(sub=v, level=level, pretty=pretty)
+                    res += sub_res or ""
                 res = remove_comma(res)
                 res += "],"
                 res += "\n" if pretty else ""
             elif sub == "":
                 res = ","
             elif isinstance(sub, str):
-                res = "'" + str(sub) + "',"
-            elif isinstance(sub, (int, float, bool)):
-                res = str(sub) + ","
+                res = f"'{sub!s}',"
+            elif isinstance(sub, int | float | bool):
+                res = f"{sub!s},"
             else:  # try still to make a string
-                res = str(sub) + ","
+                res = f"{sub!s},"
             return res
 
         js5 = print_js5(self.js_py, level=0, pretty=pretty_print)
         if file:
-            with open(file, "w") as fp:
-                fp.write(js5)
+            with Path(file).open(mode="w") as fp:
+                _ = fp.write(js5)
         return js5

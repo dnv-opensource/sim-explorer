@@ -5,16 +5,16 @@ import pytest
 from sim_explorer.utils.paths import get_path, relative_path
 
 
-@pytest.fixture
-def simexp(scope="module", autouse=True):
+@pytest.fixture(scope="module", autouse=True)
+def simexp() -> Path:
     return _simexp()
 
 
-def _simexp():
+def _simexp() -> Path:
     return Path(__file__).parent.parent
 
 
-def test_relative_path(simexp):
+def test_relative_path(simexp: Path):
     cases = simexp / "tests" / "data" / "BouncingBall3D" / "BouncingBall3D.cases"
     res = simexp / "tests" / "data" / "BouncingBall3D" / "test_results"
     cases0 = simexp / "tests" / "data" / "BouncingBall0" / "BouncingBall.cases"

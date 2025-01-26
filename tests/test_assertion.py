@@ -29,26 +29,26 @@ def test_globals_locals():
     assert abs(locals()["f"](3.0) - sin(3.0)) < 1e-15
 
 
-def test_ast(show):
+def test_ast(show: bool):
     expr = "1+2+x.dot(x) + sin(y)"
+    a = ast.parse(source=expr, filename="<source>", mode="exec")
     if show:
-        a = ast.parse(expr, "<source>", "exec")
-        print(a, ast.dump(a, indent=4))
+        print(a, ast.dump(node=a, indent=4))
 
     asserts = Assertion()
     asserts.register_vars(
-        {
+        variables={
             "x": {"instances": ("dummy",), "names": ("x[0]", "x[1]", "x[2]")},
             "y": {"instances": ("dummy2",), "names": ("y[0]",)},
         }
     )
-    syms, funcs = asserts.expr_get_symbols_functions(expr)
+    syms, funcs = asserts.expr_get_symbols_functions(expr=expr)
     assert syms == ["x", "y"], f"SYMS: {syms}"
     assert funcs == ["sin"], f"FUNCS: {funcs}"
 
     expr = "abs(y-4)<0.11"
+    a = ast.parse(expr)
     if show:
-        a = a = ast.parse(expr)
         print(a, ast.dump(a, indent=4))
     syms, funcs = asserts.expr_get_symbols_functions(expr)
     assert syms == ["y"]

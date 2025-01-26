@@ -182,7 +182,7 @@ class SystemInterface:
             )
         raise AssertionError(f"Unallowed argument {comp} in 'variables'")
 
-    def variables(self, comp: str | int) -> dict[int | str, Any]:
+    def variables(self, comp: str | int) -> dict[int | str, dict[str, Any]]:
         """Get the registered variables for a given component from the system.
         This is the default version which works without the full modelDescription inside self._models.
         Can be overridden by super-classes which have the modelDescription available.

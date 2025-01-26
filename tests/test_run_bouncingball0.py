@@ -1,3 +1,4 @@
+import contextlib
 from math import sqrt
 from pathlib import Path
 
@@ -9,11 +10,11 @@ from sim_explorer.json5 import Json5
 from sim_explorer.system_interface_osp import SystemInterfaceOSP
 
 
-def expect_bounce_at(results: Json5, time: float, eps=0.02):
+def expect_bounce_at(results: Json5, time: float, eps: float = 0.02):
     previous = None
     falling = True
     for t in results.js_py:
-        try:
+        with contextlib.suppress(ValueError):
             _t = float(t)
             if previous is not None:
                 print(results.jspath(f"$.['{t}'].bb.h"), previous[0])
@@ -29,8 +30,6 @@ def expect_bounce_at(results: Json5, time: float, eps=0.02):
                     return False
             previous = (results.jspath(f"$.['{t}'].bb.h"), falling)
             assert previous is not None, f"No data 'bb.h' found for time {t}"
-        except ValueError:
-            pass
     print("Time not found")
     return False
 

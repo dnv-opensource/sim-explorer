@@ -106,7 +106,7 @@ class Case:
             self.act_set = copy.deepcopy(self.parent.act_set)
 
         if self.cases.simulator.full_simulator_available:
-            for k, v in self.js.jspath(path="$.spec", typ=dict, errorMsg=True).items():
+            for k, v in self.js.jspath(path="$.spec", typ=dict, error_msg=True).items():
                 self.read_spec_item(k, v)
             _results = self.js.jspath("$.results", list)
             if _results is not None:
@@ -651,7 +651,7 @@ class Cases:
         """
         variables = {}
         model_vars = {}  # cache of variables of models
-        for k, v in self.js.jspath(path="$.header.variables", typ=dict, errorMsg=True).items():
+        for k, v in self.js.jspath(path="$.header.variables", typ=dict, error_msg=True).items():
             if not isinstance(v, list):
                 raise CaseInitError(f"List of 'component(s)' and 'variable(s)' expected. Found {v}") from None
             assert len(v) in {2, 3}, f"Variable spec should be: instance(s), variables[, description]. Found {v}."
@@ -752,13 +752,13 @@ class Cases:
         # we need to peek into the base case where startTime and stopTime should be defined
         special: dict[str, float] = {
             "startTime": self.js.jspath(path="$.base.spec.startTime", typ=float) or 0.0,
-            "stopTime": self.js.jspath(path="$.base.spec.stopTime", typ=float, errorMsg=True),
+            "stopTime": self.js.jspath(path="$.base.spec.stopTime", typ=float, error_msg=True),
         }
         # all case definitions are top-level objects in self.spec. 'base' is mandatory
         self.base = Case(
             cases=self,
             name="base",
-            spec=self.js.jspath(path="$.base", typ=dict, errorMsg=True),
+            spec=self.js.jspath(path="$.base", typ=dict, error_msg=True),
             special=special,
         )
         for k in self.js.js_py:
@@ -766,7 +766,7 @@ class Cases:
                 _ = Case(
                     cases=self,
                     name=k,
-                    spec=self.js.jspath(path=f"$.{k}", typ=dict, errorMsg=True),
+                    spec=self.js.jspath(path=f"$.{k}", typ=dict, error_msg=True),
                 )
 
     def case_by_name(self, name: str) -> Case | None:
@@ -972,14 +972,14 @@ class Results:
         self.file = Path(file)
         assert self.file.exists(), f"File {file} is expected to exist."
         self.res = Json5(self.file)
-        case = Path(self.file.parent / (self.res.jspath(path="$.header.cases", typ=str, errorMsg=True) + ".cases"))
+        case = Path(self.file.parent / (self.res.jspath(path="$.header.cases", typ=str, error_msg=True) + ".cases"))
         try:
             cases = Cases(Path(case))
         except ValueError:
             raise CaseInitError(f"Cases {Path(case)} instantiation error") from ValueError
-        self.case = cases.case_by_name(name=self.res.jspath(path="$.header.case", typ=str, errorMsg=True))
+        self.case = cases.case_by_name(name=self.res.jspath(path="$.header.case", typ=str, error_msg=True))
         assert isinstance(self.case, Case), (
-            f"Case {self.res.jspath(path='$.header.case', typ=str, errorMsg=True)} not found"
+            f"Case {self.res.jspath(path='$.header.case', typ=str, error_msg=True)} not found"
         )
         assert isinstance(self.case.cases, Cases), "Cases object not defined"
         self._header_transform(tostring=False)
@@ -1008,12 +1008,12 @@ class Results:
         """
         assert self.case is not None, "Case object not defined"
         assert self.file is not None, "File name not defined"
-        _ = self.case.cases.js.jspath(path="$.header.name", typ=str, errorMsg=True)
+        _ = self.case.cases.js.jspath(path="$.header.name", typ=str, error_msg=True)
         results: dict[str, dict[str, Any]] = {
             "header": {
                 "case": self.case.name,
                 "dateTime": datetime.now(tz=timezone.utc).isoformat(),
-                "cases": self.case.cases.js.jspath(path="$.header.name", typ=str, errorMsg=True),
+                "cases": self.case.cases.js.jspath(path="$.header.name", typ=str, error_msg=True),
                 "file": relative_path(p1=Path(self.case.cases.file), p2=self.file),
                 "casesDate": datetime.fromtimestamp(
                     timestamp=self.case.cases.file.stat().st_mtime, tz=timezone.utc
@@ -1037,28 +1037,28 @@ class Results:
         if tostring:
             res.update(
                 spath="$.header.dateTime",
-                data=res.jspath(path="$.header.dateTime", typ=datetime, errorMsg=True).isoformat(),
+                data=res.jspath(path="$.header.dateTime", typ=datetime, error_msg=True).isoformat(),
             )
             res.update(
                 spath="$.header.casesDate",
-                data=res.jspath(path="$.header.casesDate", typ=datetime, errorMsg=True).isoformat(),
+                data=res.jspath(path="$.header.casesDate", typ=datetime, error_msg=True).isoformat(),
             )
             res.update(
                 spath="$.header.file",
-                data=relative_path(p1=res.jspath(path="$.header.file", typ=Path, errorMsg=True), p2=self.file),
+                data=relative_path(p1=res.jspath(path="$.header.file", typ=Path, error_msg=True), p2=self.file),
             )
         else:
             res.update(
                 spath="$.header.dateTime",
-                data=datetime.fromisoformat(res.jspath(path="$.header.dateTime", typ=str, errorMsg=True)),
+                data=datetime.fromisoformat(res.jspath(path="$.header.dateTime", typ=str, error_msg=True)),
             )
             res.update(
                 spath="$.header.casesDate",
-                data=datetime.fromisoformat(res.jspath(path="$.header.casesDate", typ=str, errorMsg=True)),
+                data=datetime.fromisoformat(res.jspath(path="$.header.casesDate", typ=str, error_msg=True)),
             )
             res.update(
                 spath="$.header.file",
-                data=get_path(p1=res.jspath(path="$.header.file", typ=str, errorMsg=True), base=self.file.parent),
+                data=get_path(p1=res.jspath(path="$.header.file", typ=str, error_msg=True), base=self.file.parent),
             )
 
     def add(

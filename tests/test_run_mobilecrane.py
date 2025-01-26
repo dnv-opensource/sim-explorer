@@ -1,5 +1,6 @@
 from math import sqrt
 from pathlib import Path
+from typing import Any
 
 import pytest
 from libcosimpy.CosimEnums import CosimExecutionState
@@ -50,16 +51,18 @@ def test_read_cases():
 
 
 # @pytest.mark.skip("Alternative step-by step, only using libcosimpy")
-def test_step_by_step_cosim(mobile_crane_fmu):
-    def set_var(name: str, value: float, slave: int = 0):
+def test_step_by_step_cosim(mobile_crane_fmu: Path):  # noqa: C901
+    def set_var(name: str, value: float, slave: int = 0) -> bool:
         for idx in range(sim.num_slave_variables(slave)):
             if sim.slave_variables(slave)[idx].name.decode() == name:
-                return manipulator.slave_real_values(slave, [idx], [value])
+                return manipulator.slave_real_values(slave_index=slave, variable_references=[idx], values=[value])
+        return False
 
-    def set_initial(name: str, value: float, slave: int = 0):
+    def set_initial(name: str, value: float, slave: int = 0) -> bool:
         for idx in range(sim.num_slave_variables(slave)):
             if sim.slave_variables(slave)[idx].name.decode() == name:
-                return sim.real_initial_value(slave, idx, value)
+                return sim.real_initial_value(slave_index=slave, variable_reference=idx, value=value)
+        return False
 
     sim = CosimExecution.from_step_size(0.1 * 1.0e9)
     assert mobile_crane_fmu.exists(), f"FMU {mobile_crane_fmu} not found"
@@ -109,23 +112,25 @@ def test_step_by_step_cosim(mobile_crane_fmu):
         if step_count == 9:
             manipulator.slave_real_values(slave, [34], [0.1])
         # sim.step()  #
-        sim.simulate_until(step_count * 1e9)
+        _ = sim.simulate_until(step_count * 1e9)
 
 
 # @pytest.mark.skip("Alternative step-by step, using SystemInterfaceOSP and Cases")
-def test_step_by_step_cases(mobile_crane_fmu):
+def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
     sim: SystemInterfaceOSP
     cosim: CosimExecution
+    cases: Cases
 
-    def get_ref(name: str):
+    def get_ref(name: str) -> Any:  # noqa: ANN401
         variable = cases.simulator.variables(0)[name]
         assert len(variable), f"Variable {name} not found"
         return variable["reference"]
 
-    def set_initial(name: str, value: float, slave: int = 0):
+    def set_initial(name: str, value: float, slave: int = 0) -> bool:
         for idx in range(cosim.num_slave_variables(slave_index=slave)):
             if cosim.slave_variables(slave_index=slave)[idx].name.decode() == name:
                 return cosim.real_initial_value(slave_index=slave, variable_reference=idx, value=value)
+        return False
 
     def initial_settings():
         assert isinstance(cases.simulator, SystemInterfaceOSP)
@@ -144,15 +149,15 @@ def test_step_by_step_cases(mobile_crane_fmu):
     system = Path(Path(__file__).parent / "data" / "MobileCrane" / "OspSystemStructure.xml")
     assert system.exists(), f"OspSystemStructure file {system} not found"
     sim = SystemInterfaceOSP(system)
-    sim.init_simulator()
-    print("COMP", {k: v for k, v in sim.components.items()})
-    expected = {k: v for k, v in sim.components.items()}
+    _ = sim.init_simulator()
+    print("COMP", dict(sim.components.items()))
+    expected = dict(sim.components.items())
     assert isinstance(expected["mobileCrane"], str), f"Found components {expected}"
 
     path = Path(Path(__file__).parent, "data/MobileCrane/MobileCrane.cases")
     assert path.exists(), "Cases file not found"
     js = Json5(path)
-    print("CASES", js.write(None, True))
+    print("CASES", js.write(file=None, pretty_print=True))
     expected_results = ["T@step", "x_pedestal@step", "x_boom@step", "x_load@step"]
     assert js.jspath("$.base.results") == expected_results, f"Results found: {js.jspath('$.base.results')}"
     assert list(js.js_py.keys()) == [
@@ -302,8 +307,8 @@ def test_run_cases():
     assert case is not None
     case.run(dump="results_base")
     res = case.res.res
-    # TODO: expected Torque?
-    assert is_nearly_equal(res.jspath("$['1.0'].mobileCrane.x_pedestal"), [0.0, 0.0, 3.0])
+    # TODO @EisDNV: expected Torque?
+    assert is_nearly_equal(res.jspath(path="$['1.0'].mobileCrane.x_pedestal", typ=list), expected=[0.0, 0.0, 3.0])
     # assert is_nearly_equal(res[1.0]["mobileCrane"]["x_boom"], [8, 0.0, 3], 1e-5)
     # assert is_nearly_equal(res[1.0]["mobileCrane"]["x_load"], [8, 0, 3.0 - 1e-6], 1e-5)
 

@@ -6,7 +6,7 @@ from libcosimpy.CosimEnums import (
     CosimVariableType,
     CosimVariableVariability,
 )
-from libcosimpy.CosimExecution import CosimExecution  # type: ignore
+from libcosimpy.CosimExecution import CosimExecution
 
 from sim_explorer.utils.osp import make_osp_system_structure, osp_system_structure_from_js5
 
