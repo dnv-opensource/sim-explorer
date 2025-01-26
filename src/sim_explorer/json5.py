@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
-# from jsonpath_ng.ext.filter import Expression#, Filter
-import os
+import contextlib
 import re
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from jsonpath_ng.ext import parse  # type: ignore
-from jsonpath_ng.jsonpath import DatumInContext  # type: ignore
+from jsonpath_ng.ext import parse
+from jsonpath_ng.jsonpath import DatumInContext
+
+if TYPE_CHECKING:
+    import os
 
 
 class Json5Error(Exception):
@@ -45,33 +47,30 @@ class Json5:
 
     def __init__(
         self,
-        js5: str | os.PathLike[str] | dict,
+        js5: str | os.PathLike[str] | dict[str, Any],
+        *,
         auto: bool | int = True,
-        comments_eol: tuple[str, ...] = (
-            "//",
-            "#",
-        ),
+        comments_eol: tuple[str, ...] = ("//", "#"),
         comments_ml: tuple[str, ...] = ("/*", "'" * 3, '"' * 3),
-        keys_unique: bool = True,
-    ):
-        self.pos = 0
-        self.comments_eol = comments_eol
-        self.comments_ml = comments_ml
+        # keys_unique: bool = True,  # TODO @EisDNV: `keys_unique` is nowhere used. Remove?  ClaasRostock, 2025-01-26  # noqa: ERA001
+    ) -> None:
+        self.pos: int = 0
+        self.comments_eol: tuple[str, ...] = comments_eol
+        self.comments_ml: tuple[str, ...] = comments_ml
+        self.js_py: dict[str, Any] = {}
+        self.js5: str = ""
         if isinstance(js5, dict):  # instantiation from dict
             assert self.check_valid_js(js5), f"{js5} is not a valid Json dict"
             self.js_py = js5
             self.js5 = ""
         else:  # instantiation from file
-            try:
+            with contextlib.suppress(Exception):
                 if Path(js5).exists():
                     path = Path(js5)
                 elif Path(Path(js5).name).exists():
                     path = Path(Path(js5).name)
-                with open(path) as file:  # read file into string
-                    self.js5 = file.read()
-            except Exception:
-                pass
-            if not hasattr(self, "js5"):  # file reading not succesfull
+                self.js5 = path.read_text()
+            if not self.js5:  # file reading not succesfull
                 if isinstance(js5, str):
                     self.js5 = js5
                 else:
@@ -83,7 +82,7 @@ class Json5:
             self.js5, self.lines = self._lines()  # map the lines first so that error messages work
             self.js5, self.comments = self._comments()
             self.js5, _ = self._newline()  # replace unnecessary LFs and return start position per line
-            self.js_py: dict[str, Any] = {}  # is replaced by the python json5 dict when to_py() is run
+            self.js_py = {}  # is replaced by the python json5 dict when to_py() is run
             if auto:
                 self.js_py = self.to_py()
 
@@ -101,35 +100,29 @@ class Json5:
         except Json5Error as err:  # can happen when self.lines does not yet exist
             return f"Json5 read error at {pos}: {pre}: {self.js5[pos : pos + num]}: {err}"
 
-    def _lines(self):
+    def _lines(self) -> tuple[str, list[int]]:
         """Map start positions of lines and replace all newline CR-LF combinations with single newline (LF)."""
-        c = re.compile(r"\n\r|\r\n|\r|\n")
-        pos = 0
-        lines = [0]
-        js = ""
-        while True:
-            s = c.search(self.js5[pos:])
-            if s is None:
-                return (js + self.js5[pos:], lines)
+        c: re.Pattern = re.compile(r"\n\r|\r\n|\r|\n")
+        pos: int = 0
+        lines: list[int] = [0]
+        js: str = ""
+        s: re.Match[str] | None
+        while s := c.search(self.js5[pos:]):
             js += self.js5[pos : pos + s.start()] + "\n"
             lines.append(len(js))  # register line start
             pos += s.end()
+        return (js + self.js5[pos:], lines)
 
-    def _newline(self):
+    def _newline(self) -> tuple[str, list[int]]:
         """Replace unnecessary line feeds with spaces and return list of start position per line."""
-        qt1 = 0  # single quote state
-        qt2 = 0  # double quote state
-        c = re.compile(r'"|\'|\n\r|\r\n|\r|\n')
-        pos = 0
-        lines = [0]
-        js = ""
-        while True:
-            s = c.search(self.js5[pos:])
-            if s is None:
-                if qt1 + qt2 != 0:
-                    self._msg("Non-matching quotes detected")
-                return (js + self.js5[pos:], lines)
-
+        qt1: int = 0  # single quote state
+        qt2: int = 0  # double quote state
+        c: re.Pattern = re.compile(r'"|\'|\n\r|\r\n|\r|\n')
+        pos: int = 0
+        lines: list[int] = [0]
+        js: str = ""
+        s: re.Match[str] | None
+        while s := c.search(self.js5[pos:]):
             js += self.js5[pos : pos + s.start()]
             if s.group() == '"' and not qt1:
                 qt2 = 1 - qt2
@@ -139,23 +132,26 @@ class Json5:
                 js += s.group()
             else:
                 lines.append(pos + s.end())  # register line start (also if within literal string)
-                if not (qt1 or qt2):  # we are not within a literal string
-                    if s.group() in ("\n\r", "\r\n"):
-                        js += "  "
-                    elif s.group() in ("\r", "\n"):
-                        js += " "
-                else:  # within a literal string newlines are kept
+                if qt1 or qt2:  # We are within a literal string. -> Keep newlines.
                     js += s.group()
+                elif s.group() in ("\n\r", "\r\n"):  # Remove newlines.
+                    js += "  "
+                elif s.group() in ("\r", "\n"):  # Remove newlines.
+                    js += " "
             pos += s.end()
+
+        if qt1 + qt2 != 0:
+            _ = self._msg("Non-matching quotes detected")
+        return (js + self.js5[pos:], lines)
 
     def _get_line_number(self, pos: int) -> tuple[int, int]:
         """Get the line number relative to position 'pos'.
         Returns both the row and column of 'pos' (1-based).
         """
-        for i, p in enumerate(self.lines):  # line number (zero-based) and position at beginning of line
-            if p > pos:  # read too far
-                return i, pos - self.lines[i - 1] + 1
-        return len(self.lines), pos - self.lines[-1] + 1
+        return next(  # line number (zero-based) and position at beginning of line
+            ((i, pos - self.lines[i - 1] + 1) for i, p in enumerate(self.lines) if p > pos),
+            (len(self.lines), pos - self.lines[-1] + 1),
+        )
 
     def line(self, num: int) -> str:
         """Return the raw json5 line 'num'.
@@ -181,31 +177,31 @@ class Json5:
         Return the resulting 'cleaned' string and the comments dict
         """
 
-        def _re(txt: str):
+        def _re(txt: str) -> str:
             return "".join("\\" + ch if ch in ("*",) else ch for ch in txt)
 
-        _js5 = self.js5 if js5 == "" else js5
-        comments = {}
-        cq = re.compile(r"'([^']*)'")  #  single quotes
-        cq2 = re.compile(r'"([^"]*)"')  # double quotes
+        _js5: str = js5 or self.js5
+        comments: dict[int, str] = {}
+        cq: re.Pattern = re.compile(r"'([^']*)'")  #  single quotes
+        cq2: re.Pattern = re.compile(r'"([^"]*)"')  # double quotes
+        js5: str
+        pos: int
+
         for cmt in self.comments_eol:  # handle end-of-line comments
             js5 = _js5
             _js5 = ""
-            c = re.compile(r"" + cmt + ".*$", re.MULTILINE)  # eol comments
+            c: re.Pattern = re.compile(f"{cmt}.*$", re.MULTILINE)  # eol comments
             pos = 0
-            while True:
-                s = c.search(js5[pos:])
+            s: re.Match[str] | None
+            while s := c.search(js5[pos:]):
                 sq = cq.search(js5[pos:])
                 sq2 = cq2.search(js5[pos:])
-                # print("_COMMENTS", pos, s, sq, sq2)
-                if s is None:
-                    _js5 += js5[pos:]
-                    break
+                # print("_COMMENTS", pos, s, sq, sq2)  # noqa: ERA001
                 if (sq is None or s.start() < sq.start() or s.start() > sq.end()) and (
                     sq2 is None or s.start() < sq2.start() or s.start() > sq2.end()
                 ):
                     # no quote or comments starts before or after quote. Handle comment
-                    comments.update({pos + s.start(): s.group()})
+                    comments[pos + s.start()] = s.group()
                     _js5 += js5[pos : pos + s.start()]
                     _js5 += " " * len(s.group())
                     pos += s.end()
@@ -219,54 +215,52 @@ class Json5:
                     pos += sq2.end()
                 else:
                     raise Json5Error(f"Unhandled EOL-comment removal: {s}, {sq}, {sq2}")
-
-        #                 if (
-        #                     s is None
-        #                     or (sq is not None and sq.end() < s.start())
-        #                     or (sq2 is not None and sq2.end() < s.start())
-        #                 ):
-        #                     _js5 += js5[pos:]
-        #                     break
-        #                 if (s is not None and
-        #                     (sq is None or sq.start() > s.start() or s.start() > sq.end()) and
-        #                     (sq2 is None or sq2.start() > s.start() or s.start() > sq2.end())): # comment sign outside quotes
-        #                     comments.update({pos + s.start(): s.group()})
-        #                     _js5 += js5[pos : pos + s.start()]
-        #                     _js5 += " " * len(s.group())
-        #                     pos += s.end()
-        #                 elif sq is not None:
-        #                     _js5 += js5[pos : sq.end()]
-        #                     pos += sq.end()
-        #                 elif sq2 is not None:
-        #                     _js5 += js5[pos : sq2.end()]
-        #                     pos += sq2.end()
-        #                 else:
-        #                     raise Json5Error(f"Unresolved when removing comments {js5[pos:]}") from None
+            _js5 += js5[pos:]
+            """
+            if (
+                s is None
+                or (sq is not None and sq.end() < s.start())
+                or (sq2 is not None and sq2.end() < s.start())
+            ):
+                _js5 += js5[pos:]
+                break
+            if (s is not None and
+                (sq is None or sq.start() > s.start() or s.start() > sq.end()) and
+                (sq2 is None or sq2.start() > s.start() or s.start() > sq2.end())): # comment sign outside quotes
+                comments.update({pos + s.start(): s.group()})
+                _js5 += js5[pos : pos + s.start()]
+                _js5 += " " * len(s.group())
+                pos += s.end()
+            elif sq is not None:
+                _js5 += js5[pos : sq.end()]
+                pos += sq.end()
+            elif sq2 is not None:
+                _js5 += js5[pos : sq2.end()]
+                pos += sq2.end()
+            else:
+                raise Json5Error(f"Unresolved when removing comments {js5[pos:]}") from None
+            """
 
         for cmt in self.comments_ml:  # handle multi-line comments
             js5 = _js5
             _js5 = ""
-            c1 = re.compile("" + _re(cmt))
-            c2 = re.compile("" + _re(cmt[::-1]))
+            c1: re.Pattern = re.compile(f"{_re(cmt)}")
+            c2: re.Pattern = re.compile(f"{_re(cmt[::-1])}")
             pos = 0
-            while True:
-                s1 = c1.search(js5[pos:])
+            s1: re.Match[str] | None
+            while s1 := c1.search(js5[pos:]):
                 sq = cq.search(js5[pos:])
                 sq2 = cq2.search(js5[pos:])
-                if s1 is None:
-                    _js5 += js5[pos:]
-                    break
                 _js5 += js5[pos : pos + s1.start()]
                 pos += pos + s1.start()
                 s2 = c2.search(js5[pos:])
                 assert s2 is not None, f"No end of comment found for comment starting with '{js5[pos : pos + 50]}'"
-                comments.update({pos + s2.start(): js5[pos : pos + s2.start()]})
+                comments[pos + s2.start()] = js5[pos : pos + s2.start()]
                 for p in range(pos, pos + s2.end()):
-                    if js5[p] not in ("\r", "\n"):
-                        _js5 += " "
-                    else:
-                        _js5 += js5[p]
+                    _js5 += " " if js5[p] not in ("\r", "\n") else js5[p]
                 pos += s2.end()
+            _js5 += js5[pos:]
+
         return _js5, comments
 
     def to_py(self) -> dict[str, Any]:

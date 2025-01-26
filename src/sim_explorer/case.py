@@ -9,7 +9,7 @@ import copy
 from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, overload
+from typing import TYPE_CHECKING, Any, cast, overload
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -22,10 +22,20 @@ from sim_explorer.system_interface import SystemInterface
 from sim_explorer.system_interface_osp import SystemInterfaceOSP
 from sim_explorer.utils.misc import from_xml
 from sim_explorer.utils.paths import get_path, relative_path
-from sim_explorer.utils.types import TValue
+from sim_explorer.utils.types import (
+    TDataColumn,
+    TValue,
+)
 
 if TYPE_CHECKING:
-    from sim_explorer.utils.types import TActionArgs, TDataTable, TGetActionArgs, TSetActionArgs, TValue
+    from sim_explorer.utils.types import (
+        TActionArgs,
+        TDataTable,
+        TGetActionArgs,
+        TSetActionArgs,
+        TTimeColumn,
+        TValue,
+    )
 
 """
 sim_explorer module for definition and execution of simulation experiments
@@ -1131,21 +1141,23 @@ class Results:
                                     }
         return cont
 
-    def retrieve(self, comp_var: Iterable) -> TDataTable:
+    def retrieve(self, comp_var: Iterable[str | tuple[str, str]]) -> TDataTable:
         """Retrieve from results js5-dict the variables and return (times, values).
 
         Args:
-            comp_var (Iterator): iterator over (<component-name>, <variable_name>[, element])
+            comp_var (Iterable): Iterable of (<component-name>, <variable_name>[, element])
                Alternatively, the jspath syntax <component-name>.<variable_name>[[element]] can be used as comp_var.
                Time is not explicitly included in comp_var
                A record is only included if all variables are found for a given time
         Returns:
             Data table (list of lists): time and one column per variable
         """
-        data = []
-        _comp_var = []
+        data: list[list[TValue]] = []
+        _comp_var: list[tuple[str, str, int | None]] = []
         for _cv in comp_var:
-            el = None
+            comp: str
+            var: str
+            el: int | None = None
             if isinstance(_cv, str):  # expect <component-name>.<variable_name> syntax
                 comp, var = _cv.split(".")
                 if "[" in var and var[-1] == "]":  # explicit element
@@ -1156,42 +1168,62 @@ class Results:
             _comp_var.append((comp, var, el))
 
         for key, values in self.res.js_py.items():
-            if key != "header":
-                time = float(key)
-                record = [time]
-                is_complete = True
-                for comp, var, el in _comp_var:
-                    try:
-                        _rec = values[comp][var]
-                    except KeyError:  # noqa: PERF203
-                        is_complete = False
-                        break  # give up
-                    else:
-                        record.append(_rec if el is None else _rec[el])
+            if key == "header":
+                continue
+            time: float = float(key)
+            record: list[TValue] = [time]
+            is_complete: bool = True
+            for comp, var, el in _comp_var:
+                try:
+                    _rec = values[comp][var]
+                except KeyError:
+                    is_complete = False
+                    break  # give up
+                record.append(_rec if el is None else _rec[el])
+            if is_complete:
+                data.append(record)
 
-                if is_complete:
-                    data.append(record)
         return data
 
-    def plot_time_series(self, comp_var: Sequence, title: str = "") -> None:
+    def plot_time_series(self, comp_var: Iterable[str | tuple[str, str]], title: str = "") -> None:
         """Extract the provided alias variables and plot the data found in the same plot.
 
         Args:
-            comp_var (Sequence): Sequence of (<component-instance>,<variable>) tuples (as used in retrieve)
+            comp_var (Iterable): Iterable of (<component-name>, <variable_name>) tuples (as used in retrieve)
                Alternatively, the jspath syntax <component>.<variable> is also accepted
             title (str): optional title of the plot
         """
-        data = self.retrieve(comp_var)
-        times = [rec[0] for rec in data]
-        for i, var in enumerate(comp_var):
-            if isinstance(var, str):
-                label = var
+        data: TDataTable = self.retrieve(comp_var)
+        times: TTimeColumn = [float(rec[0]) for rec in data]
+
+        _comp_var: list[tuple[str, str, int | None]] = []
+        for _cv in comp_var:
+            comp: str
+            var: str
+            el: int | None = None
+            if isinstance(_cv, str):  # expect <component-name>.<variable_name> syntax
+                comp, var = _cv.split(".")
+                if "[" in var and var[-1] == "]":  # explicit element
+                    var, _el = var.split("[")
+                    el = int(_el[:-1])
+            else:  # expect (<component-name>, <variable_name>) syntax
+                comp, var = _cv
+            _comp_var.append((comp, var, el))
+
+        label: str
+        for i, _cv in enumerate(comp_var):
+            if isinstance(_cv, str):
+                label = _cv
             else:
-                label = f"{var[0]}.{var[1]}"
-                if len(var) > 2:
-                    label += f"[{var[2]}]"
-            values = [rec[i + 1] for rec in data]
-            _ = plt.plot(times, values, label=var, linewidth=3)
+                label = f"{_cv[0]}.{_cv[1]}"
+                if len(_cv) > 2:  # variable is indexed  # noqa: PLR2004
+                    label += f"[{_cv[2]}]"  # append the element index
+            _values = [rec[i + 1] for rec in data]
+            assert all(type[v] is type[_values[0]] for v in _values), (
+                f"values of variable {label} have non-uniform types: {_values}"
+            )
+            values: TDataColumn = cast(TDataColumn, _values)
+            _ = plt.plot(times, values, label=_cv, linewidth=3)
 
         if len(title):
             _ = plt.title(title)
