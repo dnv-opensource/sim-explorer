@@ -6,9 +6,8 @@ with respect to reading *.cases files, running cases and storing results.
 from __future__ import annotations
 
 import copy
-import os
 from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, overload
 
@@ -18,7 +17,7 @@ import numpy as np
 from sim_explorer.assertion import Assertion
 from sim_explorer.exceptions import CaseInitError
 from sim_explorer.json5 import Json5
-from sim_explorer.models import AssertionResult, Temporal
+from sim_explorer.models import Temporal
 from sim_explorer.system_interface import SystemInterface
 from sim_explorer.system_interface_osp import SystemInterfaceOSP
 from sim_explorer.utils.misc import from_xml
@@ -26,7 +25,7 @@ from sim_explorer.utils.paths import get_path, relative_path
 from sim_explorer.utils.types import TValue
 
 if TYPE_CHECKING:
-    from sim_explorer.utils.types import TActionArgs, TGetActionArgs, TSetActionArgs, TValue
+    from sim_explorer.utils.types import TActionArgs, TDataTable, TGetActionArgs, TSetActionArgs, TValue
 
 """
 sim_explorer module for definition and execution of simulation experiments
@@ -598,35 +597,37 @@ class Cases:
         "timefac",
         "variables",
     )
-    assertion_results: list[AssertionResult] = []
+    # TODO @EisDNV: The class attribute `assertion_results` is nowhere used. Maybe remove?
+    #      ClaasRostock, 2025-01-26
+    # assertion_results: list[AssertionResult] = []  # noqa: ERA001
 
-    def __init__(self, spec: str | Path):
-        self.file = Path(spec)  # everything relative to the folder of this file!
+    def __init__(self, spec: str | Path) -> None:
+        self.file: Path = Path(spec)  # everything relative to the folder of this file!
         assert self.file.exists(), f"Cases spec file {spec} not found"
-        self.js = Json5(spec)
-        name = (self.js.jspath("$.header.name", str) or "",)
-        description = (self.js.jspath("$.header.description", str) or "",)
-        log_level = self.js.jspath("$.header.logLevel") or "fatal"
-        modelfile = self.js.jspath("$.header.modelFile", str) or "OspSystemStructure.xml"
-        simulator = self.js.jspath("$.header.simulator", str) or ""
-        path = self.file.parent / modelfile
+        self.js: Json5 = Json5(spec)
+        name: str = self.js.jspath("$.header.name", str) or ""
+        description: str = self.js.jspath("$.header.description", str) or ""
+        log_level: str = self.js.jspath("$.header.logLevel") or "fatal"
+        modelfile: str = self.js.jspath("$.header.modelFile", str) or "OspSystemStructure.xml"
+        simulator: str = self.js.jspath("$.header.simulator", str) or ""
+        path: Path = self.file.parent / modelfile
         assert path.exists(), f"System structure file {path} not found"
-        if simulator == "":  # without ability to perform simulatiosn
-            self.simulator = SystemInterface(path, name, description, log_level)  # type: ignore
+        if not simulator:  # without ability to perform simulations
+            self.simulator = SystemInterface(path, name, description, log_level)
         elif simulator == "OSP":
-            self.simulator = SystemInterfaceOSP(path, name, description, log_level)  # type: ignore
+            self.simulator = SystemInterfaceOSP(path, name, description, log_level)
 
-        self.timefac = self._get_time_unit() * 1e9  # internally OSP uses pico-seconds as integer!
+        self.timefac: float = self._get_time_unit() * 1e9  # internally OSP uses pico-seconds as integer!
         # read the 'variables' section and generate dict { alias : { (instances), (variables)}}:
-        self.variables = self.get_case_variables()
-        self.assertion = Assertion()
+        self.variables: dict[str, dict[str, Any]] = self.get_case_variables()
+        self.assertion: Assertion = Assertion()
         self.assertion.register_vars(self.variables)  # register variables as symbols
         self.read_cases()
 
-    def get_case_variables(self) -> dict[str, dict]:
+    def get_case_variables(self) -> dict[str, dict[str, Any]]:
         """Read the 'variables' main key, which defines self.variables (case variables) as a dictionary.
 
-        { c_var_name : {'model':model ID,
+        { c_var_name : {'model': model ID,
                         'instances': tuple of instance names,
                         'names': tuple of variable names,
                         'refs': tuple of ValueReferences
@@ -640,13 +641,10 @@ class Cases:
         """
         variables = {}
         model_vars = {}  # cache of variables of models
-        for k, v in self.js.jspath("$.header.variables", dict, True).items():
+        for k, v in self.js.jspath(path="$.header.variables", typ=dict, errorMsg=True).items():
             if not isinstance(v, list):
                 raise CaseInitError(f"List of 'component(s)' and 'variable(s)' expected. Found {v}") from None
-            assert len(v) in (
-                2,
-                3,
-            ), f"Variable spec should be: instance(s), variables[, description]. Found {v}."
+            assert len(v) in {2, 3}, f"Variable spec should be: instance(s), variables[, description]. Found {v}."
             assert isinstance(v[0], (str | tuple)), f"First argument of variable spec: Component(s)! Found {v[0]}"
             assert isinstance(v[0], str), f"String expected as model name. Found {v[0]}"
             model, comp = self.simulator.match_components(v[0])
@@ -665,8 +663,8 @@ class Cases:
                 "refs": _varrefs,
             }
             assert len(var["names"]), f"No matching variables found for alias {k}:{v}, component '{comp}'"
-            if len(v) > 2:
-                var.update({"description": v[2]})
+            if len(v) > 2:  # noqa: PLR2004
+                var["description"] = v[2]
             # We add also the more detailed variable info from the simulator (the FMU)
             # The type, causality and variability shall be equal for all variables.
             for n in _varnames:
@@ -674,39 +672,41 @@ class Cases:
                     assert model_vars[model][n][test] == prototype[test], (
                         f"Model {model} variable {n} != {test} as {prototype}"
                     )
-            starts = []
-            for v, info in self.simulator.models[model]["variables"].items():
-                if v in _varnames and "start" in info:
-                    starts.append(info["type"](info["start"]))
-            var.update(
-                {
-                    "type": prototype["type"],
-                    "causality": prototype["causality"],
-                    "variability": prototype["variability"],
-                    "initial": prototype.get("initial", ""),
-                    "start": tuple(starts),
-                }
+            starts: list[TValue] = []
+            starts.extend(
+                info["type"](info["start"])
+                for v, info in self.simulator.models[model]["variables"].items()
+                if v in _varnames and "start" in info
             )
-            variables.update({k: var})
+            var |= {
+                "type": prototype["type"],
+                "causality": prototype["causality"],
+                "variability": prototype["variability"],
+                "initial": prototype.get("initial", ""),
+                "start": tuple(starts),
+            }
+            variables[k] = var
         return variables
 
-    def case_variable(self, component: str, variables: str | tuple):
+    def case_variable(
+        self,
+        component: str,
+        variables: str | tuple[str],
+    ) -> tuple[str, tuple[int, ...]]:
         """Identify the case variable (as defined in the spec) from the component instance and fmu variable names."""
-        if isinstance(variables, (tuple, list)) and len(variables) == 1:
+        if isinstance(variables, tuple | list) and len(variables) == 1:
             variables = variables[0]
         for var, info in self.variables.items():
             if component in info["instances"]:
-                rng = []
-                for i, name in enumerate(info["names"]):
-                    if name in variables:
-                        rng.append(i)
+                rng: list[int] = []
+                rng.extend(i for i, name in enumerate(info["names"]) if name in variables)
                 if len(rng) == len(variables):  # perfect match
                     return (var, ())
-                if len(rng) > 0:
+                if rng:
                     return (var, tuple(rng))
         raise KeyError(f"Undefined case variable with component {component}, variables {variables}") from None
 
-    def _get_time_unit(self) -> float:
+    def _get_time_unit(self) -> float:  # noqa: PLR0911
         """Find system time unit from the spec and return as seconds.
         If the entry is not found, 1 second is assumed.
         """
@@ -728,26 +728,36 @@ class Cases:
             return 1.0 / 1000000
         return 1.0
 
-    def read_cases(self):
+    def read_cases(self) -> None:
         """Instantiate all cases defined in the spec.
         'base' is defined firsts, since the others build on these
         Return the base case object.
         The others are linked as sub-cases in their parent cases.
         The 'header' is treated elsewhere.
         """
-        if self.js.jspath("$.base", dict) is not None and self.js.jspath("$.base.spec", dict) is not None:
-            # we need to peek into the base case where startTime and stopTime should be defined
-            special: dict[str, float] = {
-                "startTime": self.js.jspath("$.base.spec.startTime", float) or 0.0,
-                "stopTime": self.js.jspath("$.base.spec.stopTime", float, True),
-            }
-            # all case definitions are top-level objects in self.spec. 'base' is mandatory
-            self.base = Case(self, "base", spec=self.js.jspath("$.base", dict, True), special=special)
-            for k in self.js.js_py:
-                if k not in ("header", "base"):
-                    _ = Case(self, k, spec=self.js.jspath(f"$.{k}", dict, True))
-        else:
+
+        if self.js.jspath(path="$.base", typ=dict) is None or self.js.jspath(path="$.base.spec", typ=dict) is None:
             raise CaseInitError(f"Main section 'base' is needed. Found {list(self.js.js_py.keys())}") from None
+
+        # we need to peek into the base case where startTime and stopTime should be defined
+        special: dict[str, float] = {
+            "startTime": self.js.jspath(path="$.base.spec.startTime", typ=float) or 0.0,
+            "stopTime": self.js.jspath(path="$.base.spec.stopTime", typ=float, errorMsg=True),
+        }
+        # all case definitions are top-level objects in self.spec. 'base' is mandatory
+        self.base = Case(
+            cases=self,
+            name="base",
+            spec=self.js.jspath(path="$.base", typ=dict, errorMsg=True),
+            special=special,
+        )
+        for k in self.js.js_py:
+            if k not in ("header", "base"):
+                _ = Case(
+                    cases=self,
+                    name=k,
+                    spec=self.js.jspath(path=f"$.{k}", typ=dict, errorMsg=True),
+                )
 
     def case_by_name(self, name: str) -> Case | None:
         """Find the case 'name' amoung all defined cases. Return None if not found.
@@ -762,11 +772,13 @@ class Cases:
         if name == "base":
             return self.base
         found = self.base.case_by_name(name)
-        if found is not None:
-            return found
-        return None
+        return found
 
-    def disect_variable(self, key: str, err_level: int = 2) -> tuple[str, dict, Sequence]:
+    def disect_variable(  # noqa: C901
+        self,
+        key: str,
+        err_level: int = 2,
+    ) -> tuple[str, dict[str, Any] | None, list[int]]:
         """Extract the variable name, definition and explicit variable range, if relevant
         (multi-valued variables, where only some elements are addressed).
         ToDo: handle multi-dimensional arrays (tables, ...).
@@ -778,89 +790,82 @@ class Cases:
         -------
             1. The variable name as defined in the 'variables' section of the spec
             2. The variable definition, which the name refers to
-            3. An Sequence over indices of the variable, i.e. the range
+            3. A tuple with indices of the variable, i.e. the range
         """
 
-        def handle_error(msg: str, err: Exception | None, level: int):
+        def handle_error(
+            msg: str,
+            err: Exception | None,
+            level: int,
+        ) -> tuple[str, dict[str, Any] | None, list[int]]:
             if level > 0:
                 if level == 1:
-                    print(msg)
+                    # TODO @EisDNV: This should be logged instead of printed.
+                    #      ClaasRostock, 2025-01-26
+                    print(msg)  # noqa: T201
                 else:
                     raise AssertionError(msg) from err
-            return ("", None, range(0))
+            return ("", None, [])
 
         pre, _, r = key.partition("[")
         try:
             cvar_info = self.variables[pre]
-        except KeyError as err:
-            handle_error(
-                f"Variable {pre} was not found in list of defined case variables",
-                err,
-                err_level,
+        except KeyError as e:
+            _ = handle_error(
+                msg=f"Variable {pre} was not found in list of defined case variables",
+                err=e,
+                level=err_level,
             )
 
         cvar_len = len(cvar_info["names"])  # len of the tuple of refs
+        rng: list[int] = []
         if len(r):  # range among several variables
             r = r.rstrip("]").strip()  # string version of a non-trivial range
             parts_comma = r.split(",")
-            rng: range | list[int] = []
             for i, p in enumerate(parts_comma):
                 parts_ellipses = p.split("..")
                 if len(parts_ellipses) == 1:  # no ellipses. Should be an index
                     try:
                         idx = int(p)
-                    except ValueError as err:
+                    except ValueError as e:
                         return handle_error(
-                            f"Unhandled index {p}[{i}] for variable {pre}",
-                            err,
-                            err_level,
+                            msg=f"Unhandled index {p}[{i}] for variable {pre}",
+                            err=e,
+                            level=err_level,
                         )
                     if not 0 <= idx < cvar_len:
                         return handle_error(
-                            f"Index {idx} of variable {pre} out of range",
-                            None,
-                            err_level,
-                        )
-                    if not isinstance(rng, list):
-                        return handle_error(
-                            f"A list was expected as range here. Found {rng}",
-                            None,
-                            err_level,
+                            msg=f"Index {idx} of variable {pre} out of range",
+                            err=None,
+                            level=err_level,
                         )
                     rng.append(idx)
                 else:
-                    assert len(parts_ellipses) == 2, f"RangeError: Exactly two indices expected in {p} of {pre}"
+                    assert len(parts_ellipses) == 2, f"RangeError: Exactly two indices expected in {p} of {pre}"  # noqa: PLR2004
                     parts_ellipses[1] = parts_ellipses[1].lstrip(".")  # facilitates the option to use '...' or '..'
                     try:
-                        if len(parts_ellipses[0]) == 0:
-                            idx0 = 0
-                        else:
-                            idx0 = int(parts_ellipses[0])
+                        idx0 = 0 if len(parts_ellipses[0]) == 0 else int(parts_ellipses[0])
                         assert 0 <= idx0 <= cvar_len, f"Index {idx0} of variable {pre} out of range"
-                        if len(parts_ellipses[1]) == 0:
-                            idx1 = cvar_len
-                        else:
-                            idx1 = int(parts_ellipses[1])
+                        idx1 = cvar_len if len(parts_ellipses[1]) == 0 else int(parts_ellipses[1])
                         assert idx0 <= idx1 <= cvar_len, f"Index {idx1} of variable {pre} out of range"
-                    except ValueError as err:
+                    except ValueError as e:
                         return handle_error(
-                            "Unhandled ellipses '{parts_comma}' for variable {pre}",
-                            err,
-                            err_level,
+                            msg="Unhandled ellipses '{parts_comma}' for variable {pre}",
+                            err=e,
+                            level=err_level,
                         )
-                    rng = range(idx0, idx1)
+                    rng = list(range(idx0, idx1))
         elif cvar_len == 1:  # scalar variable
             rng = [0]
         else:  # all elements
-            rng = range(cvar_len)
+            rng = list(range(cvar_len))
         return (pre, cvar_info, rng)
 
-    def get_starts(self):
+    def get_starts(self) -> dict[str, list[TValue]]:
         """Get a copy of the start values (as advised by FMU) as dict {case-var : (start-values), }."""
-        starts: dict = {}
-        for v, info in self.variables.items():
-            if "start" in info and len(info["start"]):
-                starts.update({v: list(info["start"])})
+        starts: dict[str, list[TValue]] = {
+            v: list(info["start"]) for v, info in self.variables.items() if "start" in info and len(info["start"])
+        }
         return starts
 
     def info(self, case: Case | None = None, level: int = 0) -> str:
@@ -884,29 +889,40 @@ class Cases:
             raise ValueError(f"The argument 'case' shall be a Case object or None. Type {type(case)} found.")
         return txt
 
-    def run_case(self, name: str | Case, dump: str | None = "", run_subs: bool = False, run_assertions: bool = False):
+    def run_case(
+        self,
+        name: str | Case,
+        dump: str | None = "",
+        *,
+        run_subs: bool = False,
+        run_assertions: bool = False,
+    ) -> None:
         """Initiate case run. If done from here, the case name can be chosen.
         If run_subs = True, also the sub-cases are run.
         """
         if isinstance(name, str):
             c = self.case_by_name(name)
             assert isinstance(c, Case), f"Case {name} not found"
-        elif isinstance(name, Case):
-            c = name
         else:
-            raise ValueError(f"Invalid argument name:{name}") from None
+            c = name
 
-        c.run(dump)
+        c.run(dump=dump)
 
         if run_assertions and c:
             # Run assertions on every case after running the case -> results will be saved in memory for now
-            self.assertion.do_assert_case(c.res)
+            assert c.res is not None
+            _ = self.assertion.do_assert_case(c.res)
 
         if not run_subs:
             return
 
         for _c in c.subs:
-            self.run_case(_c, dump, run_subs, run_assertions)
+            self.run_case(
+                name=_c,
+                dump=dump,
+                run_subs=run_subs,
+                run_assertions=run_assertions,
+            )
 
 
 class Results:
@@ -935,7 +951,7 @@ class Results:
         self.file: Path | None  # None denotes that results are not automatically saved
         self.case: Case | None = None
         self.res: Json5
-        if (case is None or isinstance(case, (str, Path))) and file is not None:
+        if (case is None or isinstance(case, str | Path)) and file is not None:
             self._init_from_existing(file)  # instantiating from existing results file (work with data)
         elif isinstance(case, Case):  # instantiating from cases file (for data collection)
             self._init_new(case)
@@ -946,16 +962,18 @@ class Results:
         self.file = Path(file)
         assert self.file.exists(), f"File {file} is expected to exist."
         self.res = Json5(self.file)
-        case = Path(self.file.parent / (self.res.jspath("$.header.cases", str, True) + ".cases"))
+        case = Path(self.file.parent / (self.res.jspath(path="$.header.cases", typ=str, errorMsg=True) + ".cases"))
         try:
             cases = Cases(Path(case))
         except ValueError:
             raise CaseInitError(f"Cases {Path(case)} instantiation error") from ValueError
         self.case = cases.case_by_name(name=self.res.jspath(path="$.header.case", typ=str, errorMsg=True))
-        assert isinstance(self.case, Case), f"Case {self.res.jspath('$.header.case', str, True)} not found"
+        assert isinstance(self.case, Case), (
+            f"Case {self.res.jspath(path='$.header.case', typ=str, errorMsg=True)} not found"
+        )
         assert isinstance(self.case.cases, Cases), "Cases object not defined"
         self._header_transform(tostring=False)
-        self.case.add_results_object(self)  # make Results object known to self.case
+        self.case.add_results_object(res=self)  # make Results object known to self.case
 
     def _init_new(
         self,
@@ -966,7 +984,7 @@ class Results:
         self.case = case
         if file is not None:  # use that for storing results data as Json5
             if file == "":  # use default file name (can be changed through self.save():
-                self.file = self.case.cases.file.parent / (self.case.name + ".js5")
+                self.file = self.case.cases.file.parent / f"{self.case.name}.js5"
             else:
                 self.file = Path(file)
         else:  # do not store data
@@ -980,21 +998,27 @@ class Results:
         """
         assert self.case is not None, "Case object not defined"
         assert self.file is not None, "File name not defined"
-        _ = self.case.cases.js.jspath("$.header.name", str, True)
+        _ = self.case.cases.js.jspath(path="$.header.name", typ=str, errorMsg=True)
         results: dict[str, dict[str, Any]] = {
             "header": {
                 "case": self.case.name,
-                "dateTime": datetime.today().isoformat(),
-                "cases": self.case.cases.js.jspath("$.header.name", str, True),
-                "file": relative_path(Path(self.case.cases.file), self.file),
-                "casesDate": datetime.fromtimestamp(os.path.getmtime(self.case.cases.file)).isoformat(),
-                "timeUnit": self.case.cases.js.jspath("$.header.timeUnit", str) or "sec",
+                "dateTime": datetime.now(tz=timezone.utc).isoformat(),
+                "cases": self.case.cases.js.jspath(path="$.header.name", typ=str, errorMsg=True),
+                "file": relative_path(p1=Path(self.case.cases.file), p2=self.file),
+                "casesDate": datetime.fromtimestamp(
+                    timestamp=self.case.cases.file.stat().st_mtime, tz=timezone.utc
+                ).isoformat(),
+                "timeUnit": self.case.cases.js.jspath(path="$.header.timeUnit", typ=str) or "sec",
                 "timeFactor": self.case.cases.timefac,
             }
         }
         return results
 
-    def _header_transform(self, tostring: bool = True):
+    def _header_transform(
+        self,
+        *,
+        tostring: bool = True,
+    ) -> None:
         """Transform the header back- and forth between python types and string.
         tostring=True is used when saving to file and =False is used when reading from file.
         """
@@ -1002,29 +1026,29 @@ class Results:
         res = self.res
         if tostring:
             res.update(
-                "$.header.dateTime",
-                res.jspath("$.header.dateTime", datetime, True).isoformat(),
+                spath="$.header.dateTime",
+                data=res.jspath(path="$.header.dateTime", typ=datetime, errorMsg=True).isoformat(),
             )
             res.update(
-                "$.header.casesDate",
-                res.jspath("$.header.casesDate", datetime, True).isoformat(),
+                spath="$.header.casesDate",
+                data=res.jspath(path="$.header.casesDate", typ=datetime, errorMsg=True).isoformat(),
             )
             res.update(
-                "$.header.file",
-                relative_path(res.jspath("$.header.file", Path, True), self.file),
+                spath="$.header.file",
+                data=relative_path(p1=res.jspath(path="$.header.file", typ=Path, errorMsg=True), p2=self.file),
             )
         else:
             res.update(
-                "$.header.dateTime",
-                datetime.fromisoformat(res.jspath("$.header.dateTime", str, True)),
+                spath="$.header.dateTime",
+                data=datetime.fromisoformat(res.jspath(path="$.header.dateTime", typ=str, errorMsg=True)),
             )
             res.update(
-                "$.header.casesDate",
-                datetime.fromisoformat(res.jspath("$.header.casesDate", str, True)),
+                spath="$.header.casesDate",
+                data=datetime.fromisoformat(res.jspath(path="$.header.casesDate", typ=str, errorMsg=True)),
             )
             res.update(
-                "$.header.file",
-                get_path(res.jspath("$.header.file", str, True), self.file.parent),
+                spath="$.header.file",
+                data=get_path(p1=res.jspath(path="$.header.file", typ=str, errorMsg=True), base=self.file.parent),
             )
 
     def add(
@@ -1033,7 +1057,7 @@ class Results:
         comp: str,
         cvar: str,
         values: TValue | Sequence[TValue],
-    ):
+    ) -> None:
         """Add the results of a get action to the results dict for the case.
 
         Args:
@@ -1042,11 +1066,14 @@ class Results:
             cvar (str): the case variable name
             values (TValue, Sequence[TValue]): the value(s) to record
         """
-        # print(f"Update ({time}): {comp}: {cvar} : {values}")
+        # print(f"Update ({time}): {comp}: {cvar} : {values}")  # noqa: ERA001
         _values = values[0] if isinstance(values, Sequence) and len(values) == 1 else values
-        self.res.update("$[" + str(time) + "]" + comp, {cvar: _values})
+        self.res.update(
+            spath=f"$[{time}]{comp}",
+            data={cvar: _values},
+        )
 
-    def save(self, jsfile: str | Path = ""):
+    def save(self, jsfile: str | Path = "") -> None:
         """Dump the results dict to a json5 file.
 
         Args:
@@ -1057,15 +1084,18 @@ class Results:
         if jsfile == "":
             jsfile = self.file
         else:  # a new file name is provided
-            if isinstance(jsfile, str):
-                if not jsfile.endswith(".js5"):
-                    jsfile += ".js5"
+            if isinstance(jsfile, str) and not jsfile.endswith(".js5"):
+                jsfile += ".js5"
             jsfile = Path(self.case.cases.file.parent / jsfile)  # type: ignore [union-attr]
             self.file = jsfile  # remember the new file name
         self._header_transform(tostring=True)
-        self.res.write(jsfile)
+        _ = self.res.write(jsfile)
 
-    def inspect(self, component: str | None = None, variable: str | None = None):
+    def inspect(
+        self,
+        component: str | None = None,
+        variable: str | None = None,
+    ) -> dict[str, dict[str, Any]]:
         """Inspect the results and return a dictionary on which data are found.
 
         Args:
@@ -1077,7 +1107,7 @@ class Results:
             A dictionary {<component.variable> : {'len':#data points, 'range':[tMin, tMax], 'info':info-dict}
             The info-dict is and element of Cases.variables. See Cases.get_case_variables() for definition.
         """
-        cont: dict = {}
+        cont: dict[str, dict[str, Any]] = {}
         assert isinstance(self.case, Case)
         assert isinstance(self.case.cases, Cases)
         for _time, components in self.res.js_py.items():
@@ -1085,27 +1115,23 @@ class Results:
                 time = float(_time)
                 for c, variables in components.items():
                     if component is None or c == component:
-                        for v, _ in variables.items():
+                        for v in variables:
                             if variable is None or variable == v:
-                                ident = c + "." + v
+                                ident: str = f"{c}.{v}"
                                 if ident in cont:  # already registered
                                     cont[ident]["range"][1] = time  # update upper bound
                                     cont[ident]["len"] += 1  # update length
                                 else:  # new entry
                                     v_name, v_info, v_range = self.case.cases.disect_variable(v, err_level=0)
                                     assert len(v_name), f"Variable {v} not found in cases spec {self.case.cases.file}"
-                                    cont.update(
-                                        {
-                                            ident: {
-                                                "len": 1,
-                                                "range": [time, time],
-                                                "info": v_info,
-                                            }
-                                        }
-                                    )
+                                    cont[ident] = {
+                                        "len": 1,
+                                        "range": [time, time],
+                                        "info": v_info,
+                                    }
         return cont
 
-    def retrieve(self, comp_var: Iterable) -> list:
+    def retrieve(self, comp_var: Iterable) -> TDataTable:
         """Retrieve from results js5-dict the variables and return (times, values).
 
         Args:
@@ -1137,7 +1163,7 @@ class Results:
                 for comp, var, el in _comp_var:
                     try:
                         _rec = values[comp][var]
-                    except KeyError:
+                    except KeyError:  # noqa: PERF203
                         is_complete = False
                         break  # give up
                     else:
@@ -1147,7 +1173,7 @@ class Results:
                     data.append(record)
         return data
 
-    def plot_time_series(self, comp_var: Sequence, title: str = ""):
+    def plot_time_series(self, comp_var: Sequence, title: str = "") -> None:
         """Extract the provided alias variables and plot the data found in the same plot.
 
         Args:
@@ -1161,15 +1187,15 @@ class Results:
             if isinstance(var, str):
                 label = var
             else:
-                label = var[0] + "." + var[1]
+                label = f"{var[0]}.{var[1]}"
                 if len(var) > 2:
-                    label += "[" + var[2] + "]"
+                    label += f"[{var[2]}]"
             values = [rec[i + 1] for rec in data]
-            plt.plot(times, values, label=var, linewidth=3)
+            _ = plt.plot(times, values, label=var, linewidth=3)
 
         if len(title):
-            plt.title(title)
-        plt.xlabel("Time")
-        # plt.ylabel('Values')
-        plt.legend()
+            _ = plt.title(title)
+        _ = plt.xlabel("Time")
+        # _ = plt.ylabel('Values')  # noqa: ERA001
+        _ = plt.legend()
         plt.show()

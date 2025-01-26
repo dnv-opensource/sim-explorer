@@ -48,7 +48,13 @@ class Assertion:
     def info(self, sym: str, typ: str = "instance") -> str | int:
         """Retrieve detailed information related to the registered symbol 'sym'."""
         if sym == "t":  # the independent variable
-            return {"instance": "none", "variable": "t", "length": 1, "model": "none"}[typ]  # type: ignore[return-value]
+            sym_info: dict[str, str | int] = {
+                "instance": "none",
+                "variable": "t",
+                "length": 1,
+                "model": "none",
+            }
+            return sym_info[typ]
 
         parts = sym.split("_")
         var = parts.pop()
@@ -89,7 +95,7 @@ class Assertion:
         except KeyError:  # not yet registered
             assert length > 0, f"Vector length should be positive. Found {length}"
             if length > 1:
-                self._symbols.update({name: np.ones(length, dtype=float)})  # type: ignore[dict-item]
+                self._symbols.update({name: np.ones(length, dtype=float)})
             else:
                 self._symbols.update({name: 1})
             sym = self._symbols[name]
@@ -409,28 +415,28 @@ class Assertion:
         inst = []
         var = []
         for sym in self._syms[key]:
-            inst.append(self.info(sym, "instance"))
-            var.append(self.info(sym, "variable"))
+            inst.append(self.info(sym=sym, typ="instance"))
+            var.append(self.info(sym=sym, typ="variable"))
         assert len(var), "No variables to retrieve"
         if var[0] == "t":  # the independent variable is always the first column in data
             inst.pop(0)
             var.pop(0)
 
-        data = result.retrieve(zip(inst, var, strict=False))
-        res = self.eval_series(key, data, ret=None)
+        data = result.retrieve(comp_var=zip(inst, var, strict=False))
+        res = self.eval_series(key=key, data=data, ret=None)
         if self._temporal[key]["type"] == Temporal.A:
-            self.assertions(key, res[1], None, case_name)
+            self.assertions(key=key, res=res[1], details=None, case_name=case_name)
         elif self._temporal[key]["type"] == Temporal.F:
-            self.assertions(key, res[1], f"@{res[0]}", case_name)
+            self.assertions(key=key, res=res[1], details=f"@{res[0]}", case_name=case_name)
         elif self._temporal[key]["type"] == Temporal.T:
-            self.assertions(key, res[1], f"@{res[0]} (interpolated)", case_name)
+            self.assertions(key=key, res=res[1], details=f"@{res[0]} (interpolated)", case_name=case_name)
         return res[1]
 
     def do_assert_case(self, result: Results) -> list[int]:
         """Perform all assertions defined for the case related to the result object."""
         count = [0, 0]
         for key in result.case.asserts:
-            self.do_assert(key, result, result.case.name)
+            self.do_assert(key=key, result=result, case_name=result.case.name)
             count[0] += self._assertions[key]["passed"]
             count[1] += 1
         return count

@@ -59,9 +59,9 @@ def test_inspect():
 def test_retrieve():
     file = Path(__file__).parent / "data" / "BouncingBall3D" / "test_results"
     res = Results(file=file)
-    data = res.retrieve((("bb", "g"), ("bb", "e")))
+    data = res.retrieve(comp_var=(("bb", "g"), ("bb", "e")))
     assert data == [[0.01, 9.81, 0.5]]
-    data = res.retrieve((("bb", "x"), ("bb", "v")))
+    data = res.retrieve(comp_var=(("bb", "x"), ("bb", "v")))
     assert len(data) == 300
     assert data[0] == [0.01, [0.01, 0.0, 39.35076771653544], [1.0, 0.0, -0.0981]]
 
