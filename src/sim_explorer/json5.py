@@ -164,7 +164,7 @@ class Json5:
               'num' works here like python indexes, starting from 0 and also working with negative numbers!
         """
         L = len(self.lines)
-        if num == -1 or num == L - 1:
+        if num in [-1, L - 1]:
             return self.js5[self.lines[-1] :].strip()
         if -L + 1 < num < -1:
             return self.js5[L + num : L + num + 1]
@@ -183,88 +183,88 @@ class Json5:
         def _re(txt: str) -> str:
             return "".join("\\" + ch if ch in ("*",) else ch for ch in txt)
 
-        _js5: str = js5 or self.js5
+        js5_without_comments: str = js5 or self.js5
         comments: dict[int, str] = {}
         cq: re.Pattern = re.compile(r"'([^']*)'")  #  single quotes
         cq2: re.Pattern = re.compile(r'"([^"]*)"')  # double quotes
-        js5: str
+        _js5: str
         pos: int
 
         for cmt in self.comments_eol:  # handle end-of-line comments
-            js5 = _js5
-            _js5 = ""
-            c: re.Pattern = re.compile(f"{cmt}.*$", re.MULTILINE)  # eol comments
+            _js5 = js5_without_comments
+            js5_without_comments = ""
+            c: re.Pattern = re.compile(pattern=f"{cmt}.*$", flags=re.MULTILINE)  # eol comments
             pos = 0
             s: re.Match[str] | None
-            while s := c.search(js5[pos:]):
-                sq = cq.search(js5[pos:])
-                sq2 = cq2.search(js5[pos:])
+            while s := c.search(string=_js5[pos:]):
+                sq = cq.search(string=_js5[pos:])
+                sq2 = cq2.search(string=_js5[pos:])
                 # print("_COMMENTS", pos, s, sq, sq2)
                 if (sq is None or s.start() < sq.start() or s.start() > sq.end()) and (
                     sq2 is None or s.start() < sq2.start() or s.start() > sq2.end()
                 ):
                     # no quote or comments starts before or after quote. Handle comment
                     comments[pos + s.start()] = s.group()
-                    _js5 += js5[pos : pos + s.start()]
-                    _js5 += " " * len(s.group())
+                    js5_without_comments += _js5[pos : pos + s.start()]
+                    js5_without_comments += " " * len(s.group())
                     pos += s.end()
                 elif sq is not None and sq.start() < s.start() < sq.end():
                     # Comment sign within single quotes. Leave alone
-                    _js5 += js5[pos : pos + sq.end()]
+                    js5_without_comments += _js5[pos : pos + sq.end()]
                     pos += sq.end()
                 elif sq2 is not None and sq2.start() < s.start() < sq2.end():
                     # Comment sign within double quotes. Leave alone
-                    _js5 += js5[pos : pos + sq2.end()]
+                    js5_without_comments += _js5[pos : pos + sq2.end()]
                     pos += sq2.end()
                 else:
                     raise Json5Error(f"Unhandled EOL-comment removal: {s}, {sq}, {sq2}")
-            _js5 += js5[pos:]
+            js5_without_comments += _js5[pos:]
             """
             if (
                 s is None
                 or (sq is not None and sq.end() < s.start())
                 or (sq2 is not None and sq2.end() < s.start())
             ):
-                _js5 += js5[pos:]
+                _js5_without_comments += _js5[pos:]
                 break
             if (s is not None and
                 (sq is None or sq.start() > s.start() or s.start() > sq.end()) and
                 (sq2 is None or sq2.start() > s.start() or s.start() > sq2.end())): # comment sign outside quotes
                 comments.update({pos + s.start(): s.group()})
-                _js5 += js5[pos : pos + s.start()]
-                _js5 += " " * len(s.group())
+                _js5_without_comments += _js5[pos : pos + s.start()]
+                _js5_without_comments += " " * len(s.group())
                 pos += s.end()
             elif sq is not None:
-                _js5 += js5[pos : sq.end()]
+                _js5_without_comments += _js5[pos : sq.end()]
                 pos += sq.end()
             elif sq2 is not None:
-                _js5 += js5[pos : sq2.end()]
+                _js5_without_comments += _js5[pos : sq2.end()]
                 pos += sq2.end()
             else:
-                raise Json5Error(f"Unresolved when removing comments {js5[pos:]}") from None
+                raise Json5Error(f"Unresolved when removing comments {_js5[pos:]}") from None
             """
 
         for cmt in self.comments_ml:  # handle multi-line comments
-            js5 = _js5
-            _js5 = ""
+            _js5 = js5_without_comments
+            js5_without_comments = ""
             c1: re.Pattern = re.compile(f"{_re(cmt)}")
             c2: re.Pattern = re.compile(f"{_re(cmt[::-1])}")
             pos = 0
             s1: re.Match[str] | None
-            while s1 := c1.search(js5[pos:]):
-                sq = cq.search(js5[pos:])
-                sq2 = cq2.search(js5[pos:])
-                _js5 += js5[pos : pos + s1.start()]
+            while s1 := c1.search(_js5[pos:]):
+                sq = cq.search(_js5[pos:])
+                sq2 = cq2.search(_js5[pos:])
+                js5_without_comments += _js5[pos : pos + s1.start()]
                 pos += pos + s1.start()
-                s2 = c2.search(js5[pos:])
-                assert s2 is not None, f"No end of comment found for comment starting with '{js5[pos : pos + 50]}'"
-                comments[pos + s2.start()] = js5[pos : pos + s2.start()]
+                s2 = c2.search(_js5[pos:])
+                assert s2 is not None, f"No end of comment found for comment starting with '{_js5[pos : pos + 50]}'"
+                comments[pos + s2.start()] = _js5[pos : pos + s2.start()]
                 for p in range(pos, pos + s2.end()):
-                    _js5 += " " if js5[p] not in ("\r", "\n") else js5[p]
+                    js5_without_comments += " " if _js5[p] not in ("\r", "\n") else _js5[p]
                 pos += s2.end()
-            _js5 += js5[pos:]
+            js5_without_comments += _js5[pos:]
 
-        return _js5, comments
+        return js5_without_comments, comments
 
     def to_py(self) -> dict[str, Any]:
         """Translate json5 code 'self.js5' to a python dict and store as self.js_py."""
@@ -343,7 +343,7 @@ class Json5:
         ):  # non-white space before the quote is unacceptable
             return (-1, -1)
         m2 = re.search(m.group(), self.js5[pos + m.end() :])
-        if m2 is None:
+        if m2 is None:  # sourcery skip: assign-if-exp, reintroduce-else
             return (-1, -1)
         return (pos + m.start(), pos + m.end() + m2.end())
 
@@ -440,7 +440,7 @@ class Json5:
         typ: type[_VT],
         *,
         error_msg: bool = False,
-    ) -> _VT: ...
+    ) -> _VT | None: ...
 
     @overload
     def jspath(

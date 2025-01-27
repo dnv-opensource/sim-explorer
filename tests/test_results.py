@@ -28,7 +28,7 @@ def test_add():
     cases = Cases(Path(__file__).parent / "data" / "BouncingBall3D" / "BouncingBall3D.cases")
     case = cases.case_by_name("base")
     res = Results(case=case)
-    res._header_transform(tostring=True)
+    res._header_transform(to_string=True)
     res.add(time=0.0, comp="bb", cvar="g", values=(9.81,))
     # print( res.res.write( pretty_print=True))
     assert res.res.jspath("$['0.0'].bb.g") == 9.81

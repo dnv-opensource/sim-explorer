@@ -101,16 +101,16 @@ class SystemInterface:
             assert not fmus_exist or comp["source"].exists(), f"FMU {comp['source']} not found"
         return system_structure
 
-    def _get_models_components(self) -> tuple[dict[str, dict[str, Any]], dict[str, tuple[str, str]]]:
+    def _get_models_components(self) -> tuple[dict[str, dict[str, Any]], dict[str, str]]:
         """Get a dict of the models and a dict of components in the system:
-        {model-name : {'source':<source>, 'components':[component-list], 'variables':{variables-dict}
-        {component-name : {'model':'model-name, }, ...}.
+        {model-name : {'source':<source>, 'components':[component-list], 'variables':{variables-dict}}
+        {component-name : model-name}.
         """
         mods: dict[str, dict[str, Any]] = {}
-        components: dict[str, tuple[str, str]] = {}
+        components: dict[str, str] = {}
         for k, v in self.system_structure["Simulators"].items():
-            source = v["source"]
-            model = source.stem
+            source = Path(v["source"])
+            model: str = source.stem
             if model not in mods:
                 mods[model] = {
                     "source": source,
@@ -137,7 +137,7 @@ class SystemInterface:
         model: str | None = None
         for c in comps:
             for k, m in self.components.items():
-                if match_with_wildcard(c, k):
+                if match_with_wildcard(findtxt=c, matchtxt=k):
                     if model is None:
                         model = m
                     if m == model and k not in collect:
@@ -175,12 +175,11 @@ class SystemInterface:
         """Find the model name from the component name or index."""
         if isinstance(comp, str):
             return self.components[comp]
-        if isinstance(comp, int):
-            return next(
-                (mod for i, mod in enumerate(self.components.values()) if i == comp),
-                "",
-            )
-        raise AssertionError(f"Unallowed argument {comp} in 'variables'")
+        # int
+        return next(
+            (mod for i, mod in enumerate(self.components.values()) if i == comp),
+            "",
+        )
 
     def variables(self, comp: str | int) -> dict[int | str, dict[str, Any]]:
         """Get the registered variables for a given component from the system.
@@ -313,29 +312,43 @@ class SystemInterface:
         variability: str,
         *,
         only_default: bool = True,
-    ) -> str | int | tuple:
+    ) -> str | int | tuple[int] | tuple[str, ...]:
         """Return default initial setting as str. See p.50 FMI2.
         With only_default, the single allowed value, or '' is returned.
         Otherwise a tuple of possible values is returned where the default value is always listed first.
         """
-        col = {"parameter": 0, "calculated_parameter": 1, "input": 2, "output": 3, "local": 4, "independent": 5}[
-            causality
-        ]
-        row = {"constant": 0, "fixed": 1, "tunable": 2, "discrete": 3, "continuous": 4}[variability]
-        init = (
+        col: int = {
+            "parameter": 0,
+            "calculated_parameter": 1,
+            "input": 2,
+            "output": 3,
+            "local": 4,
+            "independent": 5,
+        }[causality]
+
+        row: int = {
+            "constant": 0,
+            "fixed": 1,
+            "tunable": 2,
+            "discrete": 3,
+            "continuous": 4,
+        }[variability]
+
+        init: int = (
             (-1, -1, -1, 7, 10, -3),
             (1, 3, -4, -5, 11, -3),
             (2, 4, -4, -5, 12, -3),
             (-2, -2, 5, 8, 13, -3),
             (-2, -2, 6, 9, 14, 15),
         )[row][col]
+
         if init < 0:  # "Unallowed combination {variability}, {causality}. See '{chr(96-init)}' in FMI standard"
             return init if only_default else (init,)
-        if init in (1, 2, 7, 10):
+        if init in {1, 2, 7, 10}:
             return "exact" if only_default else ("exact",)
-        if init in (3, 4, 11, 12):
+        if init in {3, 4, 11, 12}:
             return "calculated" if only_default else ("calculated", "approx")
-        if init in (8, 9, 13, 14):
+        if init in {8, 9, 13, 14}:
             return "calculated" if only_default else ("calculated", "exact", "approx")
         return init if only_default else (init,)
 
