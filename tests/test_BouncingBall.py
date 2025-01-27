@@ -5,7 +5,7 @@ import pytest
 from fmpy import plot_result, simulate_fmu
 
 
-def nearly_equal(res: tuple, expected: tuple, eps=1e-7):
+def nearly_equal(res: tuple[float, ...], expected: tuple[float, ...], eps: float = 1e-7):
     assert len(res) == len(expected), (
         f"Tuples of different lengths cannot be equal. Found {len(res)} != {len(expected)}"
     )
@@ -13,7 +13,7 @@ def nearly_equal(res: tuple, expected: tuple, eps=1e-7):
         assert abs(x - y) < eps, f"Element {i} not nearly equal in {x}, {y}"
 
 
-def test_run_fmpy(show):
+def test_run_fmpy(show: bool):
     """Test and validate the basic BouncingBall using fmpy and not using OSP or sim_explorer."""
     path = Path(__file__).parent / "data" / "BouncingBall0" / "BouncingBall.fmu"
     assert path.exists(), f"File {path} does not exist"

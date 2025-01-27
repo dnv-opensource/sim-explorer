@@ -28,7 +28,7 @@ class Assertion:
         funcs (dict) : Dictionary of module : <list-of-functions> of allowed functions inside assertion expressions.
     """
 
-    def __init__(self, imports: dict | None = None) -> None:
+    def __init__(self, imports: dict[str, list[str]] | None = None) -> None:
         if imports is None:
             self._imports = {"math": ["sin", "cos", "sqrt"]}  # default imports
         else:
@@ -270,8 +270,8 @@ class Assertion:
         for modulename, funclist in self._imports.items():
             module = import_module(modulename)
             for func in funclist:
-                loc.update({func: getattr(module, func)})
-        loc.update({"np": import_module("numpy")})
+                loc[func] = getattr(module, func)
+        loc["np"] = import_module("numpy")
         return loc
 
     def _eval(

@@ -7,7 +7,7 @@ from sim_explorer.json5 import Json5
 
 
 @pytest.fixture(scope="session")
-def ex(scope="session"):
+def ex() -> Json5:
     return _rfc9535_example()
 
 
@@ -46,7 +46,7 @@ def _rfc9535_example():
     return js
 
 
-def test_jpath(ex):
+def test_jpath(ex: Json5):
     assert isinstance(ex.js_py, dict), f"Expect dict. Found {ex.js_py}"
     print(f"DICT {ex.js_py}")
     found = ex.jspath("$.store.book[*].author", list)
@@ -64,7 +64,8 @@ def test_jpath(ex):
         "J. R. R. Tolkien",
     ], f"All authors: {found}"
     found = ex.jspath("$.store.*", list)
-    assert isinstance(found[0], list) and isinstance(found[1], dict), "Everything ins store: books and a bike"
+    assert isinstance(found[0], list), "Everything ins store: books and a bike"
+    assert isinstance(found[1], dict), "Everything ins store: books and a bike"
     assert ex.jspath("$.store..price", list) == [
         8.95,
         12.99,
@@ -131,7 +132,7 @@ def test_jpath(ex):
     assert Json5(js_py).jspath("$['0.0']") == {"bb": {"h": [0, 0, 1], "v": 2.3}}
 
 
-def test_update(ex):
+def test_update(ex: Json5):
     assert Json5._spath_to_keys("$.Hei[ho]Hi[ha]he.hu") == [
         "Hei",
         "ho",
@@ -200,7 +201,7 @@ def test_update(ex):
 
 def test_json5_syntax():
     js: Json5 | str
-    assert Json5("Hello World", False).js5 == "{ Hello World }", "Automatic addition of '{}' did not work"
+    assert Json5("Hello World", auto=False).js5 == "{ Hello World }", "Automatic addition of '{}' did not work"
     js = Json5("Hello\nWorld\rHei\n\rHo\r\nHi", auto=False)
     assert js.lines[6] == 24, f"Line 6 should start at {js.lines[6]}"
     assert js.js5 == "{ Hello World Hei Ho Hi }", "Automatic replacement of newlines did not work"

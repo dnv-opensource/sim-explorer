@@ -1,4 +1,4 @@
-# type: ignore
+# pyright: reportPrivateUsage=false
 
 import ast
 from math import cos, sin
@@ -18,13 +18,13 @@ _y = [1.0 * cos(t) for t in _t]
 
 def test_globals_locals():
     """Test the usage of the globals and locals arguments within exec."""
-    from importlib import __import__
+    from importlib import import_module
 
-    module = __import__("math", fromlist=["sin"])
-    locals().update({"sin": module.sin})
+    module = import_module("math")
+    locals()["sin"] = module.sin
     code = "def f(x):\n    return sin(x)"
-    compiled = compile(code, "<string>", "exec")
-    exec(compiled, locals(), locals())
+    compiled = compile(source=code, filename="<string>", mode="exec")
+    exec(compiled, locals(), locals())  # noqa: S102
     # print(f"locals:{locals()}")
     assert abs(locals()["f"](3.0) - sin(3.0)) < 1e-15
 
@@ -71,7 +71,7 @@ def test_ast(show: bool):
         {"g": {"instances": ("bb",), "names": ("g",)}, "x": {"instances": ("bb",), "names": ("x[0]", "x[1]", "x[2]")}}
     )
     expr = "sqrt(2*bb_x[2] / bb_g)"  # fully qualified variables with components
-    a = ast.parse(expr, "<source>", "exec")
+    a = ast.parse(source=expr, filename="<source>", mode="exec")
     if show:
         print(a, ast.dump(a, indent=4))
     syms, funcs = asserts.expr_get_symbols_functions(expr)
@@ -206,14 +206,16 @@ def test_vector():
     assert y.dot(y) == 3.0, "Initialized as ones"
 
 
-def test_do_assert(show):
+def test_do_assert(show: bool):
     cases = Cases(spec=Path(__file__).parent / "data" / "BouncingBall3D" / "BouncingBall3D.cases")
     case = cases.case_by_name("restitutionAndGravity")
+    assert case is not None
     case.run()
     # res = Results(file=Path(__file__).parent / "data" / "BouncingBall3D" / "restitutionAndGravity.js5")
     res = case.res
     assert isinstance(res, Results)
     # cases = res.case.cases
+    assert res.case is not None
     assert res.case.name == "restitutionAndGravity"
     assert cases.file.name == "BouncingBall3D.cases"
     for key, inf in res.inspect().items():
@@ -224,41 +226,45 @@ def test_do_assert(show):
     asserts = cases.assertion
     # asserts.vector('x', (1,0,0))
     # asserts.vector('v', (0,1,0))
-    _ = asserts.expr("0", "x.dot(v)")  # additional expression (not in .cases)
+    _ = asserts.expr(key="0", ex="x.dot(v)")  # additional expression (not in .cases)
     assert asserts._syms["0"] == ["x", "v"]
     assert all(asserts.symbol("x")[i] == np.ones(3, dtype=float)[i] for i in range(3)), "Initialized to ones"
-    assert asserts.eval_single("0", ((1, 2, 3), (4, 5, 6))) == 32
-    assert asserts.expr("1") == "g==1.5"
-    assert asserts.temporal("1")["type"] == Temporal.A
-    assert asserts.syms("1") == ["g"]
-    assert asserts.do_assert("1", res)
-    assert asserts.assertions("1") == {"passed": True, "details": None, "case": None}
-    asserts.do_assert("2", res)
-    assert asserts.assertions("2") == {
+    assert asserts.eval_single(key="0", kvargs=((1, 2, 3), (4, 5, 6))) == 32
+    assert asserts.expr(key="1") == "g==1.5"
+    assert asserts.temporal(key="1")["type"] == Temporal.A
+    assert asserts.syms(key="1") == ["g"]
+    assert asserts.do_assert(key="1", result=res)
+    assert asserts.assertions(key="1") == {
         "passed": True,
         "details": None,
         "case": None,
-    }, f"Found {asserts.assertions('2')}"
+    }
+    _ = asserts.do_assert(key="2", result=res)
+    assert asserts.assertions(key="2") == {
+        "passed": True,
+        "details": None,
+        "case": None,
+    }, f"Found {asserts.assertions(key='2')}"
     if show:
-        res.plot_time_series(["bb.x[2]"])
-    asserts.do_assert("3", res)
-    assert asserts.assertions("3") == {
+        res.plot_time_series(comp_var=["bb.x[2]"])
+    _ = asserts.do_assert(key="3", result=res)
+    assert asserts.assertions(key="3") == {
         "passed": True,
         "details": "@2.22",
         "case": None,
-    }, f"Found {asserts.assertions('3')}"
-    asserts.do_assert("4", res)
-    assert asserts.assertions("4") == {
+    }, f"Found {asserts.assertions(key='3')}"
+    _ = asserts.do_assert(key="4", result=res)
+    assert asserts.assertions(key="4") == {
         "passed": True,
         "details": "@1.1547 (interpolated)",
         "case": None,
-    }, f"Found {asserts.assertions('4')}"
-    count = asserts.do_assert_case(res)  # do all
+    }, f"Found {asserts.assertions(key='4')}"
+    count = asserts.do_assert_case(result=res)  # do all
     assert count == [4, 4], "Expected 4 of 4 passed"
 
 
 if __name__ == "__main__":
-    retcode = pytest.main(["-rA", "-v", __file__, "--show", "False"])
+    retcode = pytest.main(args=["-rA", "-v", __file__, "--show", "False"])
     assert retcode == 0, f"Non-zero return code {retcode}"
     # import os
     # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")

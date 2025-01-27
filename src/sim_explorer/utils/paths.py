@@ -23,4 +23,4 @@ def get_path(p1: str, base: Path | None = None) -> Path:
     p = (base / Path(p1)).resolve()
     if p.exists():
         return p
-    raise Exception(f"File {p1} relative to {base} not found") from None
+    raise FileNotFoundError(f"File {p1} relative to {base} not found")

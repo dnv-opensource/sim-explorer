@@ -15,7 +15,7 @@ def match_with_wildcard(findtxt: str, matchtxt: str) -> bool:
     if "*" not in findtxt:  # no wildcard characters
         return matchtxt == findtxt
     # there are wildcards
-    m = re.search(findtxt.replace("*", ".*"), matchtxt)
+    m = re.search(pattern=findtxt.replace("*", ".*"), string=matchtxt)
     return m is not None
 
 
@@ -26,18 +26,18 @@ def from_xml(file: Path, sub: str | None = None) -> ET.Element:
     if is_zipfile(file) and sub is not None:  # expect a zipped archive containing xml file 'sub'
         with ZipFile(file) as zp:
             try:
-                xml = zp.read(sub).decode("utf-8")
-            except BadZipFile as err:
-                raise Exception(f"File '{sub}' not found in {file}: {err}") from err
+                xml = zp.read(name=sub).decode(encoding="utf-8")
+            except BadZipFile as e:
+                raise RuntimeError(f"File '{sub}' not found in {file}.") from e
     elif not is_zipfile(file) and file.exists() and sub is None:  # expect an xml file
-        with open(file, encoding="utf-8") as f:
+        with file.open(encoding="utf-8") as f:
             xml = f.read()
     else:
-        raise Exception(f"It was not possible to read an XML from file {file}, sub {sub}") from None
+        raise RuntimeError(f"It was not possible to read an XML from file {file}, sub {sub}")
 
     try:
-        et = ET.fromstring(xml)
-    except ET.ParseError as err:
-        raise Exception(f"File '{file}' does not seem to be a proper xml file") from err
+        et = ET.fromstring(text=xml)  # noqa: S314
+    except ET.ParseError as e:
+        raise RuntimeError(f"File '{file}' does not seem to be a proper xml file") from e
 
     return et

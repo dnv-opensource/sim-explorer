@@ -61,13 +61,13 @@ from jsonpath_ng.jsonpath import Child, Descendants, Fields, Index, Root, Slice,
         ("$..*", Descendants(Root(), Fields("*"))),
     ],
 )
-def test_goessner_examples(string, parsed):
+def test_goessner_examples(string: str, parsed: Child | Descendants):
     """
     Test Stefan Goessner's `examples`_
 
     .. _examples: https://goessner.net/articles/JsonPath/index.html#e3
     """
-    assert parse(string, debug=True) == parsed
+    assert parse(path=string, debug=True) == parsed
 
 
 def test_attribute_and_dict_syntax():

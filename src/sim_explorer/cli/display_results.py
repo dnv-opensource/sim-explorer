@@ -17,7 +17,7 @@ def reconstruct_assertion_name(result: AssertionResult) -> str:
     return f"{result.key}@{result.temporal.name}{time}({result.expression})"
 
 
-def log_assertion_results(results: dict[str, list[AssertionResult]]):
+def log_assertion_results(results: dict[str, list[AssertionResult]]) -> None:
     """
     Log test scenarios and results in a visually appealing bullet-point list format.
 
