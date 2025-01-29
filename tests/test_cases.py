@@ -17,9 +17,11 @@ def test_cases_management():
 
 def test_cases():
     """Test of the features provided by the Cases class"""
+    # sourcery skip: extract-duplicate-method
+
     cases = Cases(Path(__file__).parent / "data" / "BouncingBall0" / "BouncingBall.cases")
 
-    c: str | Case
+    c: str | list[str] | Case | list[Case]
     print(cases.info())
     # cases.spec
     assert cases.js.jspath(path="$.header.name", typ=str, error_msg=True) == "BouncingBall", (

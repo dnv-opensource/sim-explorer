@@ -32,16 +32,16 @@ def _make_cases():
     """Make an example cases file for use in the tests"""
 
     root = ET.Element(
-        tag="OspSystemStructure",
+        "OspSystemStructure",
         attrib={
             "xmlns": "http://opensimulationplatform.com/MSMI/OSPSystemStructure",
             "version": "0.1",
         },
     )
-    simulators = ET.Element(tag="Simulators")
+    simulators = ET.Element("Simulators")
     simulators.append(
         ET.Element(
-            tag="Simulator",
+            "Simulator",
             attrib={
                 "name": "tab",
                 "source": "SimpleTable.fmu",
@@ -154,7 +154,7 @@ def test_case_range(simpletable: Cases):
     do_case_range(txt="x[1.3]", casename="caseX", expected="Unhandled index", simpletable=simpletable)
     case_x = simpletable.case_by_name("caseX")
     assert case_x is not None, "Case with name 'caseX' does not exist."
-    assert case_x.cases.disect_variable("x[99]", err_level=0) == ("", None, range(0))
+    assert case_x.cases.disect_variable("x[99]", err_level=0) == ("", None, list(range(0)))
     assert case_x.cases.disect_variable("x[1]")[2] == [1]
     var_info = case_x.cases.disect_variable("i")[1]
     assert var_info is not None

@@ -220,15 +220,15 @@ def test_json5_syntax():
     assert js.line(-1)[-1] == "}", "Ending '}' expected"
     assert js.line(3) == "Hei", "Quote of line 3 wrong"
     assert js.line(5) == "Hi", "Quote of line 5 wrong"
-    js = Json5("Hello 'W\norld'", 0).js5
-    assert Json5("Hello 'W\norld'", 0).js5[10] == "\n", "newline within quotations should not be replaced"
-    assert Json5("He'llo 'Wo'rld'", 0).js5 == "{ He'llo 'Wo'rld' }", "Handling of single quotes not correct"
-    assert len(Json5("Hello World //added a EOL comment", 0).js5) == len("Hello World //added a EOL comment") + 4, (
-        "Length of string not conserved when replacing comment"
-    )
+    js = Json5("Hello 'W\norld'", auto=0).js5
+    assert Json5("Hello 'W\norld'", auto=0).js5[10] == "\n", "newline within quotations should not be replaced"
+    assert Json5("He'llo 'Wo'rld'", auto=0).js5 == "{ He'llo 'Wo'rld' }", "Handling of single quotes not correct"
+    assert (
+        len(Json5("Hello World //added a EOL comment", auto=0).js5) == len("Hello World //added a EOL comment") + 4
+    ), "Length of string not conserved when replacing comment"
 
-    assert Json5("Hello//EOL comment", 0).js5 == "{ Hello              }", "Comment not properly replaced"
-    assert Json5("Hello#EOL comment", 0).js5 == "{ Hello             }", "Comment not properly replaced"
+    assert Json5("Hello//EOL comment", auto=0).js5 == "{ Hello              }", "Comment not properly replaced"
+    assert Json5("Hello#EOL comment", auto=0).js5 == "{ Hello             }", "Comment not properly replaced"
     raw = """{spec: {
            dp:1.5, #'com1'
            dr@0.9 : 10,  # "com2"
@@ -239,7 +239,7 @@ def test_json5_syntax():
         61: '# "com2"',
     }, "Comments not extracted as expected"
     assert js.js_py["spec"]["dp"] == 1.5, "Comments not properly removed"
-    js = Json5("Hello /*Line1\nLine2\n..*/..", 0)
+    js = Json5("Hello /*Line1\nLine2\n..*/..", auto=0)
     assert js.js5 == "{ Hello                   .. }", "Incorrect multi-line comment"
     assert Json5("{'Hi':1, Ho:2}").js_py == {
         "Hi": 1.0,
@@ -268,7 +268,7 @@ def test_json5_syntax():
     ], "Additional or missing main object elements"
     with pytest.raises(AssertionError) as err:
         _ = Json5("{ H : 1,2}")
-    assert str(err.value).startswith("Json5 read error at 1(10): No proper key:value:")
+    assert str(err.value).startswith("Json5 read error at 1(10): No proper key: :2")
     js = Json5(
         "{   spec: {\n     stopTime : '3',\n      bb.h : '10.0',\n      bb.v : '[0.0, 1.0, 3.0]',\n      bb.e : '0.7',\n   }}"
     )

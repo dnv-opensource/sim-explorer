@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar, overload
 
+from jsonpath_ng.exceptions import JsonPathParserError
 from jsonpath_ng.ext import parse
 from jsonpath_ng.jsonpath import DatumInContext
 
@@ -484,7 +485,10 @@ class Json5:
             typ (type)=None: optional specification of the expected type to find
             errMsg (bool)=False: specify whether an error should be raised, or None returned (default)
         """
-        compiled = parse(path)
+        try:
+            compiled = parse(path)
+        except JsonPathParserError as e:
+            raise ValueError(f"Invalid JsonPath expression: {path}\n{e}") from e
         data: Sequence[Any] = compiled.find(self.js_py)
         #        print("DATA", data)
         val: Any | list[Any] | None = None
@@ -634,7 +638,7 @@ class Json5:
                     res += "   " * level if pretty else ""
                     res += str(k)
                     res += " : " if pretty else ":"
-                    res += print_js5(v, level + 1, pretty)
+                    res += print_js5(sub=v, level=level + 1, pretty=pretty)
                 res += "\n" + "   " * level if pretty else ""
                 res = remove_comma(res)
                 res += "}," if level > 0 else "}"

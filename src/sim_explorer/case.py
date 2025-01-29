@@ -14,7 +14,6 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast, overload
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sim_explorer.assertion import Assertion
 from sim_explorer.exceptions import CaseInitError
 from sim_explorer.json5 import Json5
 from sim_explorer.models import Temporal
@@ -69,11 +68,11 @@ class Case:
         spec: dict[str, Any],
         special: dict[str, Any] | None = None,
     ) -> None:
-        self.cases = cases
-        self.name = name
-        self.js = Json5(spec)
-        self.description = self.js.jspath("$.description", str) or ""
-        self.subs: list = []  # own subcases
+        self.cases: Cases = cases
+        self.name: str = name
+        self.js: Json5 = Json5(spec)
+        self.description: str = self.js.jspath("$.description", str) or ""
+        self.subs: list[Case] = []  # own subcases
         self.res: Results | None = None
 
         if name == "base":
@@ -398,15 +397,15 @@ class Case:
         *,
         as_name: bool = True,
         flat: bool = False,
-    ) -> list[str] | list[Case]:
+    ) -> list[str] | list[str | list[str]] | list[Case] | list[Case | list[Case]]:
         """List this case and all sub-cases recursively, as name or case objects."""
-        lst: list[str] | list[Case]
+        lst: list[str] | list[str | list[str]] | list[Case] | list[Case | list[Case]]
         lst = [self.name] if as_name else [self]  # type: ignore[list-item]
         for s in self.subs:
             if flat:
-                lst.extend(s.list_cases(as_name, flat))
+                lst.extend(s.list_cases(as_name=as_name, flat=flat))  # type: ignore[arg-type]
             else:
-                lst.append(s.list_cases(as_name, flat))
+                lst.append(s.list_cases(as_name=as_name, flat=flat))  # type: ignore[arg-type]
         return lst
 
     def _ensure_specials(self, special: dict[str, Any]) -> dict[str, Any]:
@@ -645,6 +644,8 @@ class Cases:
         self.timefac: float = self._get_time_unit() * 1e9  # internally OSP uses pico-seconds as integer!
         # read the 'variables' section and generate dict { alias : { (instances), (variables)}}:
         self.variables: dict[str, dict[str, Any]] = self.get_case_variables()
+        from sim_explorer.assertion import Assertion
+
         self.assertion: Assertion = Assertion()
         self.assertion.register_vars(self.variables)  # register variables as symbols
         self.base: Case
@@ -788,7 +789,7 @@ class Cases:
         )
         for k in self.js.js_py:
             if k not in ("header", "base"):
-                case_spec: dict[str, Any] | None = self.js.jspath(path=f"${k}", typ=dict, error_msg=True)
+                case_spec: dict[str, Any] | None = self.js.jspath(path=f"$.{k}", typ=dict, error_msg=True)
                 assert case_spec is not None, f"Case {k} not found in the Cases spec."
                 _ = Case(
                     cases=self,

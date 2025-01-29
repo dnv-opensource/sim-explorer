@@ -64,7 +64,7 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
         attr: dict[str, Any] | None = None,
         text: str | None = None,
     ) -> ET.Element:
-        el = ET.Element(tag=tag, attrib=attr or {})
+        el = ET.Element(tag, attrib=attr or {})
         if text is not None:
             el.text = text
         return el
@@ -79,7 +79,7 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
             """Make a <InitialValue> element from the provided var dict."""
             typ: str = {int: "Integer", float: "Real", bool: "Boolean", str: "String"}[type(val)]
             initial: ET.Element = ET.Element(
-                tag="InitialValue",
+                "InitialValue",
                 attrib={"variable": var},
             )
             _ = ET.SubElement(
@@ -93,14 +93,14 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
         if simulators is not None:
             for m, props in simulators.items():
                 simulator = ET.Element(
-                    tag="Simulator",
+                    "Simulator",
                     attrib={
                         "name": m,
                         "source": props.get("source", m[0].upper() + m[1:] + ".fmu"),
                         "stepSize": str(props.get("stepSize", base_step)),
                     },
                 )
-                initial = ET.Element(tag="InitialValues")
+                initial = ET.Element("InitialValues")
                 for var, value in props.items():
                     if var not in ("source", "stepSize"):
                         initial.append(make_initial_value(var, value))
@@ -123,7 +123,7 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
             for key, val in f_linear:
                 _functions.append(
                     ET.Element(
-                        tag="LinearTransformation",
+                        "LinearTransformation",
                         attrib={
                             "name": key,
                             "factor": val["factor"],
@@ -135,7 +135,7 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
             for key, val in f_sum:
                 _functions.append(
                     ET.Element(
-                        tag="Sum",
+                        "Sum",
                         attrib={
                             "name": key,
                             "inputCount": val["inputCount"],
@@ -146,7 +146,7 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
             for key, val in f_vectorsum:
                 _functions.append(
                     ET.Element(
-                        tag="VectorSum",
+                        "VectorSum",
                         attrib={
                             "name": key,
                             "inputCount": val["inputCount"],
@@ -172,12 +172,12 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
             sub2: str,
             attr2: dict[str, str],
         ) -> ET.Element:
-            el = ET.Element(tag=main)
-            _ = ET.SubElement(parent=el, tag=sub1, attrib=attr1)
-            _ = ET.SubElement(parent=el, tag=sub2, attrib=attr2)
+            el = ET.Element(main)
+            _ = ET.SubElement(el, sub1, attrib=attr1)
+            _ = ET.SubElement(el, sub2, attrib=attr2)
             return el
 
-        _cons = ET.Element(tag="Connections")
+        _cons = ET.Element("Connections")
         m1: str
         v1: str
         g1: str
@@ -186,53 +186,53 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
         g2: str
         f: str
         if c_variable is not None:
-            for m1, v1, m2, v2 in c_variable:
-                _cons.append(
-                    make_connection(
-                        main="VariableConnection",
-                        sub1="Variable",
-                        attr1={"simulator": m1, "name": v1},
-                        sub2="Variable",
-                        attr2={"simulator": m2, "name": v2},
-                    )
+            m1, v1, m2, v2 = c_variable
+            _cons.append(
+                make_connection(
+                    main="VariableConnection",
+                    sub1="Variable",
+                    attr1={"simulator": m1, "name": v1},
+                    sub2="Variable",
+                    attr2={"simulator": m2, "name": v2},
                 )
+            )
         if c_signal is not None:
-            for m1, v1, f, v2 in c_signal:
-                _cons.append(
-                    make_connection(
-                        main="SignalConnection",
-                        sub1="Variable",
-                        attr1={"simulator": m1, "name": v1},
-                        sub2="Signal",
-                        attr2={"function": f, "name": v2},
-                    )
+            m1, v1, f, v2 = c_signal
+            _cons.append(
+                make_connection(
+                    main="SignalConnection",
+                    sub1="Variable",
+                    attr1={"simulator": m1, "name": v1},
+                    sub2="Signal",
+                    attr2={"function": f, "name": v2},
                 )
+            )
         if c_group is not None:
-            for m1, g1, m2, g2 in c_group:
-                _cons.append(
-                    make_connection(
-                        main="VariableGroupConnection",
-                        sub1="VariableGroup",
-                        attr1={"simulator": m1, "name": g1},
-                        sub2="VariableGroup",
-                        attr2={"simulator": m2, "name": g2},
-                    )
+            m1, g1, m2, g2 = c_group
+            _cons.append(
+                make_connection(
+                    main="VariableGroupConnection",
+                    sub1="VariableGroup",
+                    attr1={"simulator": m1, "name": g1},
+                    sub2="VariableGroup",
+                    attr2={"simulator": m2, "name": g2},
                 )
+            )
         if c_signalgroup is not None:
-            for m1, g1, f, g2 in c_signalgroup:
-                _cons.append(
-                    make_connection(
-                        main="SignalGroupConnection",
-                        sub1="VariableGroup",
-                        attr1={"simulator": m1, "name": g1},
-                        sub2="SignalGroup",
-                        attr2={"function": f, "name": g2},
-                    )
+            m1, g1, f, g2 = c_signalgroup
+            _cons.append(
+                make_connection(
+                    main="SignalGroupConnection",
+                    sub1="VariableGroup",
+                    attr1={"simulator": m1, "name": g1},
+                    sub2="SignalGroup",
+                    attr2={"function": f, "name": g2},
                 )
+            )
         return _cons
 
     osp = ET.Element(
-        tag="OspSystemStructure",
+        "OspSystemStructure",
         attrib={
             "xmlns": "http://opensimulationplatform.com/MSMI/OSPSystemStructure",
             "version": version,
@@ -258,6 +258,20 @@ def osp_system_structure_from_js5(file: Path, dest: Path | None = None) -> Path:
     assert file.name.endswith(".js5"), f"Json5 file expected. Found {file.name}"
     js = Json5(file)
 
+    _connections_variable = js.jspath(path="$.ConnectionsVariable", typ=list)
+    connections_variable: tuple[str, str, str, str] | None = (
+        tuple(_connections_variable) if _connections_variable else None
+    )
+    _connections_signal = js.jspath(path="$.ConnectionsSignal", typ=list)
+    connections_signal: tuple[str, str, str, str] | None = tuple(_connections_signal) if _connections_signal else None
+
+    _connections_group = js.jspath(path="$.ConnectionsGroup", typ=list)
+    connections_group: tuple[str, str, str, str] | None = tuple(_connections_group) if _connections_group else None
+
+    _connections_signalgroup = js.jspath(path="$.ConnectionsSignalGroup", typ=list)
+    connections_signalgroup: tuple[str, str, str, str] | None = (
+        tuple(_connections_signalgroup) if _connections_signalgroup else None
+    )
     ss = make_osp_system_structure(
         name=file.name[:-4],
         version=js.jspath("$.header.version", str) or "0.1",
@@ -268,10 +282,10 @@ def osp_system_structure_from_js5(file: Path, dest: Path | None = None) -> Path:
         functions_linear=js.jspath("$.FunctionsLinear", dict) or {},
         functions_sum=js.jspath("$.FunctionsSum", dict) or {},
         functions_vectorsum=js.jspath("$.FunctionsVectorSum", dict) or {},
-        connections_variable=tuple(js.jspath("$.ConnectionsVariable", list) or []),
-        connections_signal=tuple(js.jspath("$.ConnectionsSignal", list) or []),
-        connections_group=tuple(js.jspath("$.ConnectionsGroup", list) or []),
-        connections_signalgroup=tuple(js.jspath("$.ConnectionsSignalGroup", list) or []),
+        connections_variable=connections_variable,
+        connections_signal=connections_signal,
+        connections_group=connections_group,
+        connections_signalgroup=connections_signalgroup,
         path=dest or Path(file).parent,
     )
 

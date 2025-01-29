@@ -538,8 +538,6 @@ class Assertion:
                 details="No details",
             )
 
-        from sim_explorer.case import Case
-
         if isinstance(case, Case):
             for key in case.asserts:
                 yield do_report(key)
