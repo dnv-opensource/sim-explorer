@@ -38,6 +38,9 @@ class SystemInterfaceOSP(SystemInterface):
         self.full_simulator_available = True  # system and components specification + simulation capabilities
         # Note: The initialization of the OSP simulator itself is performed in init_simulator()
         #      Since this needs to be repeated before every simulation
+        self.simulator: CosimExecution
+        self.manipulator: CosimManipulator
+        self.observer: CosimObserver
 
     def init_simulator(self) -> bool:
         """Instantiate and initialize the simulator, so that simulations can be run.

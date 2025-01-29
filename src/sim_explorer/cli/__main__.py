@@ -139,11 +139,12 @@ def main() -> None:
     if not cases_path.is_file():
         logger.error(f"sim-explorer.py: File {cases_path} not found.")
         return
-    cases = Cases(args.cases)
     logger.info(f"ARGS: {args}")
 
-    if not isinstance(cases, Cases):
-        logger.error(f"Instantiation of {args.cases} not successfull")
+    try:
+        cases = Cases(args.cases)
+    except Exception:
+        logger.exception(f"Instantiation of {args.cases} not successfull")
         return
 
     log_msg_stub: str = f"Start sim-explorer.py with following arguments:\n\t cases: \t{cases}\n"

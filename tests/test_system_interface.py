@@ -34,7 +34,7 @@ def test_pytype():
 def test_interface():
     sys = SystemInterface(Path(__file__).parent / "data" / "MobileCrane" / "crane_table.js5")
     # manually adding another SimpleTable to the system
-    sys._models["SimpleTable"]["components"].append("simpleTable2")
+    sys._models["SimpleTable"]["components"].append("simpleTable2")  # pyright: ignore[reportPrivateUsage]
     sys.components.update({"simpleTable2": "SimpleTable"})
     assert isinstance(sys, SystemInterface)
     assert list(sys.components.keys()) == ["simpleTable", "mobileCrane", "simpleTable2"]

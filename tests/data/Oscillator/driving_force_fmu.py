@@ -1,3 +1,5 @@
+from collections.abc import Callable
+from typing import Any
 from component_model.model import Model
 from component_model.variable import Variable
 from functools import partial
@@ -22,7 +24,7 @@ class DrivingForce(Model):
     """
 
     def __init__(
-        self, func: callable = func, ampl: float = 1.0, freq: float = 1.0, **kwargs
+        self, func: Callable[..., Any] = func, ampl: float = 1.0, freq: float = 1.0, **kwargs: Any,
     ):
         super().__init__(
             "DrivingForce",

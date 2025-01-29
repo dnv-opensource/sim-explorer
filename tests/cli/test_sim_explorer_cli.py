@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from sim_explorer.cli import __main__
-from sim_explorer.cli.__main__ import _argparser, main
+from sim_explorer.cli.__main__ import _argparser, main  # pyright: ignore[reportPrivateUsage]
 
 # *****Test commandline interface (CLI)************************************************************
 

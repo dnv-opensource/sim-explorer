@@ -12,7 +12,8 @@ def test_run_casex():
     _ = cases.case_by_name("base")
     _ = cases.case_by_name("case1")
     _ = cases.case_by_name("caseX")
-    print("RESULTS", cases.run_case("caseX", "results"))
+    print("RESULTS")
+    cases.run_case(name="caseX", dump="results")
 
 
 if __name__ == "__main__":

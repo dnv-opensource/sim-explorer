@@ -20,6 +20,9 @@ from libcosimpy.CosimSlave import CosimLocalSlave
 from sim_explorer.utils.misc import from_xml
 from sim_explorer.utils.osp import make_osp_system_structure
 
+from .data.Oscillator.driving_force_fmu import DrivingForce, func
+from .data.Oscillator.oscillator_fmu import HarmonicOscillator
+
 
 def check_expected(
     value: Any,  # noqa: ANN401
@@ -124,9 +127,6 @@ def test_oscillator_force_class(show: bool):
     If pytest is run from the command line, the current directory is the package root,
     but when it is run from the editor (__main__) it is run from /tests/.
     """
-
-    from data.Oscillator.driving_force_fmu import DrivingForce, func
-    from data.Oscillator.oscillator_fmu import HarmonicOscillator
 
     osc = HarmonicOscillator(k=1.0, c=0.1, m=1.0)
 

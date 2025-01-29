@@ -16,6 +16,7 @@ def expect_bounce_at(results: Json5, time: float, eps: float = 0.02):
     for t in results.js_py:
         with contextlib.suppress(ValueError):
             _t = float(t)
+            bb_h: float | None = None
             if previous is not None:
                 bb_h = results.jspath(path=f"$.['{t}'].bb.h")
                 assert bb_h is not None, f"No data 'bb.h' found for time {t}"
@@ -78,7 +79,7 @@ def test_step_by_step_interface():
             ]
 
 
-def test_run_cases():
+def test_run_cases():  # noqa: PLR0915
     # sourcery skip: extract-duplicate-method
     path = Path(Path(__file__).parent, "data/BouncingBall0/BouncingBall.cases")
     assert path.exists(), "BouncingBall cases file not found"
