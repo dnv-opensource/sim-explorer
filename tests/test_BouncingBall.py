@@ -32,6 +32,8 @@ def test_run_fmpy(show: bool):
             "e": 0.71,
             "g": -9.81,
         },
+        step_finished=None,  # pyright: ignore[reportArgumentType]  # (typing incorrect in fmpy)
+        fmu_instance=None,  # pyright: ignore[reportArgumentType]  # (typing incorrect in fmpy)
     )
     if show:
         plot_result(result)

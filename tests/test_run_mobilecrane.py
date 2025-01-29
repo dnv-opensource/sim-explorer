@@ -29,6 +29,7 @@ def is_nearly_equal(x: float | list[float], expected: float | list[float], eps: 
         if abs(x - expected) < eps:
             return True
         raise AssertionError(f"{x} is not nealry equal to {expected}") from None
+    assert isinstance(x, list), f"Argument `x` is not a list. Found: {x}"
     assert isinstance(expected, list), f"Argument `expected` is not a list. Found: {expected}"
     for i, y in enumerate(x):
         if abs(y - expected[i]) >= eps:

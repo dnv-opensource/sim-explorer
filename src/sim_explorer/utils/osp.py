@@ -125,7 +125,7 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
         key: str
         val: dict[str, Any]
         if f_linear is not None:
-            for key, val in f_linear:
+            for key, val in f_linear.items():
                 _functions.append(
                     ET.Element(
                         "LinearTransformation",
@@ -137,7 +137,7 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
                     )
                 )
         if f_sum is not None:
-            for key, val in f_sum:
+            for key, val in f_sum.items():
                 _functions.append(
                     ET.Element(
                         "Sum",
@@ -148,7 +148,7 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
                     ),
                 )
         if f_vectorsum is not None:
-            for key, val in f_vectorsum:
+            for key, val in f_vectorsum.items():
                 _functions.append(
                     ET.Element(
                         "VectorSum",

@@ -215,7 +215,9 @@ class SystemInterface:
         if isinstance(flt, int | str):
             ids = [flt]  # type: ignore[assignment]
         elif isinstance(flt, tuple | list):
-            ids = list(flt)
+            if len(flt) > 1:
+                assert all(type(f) is type(flt[0]) for f in flt), "All elements in filter must be of the same type"
+            ids = list(flt)  # pyright: ignore[reportAssignmentType]
         else:
             raise TypeError(f"Unknown filter specification {flt} for variables")
         if isinstance(ids[0], str):  # by name
@@ -376,7 +378,7 @@ class SystemInterface:
         def _description(
             name: str,
             info: dict[str, Any],  # noqa: ARG001
-            initial: int,  # noqa: ARG001
+            initial: str | int | tuple[int] | tuple[str, ...],  # noqa: ARG001
         ) -> str:
             descr = f"Variable {name}, causality {var_info['causality']}"
             descr += f", variability {var_info['variability']}"
@@ -398,7 +400,6 @@ class SystemInterface:
                 _causality = var_info["causality"]
                 _variability = var_info["variability"]
                 _initial = var_info.get("initial", SystemInterface.default_initial(_causality, _variability))
-
                 if action in {"get", "step"}:  # no restrictions on get
                     pass
                 elif action == "set" and (
@@ -427,19 +428,20 @@ class SystemInterface:
                     return False
                     # additional rule for ModelExchange, not listed here
             else:  # check whether the properties are equal
+                _initial = var_info.get("initial", SystemInterface.default_initial(_causality, _variability))
                 if not _check(
                     cond=_type == var_info["type"],
-                    msg=f"{_description(name, var_info, _initial)} != type {_type}",
+                    msg=f"{_description(name=name, info=var_info, initial=_initial)} != type {_type}",
                 ):
                     return False
                 if not _check(
                     cond=_causality == var_info["causality"],
-                    msg=f"{_description(name, var_info, _initial)} != causality {_causality}",
+                    msg=f"{_description(name=name, info=var_info, initial=_initial)} != causality {_causality}",
                 ):
                     return False
                 if not _check(
                     cond=_variability == var_info["variability"],
-                    msg=f"{_description(name, var_info, _initial)} != variability {_variability}",
+                    msg=f"{_description(name=name, info=var_info, initial=_initial)} != variability {_variability}",
                 ):
                     return False
         return True

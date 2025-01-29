@@ -13,8 +13,6 @@ from sim_explorer.assertion import Assertion, Temporal
 from sim_explorer.case import Cases, Results
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
-
     from sim_explorer.utils.types import (
         TDataColumn,
         TNumeric,
@@ -175,7 +173,7 @@ def test_assertion():  # noqa: PLR0915
     assert isinstance(result, float)
     assert abs(result - 0.14993604045622577) < 1e-14
     _ = asserts.expr(key="9", ex="dummy_x*dummy_y* z[0]")
-    _x_y: Iterable[TValue] = tuple(zip(_x, _y, strict=False))
+    _x_y: tuple[tuple[TValue, ...], ...] = tuple(zip(_x, _y, strict=False))
     result = asserts.eval_series(
         key="9",
         data=tuple(

@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as ET
+from collections.abc import Iterable
 from math import pi, sin, sqrt
 from pathlib import Path
 from typing import Any
@@ -36,13 +37,14 @@ def check_expected(
 
 
 def arrays_equal(
-    res: tuple[Any, ...],
-    expected: tuple[Any, ...],
+    res: Iterable[Any],
+    expected: Iterable[Any],
     eps: float = 1e-7,
 ):
-    assert len(res) == len(expected), (
-        f"Tuples of different lengths cannot be equal. Found {len(res)} != {len(expected)}"
-    )
+    len_res = len(list(res))
+    len_exp = len(list(expected))
+    if len_res != len_exp:
+        raise ValueError(f"Arrays of different lengths cannot be equal. Found {len_res} != {len_exp}")
     for i, (x, y) in enumerate(zip(res, expected, strict=False)):
         assert abs(x - y) < eps, f"Element {i} not nearly equal in {x}, {y}"
 
@@ -159,12 +161,12 @@ def test_make_fmus(
     oscillator_fmu: Path,
     driver_fmu: Path,
 ):
-    info = fmu_info(filename=oscillator_fmu)  # this is a formatted string. Not easy to check
+    info = fmu_info(filename=str(oscillator_fmu))  # this is a formatted string. Not easy to check
     print(f"Info Oscillator: {info}")
     val = validate_fmu(filename=str(oscillator_fmu))
     assert not len(val), f"Validation of of {oscillator_fmu.name} was not successful. Errors: {val}"
 
-    info = fmu_info(filename=driver_fmu)  # this is a formatted string. Not easy to check
+    info = fmu_info(filename=str(driver_fmu))  # this is a formatted string. Not easy to check
     print(f"Info Driver: {info}")
     val = validate_fmu(filename=str(driver_fmu))
     assert not len(val), f"Validation of of {oscillator_fmu.name} was not successful. Errors: {val}"
@@ -195,6 +197,8 @@ def test_use_fmu(oscillator_fmu: Path, driver_fmu: Path, show: bool):
         debug_logging=True,
         logger=print,  # fmi_call_logger=print,
         start_values={"x[2]": 1.0, "c": 0.1},
+        step_finished=None,  # pyright: ignore[reportArgumentType]  # (typing incorrect in fmpy)
+        fmu_instance=None,  # pyright: ignore[reportArgumentType]  # (typing incorrect in fmpy)
     )
     if show:
         plot_result(result)
