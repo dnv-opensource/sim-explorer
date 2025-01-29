@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as ET
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -20,10 +21,14 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
     functions_linear: dict[str, Any] | None = None,
     functions_sum: dict[str, Any] | None = None,
     functions_vectorsum: dict[str, Any] | None = None,
-    connections_variable: tuple[str, str, str, str] | None = None,  #: (model, out-variable, model, in-variable)
-    connections_signal: tuple[str, str, str, str] | None = None,  #: (model, variable, function, signal)
-    connections_group: tuple[str, str, str, str] | None = None,  #: (model, group, model, group)
-    connections_signalgroup: tuple[str, str, str, str] | None = None,  #: (model, group, function, signal-group)
+    #: tuple[(model, out-variable, model, in-variable), ...]
+    connections_variable: Sequence[tuple[str, str, str, str]] | None = None,
+    #: tuple[(model, variable, function, signal), ...]
+    connections_signal: Sequence[tuple[str, str, str, str]] | None = None,
+    #: tuple[(model, group, model, group), ...]
+    connections_group: Sequence[tuple[str, str, str, str]] | None = None,
+    #: tuple[(model, group, function, signal-group), ...]
+    connections_signalgroup: Sequence[tuple[str, str, str, str]] | None = None,
     path: Path | str = ".",
 ) -> Path:
     """Prepare a OspSystemStructure xml file according to `OSP configuration specification <https://open-simulation-platform.github.io/libcosim/configuration>`_.
@@ -83,8 +88,8 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
                 attrib={"variable": var},
             )
             _ = ET.SubElement(
-                parent=initial,
-                tag=typ,
+                initial,
+                typ,
                 attrib={"value": ("false", "true")[int(val)] if isinstance(val, bool) else str(val)},
             )
             return initial
@@ -158,12 +163,12 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
         return _functions
 
     def make_connections(
-        c_variable: tuple[str, str, str, str] | None,
-        c_signal: tuple[str, str, str, str] | None,
-        c_group: tuple[str, str, str, str] | None,
-        c_signalgroup: tuple[str, str, str, str] | None,
+        c_variable: Sequence[tuple[str, str, str, str]] | None,
+        c_signal: Sequence[tuple[str, str, str, str]] | None,
+        c_group: Sequence[tuple[str, str, str, str]] | None,
+        c_signalgroup: Sequence[tuple[str, str, str, str]] | None,
     ) -> ET.Element:
-        """Make the <connections> element from the provided con."""
+        """Make the <connections> element from the provided connections."""
 
         def make_connection(
             main: str,
@@ -185,50 +190,59 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
         v2: str
         g2: str
         f: str
+        c: tuple[str, str, str, str]
         if c_variable is not None:
-            m1, v1, m2, v2 = c_variable
-            _cons.append(
-                make_connection(
-                    main="VariableConnection",
-                    sub1="Variable",
-                    attr1={"simulator": m1, "name": v1},
-                    sub2="Variable",
-                    attr2={"simulator": m2, "name": v2},
+            for c in c_variable:
+                assert len(c) == 4, f"Four elements expected for VariableConnection. Found {len(c)}."  # noqa: PLR2004
+                m1, v1, m2, v2 = c
+                _cons.append(
+                    make_connection(
+                        main="VariableConnection",
+                        sub1="Variable",
+                        attr1={"simulator": m1, "name": v1},
+                        sub2="Variable",
+                        attr2={"simulator": m2, "name": v2},
+                    )
                 )
-            )
         if c_signal is not None:
-            m1, v1, f, v2 = c_signal
-            _cons.append(
-                make_connection(
-                    main="SignalConnection",
-                    sub1="Variable",
-                    attr1={"simulator": m1, "name": v1},
-                    sub2="Signal",
-                    attr2={"function": f, "name": v2},
+            for c in c_signal:
+                assert len(c) == 4, f"Four elements expected for SignalConnection. Found {len(c)}."  # noqa: PLR2004
+                m1, v1, f, v2 = c
+                _cons.append(
+                    make_connection(
+                        main="SignalConnection",
+                        sub1="Variable",
+                        attr1={"simulator": m1, "name": v1},
+                        sub2="Signal",
+                        attr2={"function": f, "name": v2},
+                    )
                 )
-            )
         if c_group is not None:
-            m1, g1, m2, g2 = c_group
-            _cons.append(
-                make_connection(
-                    main="VariableGroupConnection",
-                    sub1="VariableGroup",
-                    attr1={"simulator": m1, "name": g1},
-                    sub2="VariableGroup",
-                    attr2={"simulator": m2, "name": g2},
+            for c in c_group:
+                assert len(c) == 4, f"Four elements expected for VariableGroupConnection. Found {len(c)}."  # noqa: PLR2004
+                m1, g1, m2, g2 = c
+                _cons.append(
+                    make_connection(
+                        main="VariableGroupConnection",
+                        sub1="VariableGroup",
+                        attr1={"simulator": m1, "name": g1},
+                        sub2="VariableGroup",
+                        attr2={"simulator": m2, "name": g2},
+                    )
                 )
-            )
         if c_signalgroup is not None:
-            m1, g1, f, g2 = c_signalgroup
-            _cons.append(
-                make_connection(
-                    main="SignalGroupConnection",
-                    sub1="VariableGroup",
-                    attr1={"simulator": m1, "name": g1},
-                    sub2="SignalGroup",
-                    attr2={"function": f, "name": g2},
+            for c in c_signalgroup:
+                assert len(c) == 4, f"Four elements expected for SignalGroupConnection. Found {len(c)}."  # noqa: PLR2004
+                m1, g1, f, g2 = c
+                _cons.append(
+                    make_connection(
+                        main="SignalGroupConnection",
+                        sub1="VariableGroup",
+                        attr1={"simulator": m1, "name": g1},
+                        sub2="SignalGroup",
+                        attr2={"function": f, "name": g2},
+                    )
                 )
-            )
         return _cons
 
     osp = ET.Element(
@@ -258,20 +272,6 @@ def osp_system_structure_from_js5(file: Path, dest: Path | None = None) -> Path:
     assert file.name.endswith(".js5"), f"Json5 file expected. Found {file.name}"
     js = Json5(file)
 
-    _connections_variable = js.jspath(path="$.ConnectionsVariable", typ=list)
-    connections_variable: tuple[str, str, str, str] | None = (
-        tuple(_connections_variable) if _connections_variable else None
-    )
-    _connections_signal = js.jspath(path="$.ConnectionsSignal", typ=list)
-    connections_signal: tuple[str, str, str, str] | None = tuple(_connections_signal) if _connections_signal else None
-
-    _connections_group = js.jspath(path="$.ConnectionsGroup", typ=list)
-    connections_group: tuple[str, str, str, str] | None = tuple(_connections_group) if _connections_group else None
-
-    _connections_signalgroup = js.jspath(path="$.ConnectionsSignalGroup", typ=list)
-    connections_signalgroup: tuple[str, str, str, str] | None = (
-        tuple(_connections_signalgroup) if _connections_signalgroup else None
-    )
     ss = make_osp_system_structure(
         name=file.name[:-4],
         version=js.jspath("$.header.version", str) or "0.1",
@@ -282,10 +282,10 @@ def osp_system_structure_from_js5(file: Path, dest: Path | None = None) -> Path:
         functions_linear=js.jspath("$.FunctionsLinear", dict) or {},
         functions_sum=js.jspath("$.FunctionsSum", dict) or {},
         functions_vectorsum=js.jspath("$.FunctionsVectorSum", dict) or {},
-        connections_variable=connections_variable,
-        connections_signal=connections_signal,
-        connections_group=connections_group,
-        connections_signalgroup=connections_signalgroup,
+        connections_variable=js.jspath(path="$.ConnectionsVariable", typ=list),
+        connections_signal=js.jspath(path="$.ConnectionsSignal", typ=list),
+        connections_group=js.jspath(path="$.ConnectionsGroup", typ=list),
+        connections_signalgroup=js.jspath(path="$.ConnectionsSignalGroup", typ=list),
         path=dest or Path(file).parent,
     )
 

@@ -16,10 +16,9 @@ def expect_bounce_at(results: Json5, time: float, eps: float = 0.02):
     for t in results.js_py:
         with contextlib.suppress(ValueError):
             _t = float(t)
-            bb_h: float | None = None
+            bb_h: float | None = results.jspath(path=f"$.['{t}'].bb.h")
+            assert bb_h is not None, f"No data 'bb.h' found for time {t}"
             if previous is not None:
-                bb_h = results.jspath(path=f"$.['{t}'].bb.h")
-                assert bb_h is not None, f"No data 'bb.h' found for time {t}"
                 print(bb_h, previous[0])
                 falling = bb_h < previous[0]
                 # if falling != previous[1]:

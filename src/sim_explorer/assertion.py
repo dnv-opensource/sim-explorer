@@ -234,8 +234,9 @@ class Assertion:
         else:  # setter
             if isinstance(typ, Temporal):
                 self._temporal.update({key: {"type": typ, "args": args}})
-            assert isinstance(typ, str), f"Unknown temporal type {typ}"
-            self._temporal.update({key: {"type": Temporal[typ], "args": args}})
+            else:  # str
+                assert isinstance(typ, str), f"Unknown temporal type {typ}"
+                self._temporal.update({key: {"type": Temporal[typ], "args": args}})
             return self._temporal[key]
 
     def description(self, key: str, descr: str | None = None) -> str:
@@ -389,9 +390,9 @@ class Assertion:
             time: TNumeric
             row: TDataRow
             result: TValue
-            if isinstance(_row, TNumeric):  # can happen if the time itself is evaluated
-                time = _row
-                row = [_row]
+            # If row is a single value, make it a list.
+            # This happens e.g. when only time is given as input.
+            row = [_row] if isinstance(_row, TNumeric) else _row
             assert isinstance(row[0], TNumeric), f"Time data in eval_series is not numeric: {row}"
             time = row[0]
             if "t" not in argument_names:

@@ -29,6 +29,7 @@ output_dirs = [
 ]
 output_files = [
     "*test*.pdf",
+    "systemModel.xml",
 ]
 
 
