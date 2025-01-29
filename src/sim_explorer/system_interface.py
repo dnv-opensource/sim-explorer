@@ -5,14 +5,14 @@ Currently only Open Simulation Platform (OSP) is supported.
 from collections.abc import Callable, Generator, Sequence
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import numpy as np
 
 from sim_explorer.json5 import Json5
 from sim_explorer.utils.misc import from_xml, match_with_wildcard
 from sim_explorer.utils.osp import read_system_structure_xml
-from sim_explorer.utils.types import TActionArgs, TValue
+from sim_explorer.utils.types import TActionArgs, TGetActionArgs, TSetActionArgs, TValue
 
 if TYPE_CHECKING:
     from xml.etree.ElementTree import Element
@@ -181,7 +181,7 @@ class SystemInterface:
             "",
         )
 
-    def variables(self, comp: str | int) -> dict[int | str, dict[str, Any]]:
+    def variables(self, comp: str | int) -> dict[str, dict[str, Any]]:
         """Get the registered variables for a given component from the system.
         This is the default version which works without the full modelDescription inside self._models.
         Can be overridden by super-classes which have the modelDescription available.
@@ -204,15 +204,16 @@ class SystemInterface:
 
     def variable_iter(
         self,
-        variables: dict[int | str, Any],
-        flt: int | str | Sequence[int | str],
+        variables: dict[str, dict[str, Any]],
+        flt: int | str | Sequence[int] | Sequence[str],
     ) -> Generator[tuple[str, dict[str, Any]], None, None]:
         """Get the variable dicts of the variables refered to by ids.
 
         Returns: Iterator over the dicts of the selected variables
         """
+        ids: list[int] | list[str]
         if isinstance(flt, int | str):
-            ids = [flt]
+            ids = [flt]  # type: ignore[assignment]
         elif isinstance(flt, tuple | list):
             ids = list(flt)
         else:
@@ -220,6 +221,7 @@ class SystemInterface:
         if isinstance(ids[0], str):  # by name
             for i in ids:
                 if i in variables:
+                    assert isinstance(i, str)
                     yield (i, variables[i])
         else:  # by reference
             for v, info in variables.items():
@@ -230,7 +232,7 @@ class SystemInterface:
         self,
         component: str,
         varname: str,
-    ) -> tuple[tuple[int | str, Any], ...]:
+    ) -> tuple[tuple[str, Any], ...]:
         """Based on an example component (instance), identify unique variables starting with 'varname'.
         The returned information applies to all instances of the same model.
         The variables shall all be of the same type, causality and variability.
@@ -252,7 +254,7 @@ class SystemInterface:
             rest = org[len(varname) :]
             return not len(rest) or any(rest.startswith(c) for c in ("[", "."))
 
-        var: list[tuple[int | str, Any]] = []
+        var: list[tuple[str, Any]] = []
         assert hasattr(self, "components"), "Need the dictionary of components before maching variables"
 
         accepted = None
@@ -356,7 +358,7 @@ class SystemInterface:
         self,
         action: str,
         comp: int | str,
-        var: int | str | Sequence[int | str],
+        var: int | str | Sequence[int] | Sequence[str],
         time: float,
     ) -> bool:
         """Check whether the action would be allowed according to FMI2 rules, see FMI2.01, p.49.
@@ -390,7 +392,7 @@ class SystemInterface:
         _type, _causality, _variability = ("", "", "")  # unknown
 
         variables = self.variables(comp)
-        for name, var_info in self.variable_iter(variables, var):
+        for name, var_info in self.variable_iter(variables=variables, flt=var):
             if _type == "" or _causality == "" or _variability == "":  # define the properties and check whether allowed
                 _type = var_info["type"]
                 _causality = var_info["causality"]
@@ -445,11 +447,11 @@ class SystemInterface:
     @classmethod
     def update_refs_values(
         cls,
-        allrefs: tuple[int, ...],
-        baserefs: tuple[int, ...],
-        basevals: tuple[TValue, ...],
-        refs: tuple[int, ...],
-        values: tuple[TValue, ...],
+        allrefs: Sequence[int],
+        baserefs: Sequence[int],
+        basevals: Sequence[TValue],
+        refs: Sequence[int],
+        values: Sequence[TValue],
     ) -> tuple[tuple[int, ...], tuple[TValue, ...]]:
         """Update baserefs and basevals with refs and values according to all possible refs."""
         allvals: list[TValue | None] = [None] * len(allrefs)
@@ -493,13 +495,13 @@ class SystemInterface:
 
     def _add_set(
         self,
-        actions: dict,
+        actions: dict[float, list[TSetActionArgs]],
         time: float,
         cvar: str,
         comp: str,
-        cvar_info: dict,
-        values: tuple,
-        rng: tuple | None = None,
+        cvar_info: dict[str, Any],
+        values: tuple[TValue, ...],
+        rng: tuple[int, ...] | None = None,
     ) -> None:
         """Perform final processing and add the set action to the list (if appropriate).
 
@@ -517,11 +519,17 @@ class SystemInterface:
             values (tuple): tuple of values (correct type made sure)
             rng (tuple)=None: Optional sub-range among the variables of cvar. None: whole variable
         """
-        refs = cvar_info["refs"] if rng is None else tuple([cvar_info["refs"][i] for i in rng])
+        refs = cvar_info["refs"] if rng is None else tuple(cvar_info["refs"][i] for i in rng)
         assert len(refs) == len(values), f"Number of variable refs {refs} != values {values} in {cvar}, {comp}"
         for i, (_cvar, _comp, _refs, _values) in enumerate(actions[time]):  # go through existing actions for time
             if cvar == _cvar and comp == _comp:  # the case variable and the component name match
-                refs, values = self.update_refs_values(cvar_info["refs"], _refs, _values, refs, values)
+                refs, values = self.update_refs_values(
+                    allrefs=cvar_info["refs"],
+                    baserefs=_refs,
+                    basevals=_values,
+                    refs=refs,
+                    values=values,
+                )
                 actions[time][i] = (cvar, comp, refs, values)  # replace action
                 return
         # new set action
@@ -529,7 +537,7 @@ class SystemInterface:
 
     def _add_get(
         self,
-        actions: dict[float, list[tuple[str, str, Any]]],
+        actions: dict[float, list[TGetActionArgs]],
         time: float,
         cvar: str,
         comp: str,
@@ -557,11 +565,11 @@ class SystemInterface:
 
     def add_actions(  # noqa: PLR0913
         self,
-        actions: dict[float, list[TActionArgs]],
+        actions: dict[float, list[TGetActionArgs]] | dict[float, list[TSetActionArgs]],
         act_type: str,
         cvar: str,
         cvar_info: dict[str, Any],
-        values: tuple[TValue] | None,
+        values: tuple[TValue, ...] | None,
         at_time: float,
         stoptime: float,
         rng: tuple[int, ...] | None = None,
@@ -592,17 +600,24 @@ class SystemInterface:
             actions[at_time] = []  # make sure that there is a suitable slot
         for comp in cvar_info["instances"]:
             if act_type == "get" or (act_type == "step" and at_time == -1):  # normal get or step without time spec
+                assert all(len(args) == 3 for t in actions for args in actions[t]), (  # noqa: PLR2004
+                    "Get actions must be tuples of (cvar, comp, refs)"
+                )
                 self._add_get(
-                    actions=actions,
+                    actions=cast(dict[float, list[TGetActionArgs]], actions),
                     time=at_time,
                     cvar=cvar,
                     comp=comp,
                     cvar_info=cvar_info,
                 )
             elif act_type == "step" and at_time >= 0:  # step actions with specified interval
+                assert isinstance(actions, dict)
+                assert all(len(args) == 3 for t in actions for args in actions[t]), (  # noqa: PLR2004
+                    "Get actions must be tuples of (cvar, comp, refs)"
+                )
                 for time in np.arange(start=at_time, stop=stoptime, step=at_time):
                     self._add_get(
-                        actions=actions,
+                        actions=cast(dict[float, list[TGetActionArgs]], actions),
                         time=time,
                         cvar=cvar,
                         comp=comp,
@@ -611,8 +626,12 @@ class SystemInterface:
 
             elif act_type == "set":
                 assert values is not None, f"Variable {cvar}: Value needed for 'set' actions."
+                assert isinstance(actions, dict)
+                assert all(len(args) == 4 for t in actions for args in actions[t]), (  # noqa: PLR2004
+                    "Get actions must be tuples of (cvar, comp, refs, values)"
+                )
                 self._add_set(
-                    actions=actions,
+                    actions=cast(dict[float, list[TSetActionArgs]], actions),
                     time=at_time,
                     cvar=cvar,
                     comp=comp,

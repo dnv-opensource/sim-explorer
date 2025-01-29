@@ -9,7 +9,7 @@ import copy
 from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast, overload
+from typing import TYPE_CHECKING, Any, TypeVar, cast, overload
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -24,15 +24,14 @@ from sim_explorer.utils.misc import from_xml
 from sim_explorer.utils.paths import get_path, relative_path
 from sim_explorer.utils.types import (
     TDataColumn,
+    TGetActionArgs,
+    TSetActionArgs,
     TValue,
 )
 
 if TYPE_CHECKING:
     from sim_explorer.utils.types import (
-        TActionArgs,
         TDataTable,
-        TGetActionArgs,
-        TSetActionArgs,
         TTimeColumn,
         TValue,
     )
@@ -360,15 +359,26 @@ class Case:
             if at_time_type in ("get", "step"):
                 value = None
             key, cvar_info, rng = self.cases.disect_variable(key)
+            assert cvar_info is not None, (
+                f"No variable specification found for variable {key} not found in variable specification"
+            )
             key = key.strip()
             if value is not None:  # check also the number of supplied values
                 if isinstance(value, str | float | int | bool):  # make sure that there are always lists
                     value = [value]
                 # assert sum(1 for _ in rng) == Case._num_elements(value), f"Variable {key}: # values {value} != # vars {rng}",
                 assert len(rng) == Case._num_elements(value), f"Variable {key}: # values {value} != # vars {rng}"
-            varnames = tuple(cvar_info["names"][r] for r in rng)
+            _names = cvar_info["names"]
+            assert isinstance(_names, Sequence), f"Attribute `names` in variable {key} is not a sequence: {_names}"
+            varnames = tuple(_names[r] for r in rng)
             # print(f"CASE.read_spec, {key}@{at_time_arg}({at_time_type}):{value}[{rng}], alias={cvar_info}")  # noqa: ERA001
-            if not self.cases.simulator.allowed_action(at_time_type, cvar_info["instances"][0], varnames, at_time_arg):
+            _instances = cvar_info["instances"]
+            assert isinstance(_instances, Sequence), (
+                f"Attribute `instances` in variable {key} is not a sequence: {_instances}"
+            )
+            if not self.cases.simulator.allowed_action(
+                action=at_time_type, comp=_instances[0], var=varnames, time=at_time_arg
+            ):
                 raise AssertionError(self.cases.simulator.message) from None
             # action allowed. Ask simulator to add actions appropriately
             assert self.special is not None
@@ -440,6 +450,7 @@ class Case:
             dump (str): Optionally save the results as json file.
                 None: do not save, '': use default file name, str (with or without '.js5'): save with that file name
         """
+        _VT = TypeVar("_VT", TGetActionArgs, TSetActionArgs)
 
         @overload
         def do_actions(
@@ -459,10 +470,10 @@ class Case:
 
         def do_actions(
             _t: float,
-            actions: list[TGetActionArgs] | list[TSetActionArgs],
-            _iter: Iterator[tuple[float, list[TGetActionArgs]]] | Iterator[tuple[float, list[TSetActionArgs]]],
+            actions: list[_VT],
+            _iter: Iterator[tuple[float, list[_VT]]],
             time: int | float,
-        ) -> tuple[float, list[TGetActionArgs]] | tuple[float, list[TSetActionArgs]]:
+        ) -> tuple[float, list[_VT]]:
             while time >= _t:  # issue the actions - actions
                 if len(actions):
                     for _act in actions:
@@ -492,28 +503,29 @@ class Case:
         time = tstart
         tstop: int = int(self.special["stopTime"] * self.cases.timefac)
         tstep: int = int(self.special["stepSize"] * self.cases.timefac)
-        starts = self.cases.get_starts()  # start value of all case variables (where defined)
+        # start value of all case variables (where defined)
+        starts: dict[str, tuple[TValue, ...]] = self.cases.get_starts()
+        self.add_results_object(res=Results(case=self))
 
-        set_iter: Iterator[tuple[float, list[TSetActionArgs]]] = (
-            self.act_set.items().__iter__()
-        )  # iterator over set actions => time, action_list
+        t_set: float | int
+        a_set: list[TSetActionArgs] = []
+        # iterator over set actions => time, set_action_list
+        set_iter: Iterator[tuple[float, list[TSetActionArgs]]] = self.act_set.items().__iter__()
         try:
             t_set, a_set = next(set_iter)
         except StopIteration:
-            t_set, a_set = (float(np.inf), [])  # satisfy linter
-        get_iter: Iterator[tuple[float, list[TGetActionArgs]]] = (
-            self.act_get.items().__iter__()
-        )  # iterator over get actions => time, action_list
-        self.add_results_object(Results(self))
+            t_set = tstop + 1  # ensure loop termination
 
-        act_step: list[tuple[str, str, tuple[int, ...], Callable[[], list[TValue]]]] = []
         t_get: float | int
-        a_get: list[TActionArgs]
+        a_get: list[TGetActionArgs] = []
+        # iterator over get actions => time, get_action_list
+        get_iter: Iterator[tuple[float, list[TGetActionArgs]]] = self.act_get.items().__iter__()
         try:
             t_get, a_get = next(get_iter)
         except StopIteration:
             t_get = tstop + 1  # ensure loop termination
 
+        act_step: list[tuple[str, str, tuple[int, ...], Callable[[], list[TValue]]]] = []
         while t_get < 0:  # negative time indicates 'always'
             act_step.extend(
                 (
@@ -654,7 +666,7 @@ class Cases:
         Optionally a description of the alias variable may be provided (and added to the dictionary).
         """
         variables: dict[str, dict[str, Any]] = {}
-        model_vars: dict[str, dict[int | str, dict[str, Any]]] = {}  # cache of variables of models
+        model_vars: dict[str, dict[str, dict[str, Any]]] = {}  # cache of variables of models
         variables_in_spec: dict[str, list[str] | Any] = (
             self.js.jspath(path="$.header.variables", typ=dict, error_msg=True) or {}
         )
@@ -667,9 +679,8 @@ class Cases:
             model, comp = self.simulator.match_components(comps=v[0])
             assert len(comp) > 0, f"No component model instances '{v[0]}' found for alias variable '{k}'"
             assert isinstance(v[1], str), f"Second argument of variable sped: Variable name(s)! Found {v[1]}"
-            _vars = self.simulator.match_variables(
-                component=comp[0], varname=v[1]
-            )  # tuple of matching variables (name,ref)
+            # tuple of matching variables (name,ref) from the simulator
+            _vars: tuple[tuple[str, Any], ...] = self.simulator.match_variables(component=comp[0], varname=v[1])
             _varnames = tuple(n for n, _ in _vars)
             _varrefs = tuple(r for _, r in _vars)
             if model not in model_vars:  # ensure that model is included in the cache
@@ -887,10 +898,10 @@ class Cases:
             rng = list(range(cvar_len))
         return (pre, cvar_info, rng)
 
-    def get_starts(self) -> dict[str, list[TValue]]:
+    def get_starts(self) -> dict[str, tuple[TValue, ...]]:
         """Get a copy of the start values (as advised by FMU) as dict {case-var : (start-values), }."""
-        starts: dict[str, list[TValue]] = {
-            v: list(info["start"]) for v, info in self.variables.items() if "start" in info and len(info["start"])
+        starts: dict[str, tuple[TValue, ...]] = {
+            v: tuple(info["start"]) for v, info in self.variables.items() if "start" in info and len(info["start"])
         }
         return starts
 
@@ -995,7 +1006,7 @@ class Results:
             raise CaseInitError(f"Cases {Path(case)} instantiation error") from ValueError
         case_name: str | None = self.res.jspath(path="$.header.case", typ=str, error_msg=True)
         assert case_name is not None, "Case name not found in results file."
-        self.case: Case | None = cases.case_by_name(case_name)
+        self.case = cases.case_by_name(case_name)
         assert self.case is not None, f"Case {case_name} not found."
         assert isinstance(self.case.cases, Cases), "Cases object not defined."
         self._header_transform(to_string=False)
@@ -1050,31 +1061,46 @@ class Results:
         """
         assert isinstance(self.file, Path), f"Need a proper file at this point. Found {self.file}"
         res = self.res
+        _date_time: datetime | str | None
+        _cases_date: datetime | str | None
+        _file: Path | str | None
         if to_string:
+            _date_time = res.jspath(path="$.header.dateTime", typ=datetime, error_msg=True)
+            assert _date_time is not None, "DateTime not found in results header"
             res.update(
                 spath="$.header.dateTime",
-                data=res.jspath(path="$.header.dateTime", typ=datetime, error_msg=True).isoformat(),
+                data=_date_time.isoformat(),
             )
+            _cases_date = res.jspath(path="$.header.casesDate", typ=datetime, error_msg=True)
+            assert _cases_date is not None, "CasesDate not found in results header"
             res.update(
                 spath="$.header.casesDate",
-                data=res.jspath(path="$.header.casesDate", typ=datetime, error_msg=True).isoformat(),
+                data=_cases_date.isoformat(),
             )
+            _file = res.jspath(path="$.header.file", typ=Path, error_msg=True)
+            assert _file is not None, "File not found in results header"
             res.update(
                 spath="$.header.file",
-                data=relative_path(p1=res.jspath(path="$.header.file", typ=Path, error_msg=True), p2=self.file),
+                data=relative_path(p1=_file, p2=self.file),
             )
         else:
+            _date_time = res.jspath(path="$.header.dateTime", typ=str, error_msg=True)
+            assert _date_time is not None, "DateTime not found in results header"
             res.update(
                 spath="$.header.dateTime",
-                data=datetime.fromisoformat(res.jspath(path="$.header.dateTime", typ=str, error_msg=True)),
+                data=datetime.fromisoformat(_date_time),
             )
+            _cases_date = res.jspath(path="$.header.casesDate", typ=str, error_msg=True)
+            assert _cases_date is not None, "CasesDate not found in results header"
             res.update(
                 spath="$.header.casesDate",
-                data=datetime.fromisoformat(res.jspath(path="$.header.casesDate", typ=str, error_msg=True)),
+                data=datetime.fromisoformat(_cases_date),
             )
+            _file = res.jspath(path="$.header.file", typ=str, error_msg=True)
+            assert _file is not None, "File not found in results header"
             res.update(
                 spath="$.header.file",
-                data=get_path(p1=res.jspath(path="$.header.file", typ=str, error_msg=True), base=self.file.parent),
+                data=get_path(p1=_file, base=self.file.parent),
             )
 
     def add(
@@ -1210,7 +1236,7 @@ class Results:
             title (str): optional title of the plot
         """
         data: TDataTable = self.retrieve(comp_var)
-        times: TTimeColumn = [float(rec[0]) for rec in data]
+        times: TTimeColumn = [float(rec[0]) for rec in data]  # type: ignore[arg-type]
 
         _comp_var: list[tuple[str, str, int | None]] = []
         for _cv in comp_var:

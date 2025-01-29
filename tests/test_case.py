@@ -2,6 +2,7 @@
 
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -137,26 +138,35 @@ def do_case_at_time(
 def test_case_range(simpletable: Cases):
     x_inf = simpletable.variables["x"]
     # print("RNG", simpletable.case_by_name("results").cases.disect_variable("x"))
-    do_case_range(txt="x", casename="base", expected=("x", x_inf, range(3)), simpletable=simpletable)
+    do_case_range(txt="x", casename="base", expected=("x", x_inf, list(range(3))), simpletable=simpletable)
     do_case_range(txt="x[2]", casename="base", expected=("x", x_inf, [2]), simpletable=simpletable)
     do_case_range(txt="x[2]", casename="caseX", expected=("x", x_inf, [2]), simpletable=simpletable)
-    do_case_range(txt="x[1..2]", casename="base", expected=("x", x_inf, range(1, 2)), simpletable=simpletable)
+    do_case_range(txt="x[1..2]", casename="base", expected=("x", x_inf, list(range(1, 2))), simpletable=simpletable)
     do_case_range(txt="x[0,1,2]", casename="base", expected=("x", x_inf, [0, 1, 2]), simpletable=simpletable)
-    do_case_range(txt="x[0...2]", casename="caseX", expected=("x", x_inf, range(2)), simpletable=simpletable)
+    do_case_range(txt="x[0...2]", casename="caseX", expected=("x", x_inf, list(range(2))), simpletable=simpletable)
     do_case_range(
-        txt="x", casename="caseX", expected=("x", x_inf, range(3)), simpletable=simpletable
+        txt="x", casename="caseX", expected=("x", x_inf, list(range(3))), simpletable=simpletable
     )  # assume all values
     do_case_range(txt="x[3]", casename="caseX", expected="Index 3 of variable x out of range", simpletable=simpletable)
     do_case_range(
         txt="x[1,2,4]", casename="caseX", expected="Index 4 of variable x out of range", simpletable=simpletable
     )
     do_case_range(txt="x[1.3]", casename="caseX", expected="Unhandled index", simpletable=simpletable)
-    assert simpletable.case_by_name("caseX").cases.disect_variable("x[99]", err_level=0) == ("", None, range(0))
-    assert simpletable.case_by_name("caseX").cases.disect_variable("x[1]")[2] == [1]
-    assert simpletable.case_by_name("caseX").cases.disect_variable("i")[1]["instances"] == ("tab",)
+    case_x = simpletable.case_by_name("caseX")
+    assert case_x is not None, "Case with name 'caseX' does not exist."
+    assert case_x.cases.disect_variable("x[99]", err_level=0) == ("", None, range(0))
+    assert case_x.cases.disect_variable("x[1]")[2] == [1]
+    var_info = case_x.cases.disect_variable("i")[1]
+    assert var_info is not None
+    assert var_info["instances"] == ("tab",)
 
 
-def do_case_range(txt: str, casename: str, expected: tuple[str, str, float] | str, simpletable: Cases):
+def do_case_range(
+    txt: str,
+    casename: str,
+    expected: tuple[str, dict[str, Any] | None, list[int]] | str,
+    simpletable: Cases,
+):
     """Test the .cases.disect_variable function"""
     case = simpletable.case_by_name(casename)
     assert case is not None, f"Case {casename} was not found"

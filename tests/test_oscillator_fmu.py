@@ -53,7 +53,7 @@ def do_show(time: list[float], z: list[float], v: list[float]):
 
 
 def force(t: float, ampl: float = 1.0, omega: float = 0.1):
-    return np.array((0, 0, ampl * sin(omega * t)), float)
+    return np.array((0, 0, ampl * sin(omega * t)), dtype=float)
 
 
 @pytest.fixture(scope="session")
@@ -67,7 +67,7 @@ def _oscillator_fmu():
     build_path.mkdir(exist_ok=True)
     src = Path(__file__).parent / "data" / "Oscillator" / "oscillator_fmu.py"
     fmu_path = Model.build(
-        str(src),
+        script=str(src),
         project_files=[src],
         dest=build_path,
     )
@@ -85,7 +85,7 @@ def _driver_fmu():
     build_path.mkdir(exist_ok=True)
     src = Path(__file__).parent / "data" / "Oscillator" / "driving_force_fmu.py"
     fmu_path = Model.build(
-        str(src),
+        script=str(src),
         project_files=[src],
         dest=build_path,
     )
@@ -106,7 +106,7 @@ def _system_structure():
             "osc": {"source": "HarmonicOscillator.fmu", "stepSize": 0.01},
             "drv": {"source": "DrivingForce.fmu", "stepSize": 0.01},
         },
-        connections_variable=(("drv", "f[2]", "osc", "f[2]"),),
+        connections_variable=("drv", "f[2]", "osc", "f[2]"),
         version="0.1",
         start=0.0,
         base_step=0.01,
@@ -139,20 +139,20 @@ def test_oscillator_force_class(show: bool):
     time = 0.0
     assert abs(2 * pi / sqrt(osc.k / osc.m) - 2 * pi) < 1e-9, f"Period should be {2 * pi}"
     for _ in range(10000):
-        osc.f = func(time)
-        osc.do_step(time, dt)
+        osc.f = func(time=time)
+        _ = osc.do_step(time=time, dt=dt)
         times.append(time)
         z.append(osc.x[2])
         v.append(osc.v[2])
         time += dt
 
     if show:
-        do_show(times, z, v)
+        do_show(time=times, z=z, v=v)
 
     dri = DrivingForce()
     assert osc.c == 0.1
     assert dri.ampl == 1.0
-    arrays_equal(func(1.0), (0, 0, sin(0.1)))
+    arrays_equal(res=func(time=1.0), expected=(0, 0, sin(0.1)))
 
 
 def test_make_fmus(
@@ -185,6 +185,7 @@ def test_make_system_structure(system_structure: Path):
 
 def test_use_fmu(oscillator_fmu: Path, driver_fmu: Path, show: bool):
     """Test single FMUs."""
+    # sourcery skip: move-assign
     result = simulate_fmu(
         oscillator_fmu,
         stop_time=50,
@@ -212,8 +213,8 @@ def test_run_osp(oscillator_fmu: Path, driver_fmu: Path):
     assert _dri == 1, f"local slave number {_dri}"
 
     # Set initial values
-    sim.real_initial_value(_osc, reference_dict["x[2]"], 1.0)
-    sim.real_initial_value(_osc, reference_dict["c"], 0.1)
+    sim.real_initial_value(slave_index=_osc, variable_reference=reference_dict["x[2]"], value=1.0)
+    sim.real_initial_value(slave_index=_osc, variable_reference=reference_dict["c"], value=0.1)
 
     sim_status = sim.status()
     assert sim_status.current_time == 0
@@ -238,29 +239,23 @@ def test_run_osp_system_structure(system_structure: Path, show: bool):
     variables = {}
     for idx in range(simulator.num_slave_variables(0)):
         struct = simulator.slave_variables(0)[idx]
-        variables.update(
-            {
-                struct.name.decode(): {
-                    "reference": struct.reference,
-                    "type": struct.type,
-                    "causality": struct.causality,
-                    "variability": struct.variability,
-                }
-            }
-        )
+        variables[struct.name.decode()] = {
+            "reference": struct.reference,
+            "type": struct.type,
+            "causality": struct.causality,
+            "variability": struct.variability,
+        }
 
     for idx in range(simulator.num_slave_variables(1)):
         struct = simulator.slave_variables(1)[idx]
-        variables.update(
-            {
-                struct.name.decode(): {
-                    "reference": struct.reference,
-                    "type": struct.type,
-                    "causality": struct.causality,
-                    "variability": struct.variability,
-                }
+        variables |= {
+            struct.name.decode(): {
+                "reference": struct.reference,
+                "type": struct.type,
+                "causality": struct.causality,
+                "variability": struct.variability,
             }
-        )
+        }
     assert variables["c"]["type"] == 0
     assert variables["c"]["causality"] == 1
     assert variables["c"]["variability"] == 1
@@ -277,8 +272,8 @@ def test_run_osp_system_structure(system_structure: Path, show: bool):
     # Instantiate a suitable manipulator for changing variables.
     manipulator = CosimManipulator.create_override()
     simulator.add_manipulator(manipulator=manipulator)
-    simulator.real_initial_value(0, 1, 0.5)
-    simulator.real_initial_value(0, 5, 1.0)
+    simulator.real_initial_value(slave_index=0, variable_reference=1, value=0.5)
+    simulator.real_initial_value(slave_index=0, variable_reference=5, value=1.0)
     observer = CosimObserver.create_last_value()
     simulator.add_observer(observer=observer)
     times = []
@@ -287,13 +282,13 @@ def test_run_osp_system_structure(system_structure: Path, show: bool):
     for step in range(1, 1000):
         time = step * 0.01
         _ = simulator.simulate_until(step * 1e8)
-        values = observer.last_real_values(0, [5, 8])
+        values = observer.last_real_values(slave_index=0, variable_references=[5, 8])
         # print(f"Time {simulator.status().current_time*1e-9}: {values}")
         times.append(time)
         pos.append(values[0])
         speed.append(values[1])
     if show:
-        do_show(times, pos, speed)
+        do_show(time=times, z=pos, v=speed)
 
 
 # def test_sim_explorer(show):
@@ -306,7 +301,7 @@ def test_run_osp_system_structure(system_structure: Path, show: bool):
 #             res.plot_time_series('osc.x_z', f"Case {c}. z-position")
 
 if __name__ == "__main__":
-    retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
+    retcode = pytest.main(args=["-rA", "-v", __file__, "--show", "True"])
     assert retcode == 0, f"Non-zero return code {retcode}"
     # import os
     # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")

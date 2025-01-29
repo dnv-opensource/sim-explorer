@@ -7,21 +7,30 @@ from sim_explorer.case import Cases, Results
 
 
 def test_init():
+    # sourcery skip: extract-duplicate-method
     # init through existing results file
     file = Path(__file__).parent / "data" / "BouncingBall3D" / "test_results"
     print("FILE", file)
     res = Results(file=file)
     # assert res.res.jspath("$.header.file", Path, True).exists()
-    print("DATE", res.res.jspath(path="$.header.dateTime", typ=datetime, error_msg=True).isoformat())
-    assert res.res.jspath(path="$.header.dateTime", typ=datetime, error_msg=True).isoformat() == "1924-01-14T00:00:00"
-    assert res.res.jspath(path="$.header.casesDate", typ=datetime, error_msg=True).isoformat() == "1924-01-13T00:00:00"
+    _date_time = res.res.jspath(path="$.header.dateTime", typ=datetime, error_msg=True)
+    assert _date_time is not None
+    print("DATE", _date_time.isoformat())
+    assert _date_time.isoformat() == "1924-01-14T00:00:00"
+    _cases_date = res.res.jspath(path="$.header.casesDate", typ=datetime, error_msg=True)
+    assert _cases_date is not None
+    assert _cases_date.isoformat() == "1924-01-13T00:00:00"
     # init making a new file
     cases = Cases(Path(__file__).parent / "data" / "BouncingBall3D" / "BouncingBall3D.cases")
     case = cases.case_by_name("base")
     res = Results(case=case)
     # assert res.res.jspath("$.header.file", Path, True).exists()
-    assert isinstance(res.res.jspath(path="$.header.dateTime", typ=datetime, error_msg=True).isoformat(), str)
-    assert isinstance(res.res.jspath(path="$.header.casesDate", typ=datetime, error_msg=True).isoformat(), str)
+    _date_time = res.res.jspath(path="$.header.dateTime", typ=datetime, error_msg=True)
+    assert _date_time is not None
+    assert isinstance(_date_time.isoformat(), str)
+    _cases_date = res.res.jspath(path="$.header.casesDate", typ=datetime, error_msg=True)
+    assert _cases_date is not None
+    assert isinstance(_cases_date.isoformat(), str)
 
 
 def test_add():

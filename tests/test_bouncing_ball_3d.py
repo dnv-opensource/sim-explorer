@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from math import sqrt
 from pathlib import Path
 from typing import Any
@@ -8,7 +9,7 @@ from fmpy import plot_result, simulate_fmu
 from sim_explorer.case import Case, Cases
 
 
-def arrays_equal(res: tuple[Any, ...], expected: tuple[Any, ...], eps: float = 1e-7):
+def arrays_equal(res: Sequence[Any], expected: Sequence[Any], eps: float = 1e-7):
     assert len(res) == len(expected), (
         f"Tuples of different lengths cannot be equal. Found {len(res)} != {len(expected)}"
     )
@@ -62,12 +63,16 @@ def check_case(  # noqa: C901, PLR0913, PLR0915
     print(f"Run case {case.name}. g={g}, e={e}, x_z={x_z}, dt={dt}")
     case.run()  # run the case and return results as results object
     results = case.res  # the results object
+    assert results is not None, "No results found"
+    assert results.res is not None, "No results found"
     assert results.res.jspath(path="$.header.case", typ=str, error_msg=True) == case.name
     # default initial settings, superceeded by base case values
     x = [0, 0, x_z]  # z-value is in inch =! 1m!
     v = [1.0, 0, 0]
     # adjust to case settings:
-    for k, val in case.js.jspath(path="$.spec").items():
+    _spec = case.js.jspath(path="$.spec")
+    assert isinstance(_spec, dict), "No spec found in case"
+    for k, val in _spec.items():
         if k in ("stepSize", "stopTime"):
             pass
         elif k == "g":
@@ -76,9 +81,7 @@ def check_case(  # noqa: C901, PLR0913, PLR0915
             e = val
         elif k == "x[2]":
             x[2] = val
-        elif k in ("x@step", "v@step", "x_b@step"):
-            pass  # get actions
-        else:
+        elif k not in ("x@step", "v@step", "x_b@step"):
             raise KeyError(f"Unknown key {k}")
     # check correct reporting of start values: ! seems unfortunately not possible!
     # expected time and position of first bounce
@@ -93,34 +96,37 @@ def check_case(  # noqa: C901, PLR0913, PLR0915
     # print( results.res.jspath(path="$['0.01'].bb.x"), (dt, 0, x[2] - 0.5 * g * dt**2 / hf))
 
     arrays_equal(
-        res=results.res.jspath(path="$['0.01'].bb.x"),
+        res=results.res.jspath(path="$['0.01'].bb.x") or (),
         expected=(dt, 0, x[2] - 0.5 * g * dt**2 / hf),
     )
     arrays_equal(
-        res=results.res.jspath(path="$['0.01'].bb.v"),
+        res=results.res.jspath(path="$['0.01'].bb.v") or (),
         expected=(v[0], 0, -g * dt),
     )
     x_b = results.res.jspath(path="$.['0.01'].bb.['x_b']")
+    assert isinstance(x_b, Sequence), f"Expected sequence, found {type(x_b)}"
     assert abs(x_b[0] - x_bounce) < 1e-9
     # just before bounce
     t_before = int(t_bounce * tfac) / tfac  # * dt  # just before bounce
     if t_before == t_bounce:  # at the interval border
         t_before -= dt
-    x_b = results.res.jspath(path=f"$['{t_before}'].bb.x")
+
     arrays_equal(
-        res=results.res.jspath(path=f"$['{t_before}'].bb.x"),
+        res=results.res.jspath(path=f"$['{t_before}'].bb.x") or (),
         expected=(v[0] * t_before, 0, x[2] - 0.5 * g * t_before**2 / hf),
     )
     arrays_equal(
-        res=results.res.jspath(path=f"$['{t_before}'].bb.v"),
+        res=results.res.jspath(path=f"$['{t_before}'].bb.v") or (),
         expected=(v[0], 0, -g * t_before),
     )
-    assert abs(results.res.jspath(f"$['{t_before}'].bb.['x_b']")[0] - x_bounce) < 1e-9
+    x_b = results.res.jspath(path=f"$['{t_before}'].bb.['x_b']")
+    assert isinstance(x_b, Sequence), f"Expected sequence, found {type(x_b)}"
+    assert abs(x_b[0] - x_bounce) < 1e-9
     # just after bounce
     ddt = t_before + dt - t_bounce  # time from bounce to end of step
     x_bounce2 = x_bounce + 2 * v_bounce * e * 1.0 * e / g
     arrays_equal(
-        res=results.res.jspath(path=f"$['{t_before + dt}'].bb.x"),
+        res=results.res.jspath(path=f"$['{t_before + dt}'].bb.x") or (),
         expected=(
             t_bounce * v[0] + v[0] * e * ddt,
             0,
@@ -129,10 +135,12 @@ def check_case(  # noqa: C901, PLR0913, PLR0915
     )
 
     arrays_equal(
-        res=results.res.jspath(path=f"$['{t_before + dt}'].bb.v"),
+        res=results.res.jspath(path=f"$['{t_before + dt}'].bb.v") or (),
         expected=(e * v[0], 0, (v_bounce * e - g * ddt)),
     )
-    assert abs(results.res.jspath(path=f"$['{t_before + dt}'].bb.['x_b']")[0] - x_bounce2) < 1e-9
+    x_b = results.res.jspath(path=f"$['{t_before + dt}'].bb.['x_b']")
+    assert isinstance(x_b, Sequence), f"Expected sequence, found {type(x_b)}"
+    assert abs(x_b[0] - x_bounce2) < 1e-9
     # from bounce to bounce
     v_x, v_z, t_b, x_b = (
         v[0],
@@ -151,12 +159,21 @@ def check_case(  # noqa: C901, PLR0913, PLR0915
         _tb = int(t_b * tfac) / tfac
         if results.res.jspath(path=f"$['{_tb + dt}']") is None:
             break
-        _z = results.res.jspath(path=f"$['{_tb}'].bb.x")[2]
-        # z_ = results.res.jspath(path=f"$['{_tb+dt}'].bb.x")[2]
-        _vz = results.res.jspath(path=f"$['{_tb}'].bb.v")[2]
-        vz_ = results.res.jspath(path=f"$['{_tb + dt}'].bb.v")[2]
-        _vx = results.res.jspath(path=f"$['{_tb}'].bb.v")[0]
-        vx_ = results.res.jspath(path=f"$['{_tb + dt}'].bb.v")[0]
+        bb_x = results.res.jspath(path=f"$['{_tb}'].bb.x")
+        assert isinstance(bb_x, Sequence), f"Expected sequence, found {type(bb_x)}"
+        _z = bb_x[2]
+        # bb_x = results.res.jspath(path=f"$['{_tb + dt}'].bb.x")
+        # assert isinstance(bb_x, Sequence), f"Expected sequence, found {type(bb_x)}"
+        # z_ = bb_x[2]
+        bb_v = results.res.jspath(path=f"$['{_tb}'].bb.v")
+        assert isinstance(bb_v, Sequence), f"Expected sequence, found {type(bb_v)}"
+        _vx = bb_v[0]
+        _vz = bb_v[2]
+        bb_v = results.res.jspath(path=f"$['{_tb + dt}'].bb.v")
+        assert isinstance(bb_v, Sequence), f"Expected sequence, found {type(bb_v)}"
+        # sourcery skip: move-assign
+        vx_ = bb_v[0]
+        vz_ = bb_v[2]
         assert abs(_z) < x[2] * 5e-2, f"Bounce {n}@{t_b}. z-position {_z} should be close to 0 ({x[2] * 5e-2})"
         if delta_t > 2 * dt:
             assert _vz < 0, f"Bounce {n}@{t_b}. Expected speed sign change {_vz}-{vz_}when bouncing"

@@ -1,5 +1,8 @@
+# pyright: reportPrivateUsage=false
+
 import time
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -47,23 +50,25 @@ def _rfc9535_example():
 
 
 def test_jpath(ex: Json5):
+    found: Any
+    expected: Any
     assert isinstance(ex.js_py, dict), f"Expect dict. Found {ex.js_py}"
     print(f"DICT {ex.js_py}")
-    found = ex.jspath("$.store.book[*].author", list)
+    found = ex.jspath(path="$.store.book[*].author", typ=list)
     assert found == [
         "Nigel Rees",
         "Evelyn Waugh",
         "Herman Melville",
         "J. R. R. Tolkien",
     ], f"The authors of all books in the store: {found}"
-    found = ex.jspath("$..author", list)
+    found = ex.jspath(path="$..author", typ=list)
     assert found == [
         "Nigel Rees",
         "Evelyn Waugh",
         "Herman Melville",
         "J. R. R. Tolkien",
     ], f"All authors: {found}"
-    found = ex.jspath("$.store.*", list)
+    found = ex.jspath(path="$.store.*", typ=list)
     assert isinstance(found[0], list), "Everything ins store: books and a bike"
     assert isinstance(found[1], dict), "Everything ins store: books and a bike"
     assert ex.jspath("$.store..price", list) == [
@@ -73,7 +78,7 @@ def test_jpath(ex: Json5):
         22.99,
         399,
     ], "Price of all articles in the store"
-    found = ex.jspath("$..book[2]", typ=dict)
+    found = ex.jspath(path="$..book[2]", typ=dict)
     expected = {
         "category": "fiction",
         "author": "Herman Melville",
@@ -82,10 +87,10 @@ def test_jpath(ex: Json5):
         "price": 8.99,
     }
     assert found == expected, "The third book"
-    assert ex.jspath("$..book[2].author", str) == "Herman Melville", "The third book's author"
-    found = ex.jspath("$..book[2].publisher", str)
+    assert ex.jspath(path="$..book[2].author", typ=str) == "Herman Melville", "The third book's author"
+    found = ex.jspath(path="$..book[2].publisher", typ=str)
     assert found is None, f"Result not empty (the third book does not have a 'publisher' member): {found}"
-    found = ex.jspath("$..book[-1]", dict)
+    found = ex.jspath(path="$..book[-1]", typ=dict)
     expected = {
         "category": "fiction",
         "author": "J. R. R. Tolkien",
@@ -94,22 +99,27 @@ def test_jpath(ex: Json5):
         "price": 22.99,
     }
     assert found == expected, f"The last book in order: {found}"
-    found = ex.jspath("$..book[:2]", list)
+    found = ex.jspath(path="$..book[:2]", typ=list)
     assert len(found) == 2, f"The first two books: {found}"
     # found = ex.jspath( '$..book[0,1]', list) #!! does not seem to work, but [:2] works
     # assert len(found)==2, f"The first two books: {found}"
-    assert len(ex.jspath("$..book[?@.isbn]", list)) == 2, "All books with an ISBN number"
-    assert len(ex.jspath("$..book[?@.price<10]", None)) == 2, "All books cheaper than 10"
-    assert len(ex.jspath("$..*", list)) == 23, "All member values and array elements contained in the input value"
+    found = ex.jspath(path="$..book[?@.isbn]", typ=list)
+    assert isinstance(found, list), "All books with an ISBN number"
+    assert len(found) == 2, "All books with an ISBN number"
+    found = ex.jspath(path="$..book[?@.price<10]", typ=None)
+    assert isinstance(found, list), "All books cheaper than 10"
+    assert len(found) == 2, "All books cheaper than 10"
+    found = ex.jspath(path="$..*", typ=list)
+    assert isinstance(found, list), "All member values and array elements contained in the input value"
+    assert len(found) == 23, "All member values and array elements contained in the input value"
     # working with expected match and expected type, raising an error message, or not
-    assert ex.jspath("$..book[2].authors", typ=str, errorMsg=False) is None, "Fail silently"
+    assert ex.jspath(path="$..book[2].authors", typ=str, error_msg=False) is None, "Fail silently"
     with pytest.raises(ValueError) as err:
-        found = ex.jspath("$..book[2].authors", typ=str, errorMsg=True)
+        found = ex.jspath(path="$..book[2].authors", typ=str, error_msg=True)
     assert str(err.value) == "No match for $..book[2].authors", f"ERR:{err.value}"
-
-    assert ex.jspath("$..book[2].author", typ=float, errorMsg=False) is None, "Fail silently"
+    assert ex.jspath(path="$..book[2].author", typ=float, error_msg=False) is None, "Fail silently"
     with pytest.raises(ValueError) as err:
-        found = ex.jspath("$..book[2].author", typ=float, errorMsg=True)
+        found = ex.jspath(path="$..book[2].author", typ=float, error_msg=True)
     assert str(err.value) == "$..book[2].author matches, but type <class 'float'> does not match <class 'str'>.", (
         f"ERR:{err.value}"
     )
@@ -121,7 +131,9 @@ def test_jpath(ex: Json5):
     # |: works but strange result: found = ex.jspath( '$..book[?@.price<10] | $..book[?@.price>10]', None)
 
     js = Json5("{header : { case : 'Test', timeFactor : 1.0}, 0.0 : { bb: { h : [0,0,1], v : 2.3}}}")
-    assert js.jspath("$['0.0']", dict) == {"bb": {"h": [0, 0, 1], "v": 2.3}}, "Use [] notation when path includes '.'"
+    assert js.jspath(path="$['0.0']", typ=dict) == {"bb": {"h": [0, 0, 1], "v": 2.3}}, (
+        "Use [] notation when path includes '.'"
+    )
     # print("FOUND", type(found), 0 if found is None else len(found), found)
 
     # run directly on dict:
@@ -155,14 +167,14 @@ def test_update(ex: Json5):
     # print("FOUND", type(found), 0 if found is None else len(found), found)
 
     ex.update("$.store.book", {"category": "crime", "author": "noname"})
-    assert ex.jspath("$..book[-1]", typ=dict) == {
+    assert ex.jspath(path="$..book[-1]", typ=dict) == {
         "category": "crime",
         "author": "noname",
     }, "Book added"
 
     # start with header and add the first data
     js = Json5("{header : { case : 'Test', timeFactor : 1.0}, ")
-    js.update("$[0.0]bb", {"f": 9.9})
+    js.update(spath="$[0.0]bb", data={"f": 9.9})
     expected = {
         "header": {"case": "Test", "timeFactor": 1.0},
         "0.0": {"bb": {"f": 9.9}},
@@ -170,7 +182,7 @@ def test_update(ex: Json5):
     assert js.js_py == expected
 
     js = Json5("{header : { case : 'Test', timeFactor : 1.0}, 0.0 : { bb: { h : [0,0,1], v : 2.3}}}")
-    js.update("$[0.0]bb", {"f": 9.9})
+    js.update(spath="$[0.0]bb", data={"f": 9.9})
     expected = {
         "header": {"case": "Test", "timeFactor": 1.0},
         "0.0": {"bb": {"h": [0, 0, 1], "v": 2.3, "f": 9.9}},
@@ -178,7 +190,7 @@ def test_update(ex: Json5):
     assert js.js_py == expected
 
     js = Json5("{header : { case : 'Test', timeFactor : 1.0}, 0.0 : { bb: { h : [0,0,1], v : 2.3}}}")
-    js.update("$[0.0]", {"bc": {"f": 9.9}})
+    js.update(spath="$[0.0]", data={"bc": {"f": 9.9}})
     expected = {
         "header": {"case": "Test", "timeFactor": 1.0},
         "0.0": {"bb": {"h": [0, 0, 1], "v": 2.3}, "bc": {"f": 9.9}},
@@ -186,7 +198,7 @@ def test_update(ex: Json5):
     assert js.js_py == expected, f"\n{js.js_py}\n !=\n{expected}"
 
     js = Json5("{header : { case : 'Test', timeFactor : 1.0}, 0.0 : { bb: { h : [0,0,1], v : 2.3}}}")
-    js.update("$.", {"1.0": {"bb": {"h": [0, 0, 0.98]}}})
+    js.update(spath="$.", data={"1.0": {"bb": {"h": [0, 0, 0.98]}}})
     expected = {
         "header": {"case": "Test", "timeFactor": 1.0},
         "0.0": {"bb": {"h": [0, 0, 1], "v": 2.3}},
@@ -195,7 +207,7 @@ def test_update(ex: Json5):
     assert js.js_py == expected
 
     js = Json5("{header : { case : 'Test', timeFactor : 1.0}, 0.0 : { bb: { h : [0,0,1], v : 2.3}}}")
-    js.update("$.header.case", "Operation")
+    js.update(spath="$.header.case", data="Operation")
     assert js.jspath("$.header.case") == "Operation", "Changed a dict value"
 
 
@@ -255,7 +267,7 @@ def test_json5_syntax():
         "W",
     ], "Additional or missing main object elements"
     with pytest.raises(AssertionError) as err:
-        Json5("{ H : 1,2}")
+        _ = Json5("{ H : 1,2}")
     assert str(err.value).startswith("Json5 read error at 1(10): No proper key:value:")
     js = Json5(
         "{   spec: {\n     stopTime : '3',\n      bb.h : '10.0',\n      bb.v : '[0.0, 1.0, 3.0]',\n      bb.e : '0.7',\n   }}"
@@ -337,7 +349,7 @@ def test_read_cases():
 
 
 if __name__ == "__main__":
-    retcode = pytest.main(["-rA", "-v", __file__])
+    retcode = pytest.main(args=["-rA", "-v", __file__])
     assert retcode == 0, f"Non-zero return code {retcode}"
     # test_json5_syntax()
     # test_results_header()

@@ -203,12 +203,12 @@ class Assertion:
                             funcs.append(n.id)
                     else:
                         raise KeyError(f"Unknown symbol {n.id}")
-                syms, funcs = ast_walk(n, syms, funcs)
+                syms, funcs = ast_walk(node=n, syms=syms, funcs=funcs)
             return (syms, funcs)
 
         if expr in self._expr:  # assume that actually a key is queried
             expr = self._expr[expr]
-        syms, funcs = ast_walk(ast.parse(node=expr, filename="<string>", mode="exec"))
+        syms, funcs = ast_walk(node=ast.parse(source=expr, filename="<string>", mode="exec"))
         syms = sorted(syms, key=list(self._symbols.keys()).index)
         return (syms, funcs)
 
@@ -216,7 +216,7 @@ class Assertion:
         self,
         key: str,
         typ: Temporal | str | None = None,
-        args: tuple[TValue] | None = None,
+        args: tuple[TValue, ...] | None = None,
     ) -> dict[str, Any]:
         """Get or set a temporal instruction.
 
