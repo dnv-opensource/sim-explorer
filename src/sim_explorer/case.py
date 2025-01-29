@@ -558,7 +558,7 @@ class Case:
                     time=tstart,
                     comp=c,
                     cvar=v,
-                    values=s if len(s) > 1 else s[0],
+                    values=s,
                 )
 
         while True:  # main simulation loop
@@ -687,7 +687,7 @@ class Cases:
             if model not in model_vars:  # ensure that model is included in the cache
                 model_vars[model] = self.simulator.variables(comp=comp[0])
             prototype = model_vars[model][_varnames[0]]
-            var: dict = {
+            var: dict[str, Any] = {
                 "model": model,
                 "instances": comp,
                 "names": _varnames,  # variable names from FMU

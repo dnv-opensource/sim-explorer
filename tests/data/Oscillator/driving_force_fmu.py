@@ -32,6 +32,8 @@ class DrivingForce(Model):
             "Siegfried Eisinger",
             **kwargs,
         )
+        self.ampl = ampl
+        self.freq = freq
         self.func = partial(func, ampl=ampl, omega=freq / (2 * pi))
         self._interface(ampl, freq)
 
@@ -44,7 +46,7 @@ class DrivingForce(Model):
         self.func = partial(func, ampl=self.ampl, omega=self.freq / (2 * pi))
         print(f"Initial settings: ampl={self.ampl}, freq={self.freq}")
 
-    def _interface(self, ampl, freq):
+    def _interface(self, ampl: float, freq: float):
         """Define the FMU interface variables (parameters, inputs, outputs).
 
         Note: The variable object registrations like self._f provide access to the Variable meta-data

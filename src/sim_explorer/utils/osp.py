@@ -312,7 +312,7 @@ def read_system_structure_xml(file: Path) -> dict[str, Any]:
         "BaseStepSize": bss,
     }
 
-    simulators: dict = {}
+    simulators: dict[str, dict[str, Any]] = {}
     for sim in el.findall(".//{*}Simulator"):
         props = {
             "source": sim.get("source"),
@@ -320,11 +320,13 @@ def read_system_structure_xml(file: Path) -> dict[str, Any]:
         }
         for initial in sim.findall(".//{*}InitialValue"):
             props[str(initial.get("variable"))] = type_value(initial[0])
-        assert "name" in sim.attrib, f"Required attribute 'name' not found in {sim.tag}, attrib:{sim.attrib}"
-        simulators[sim.get("name")] = props
+        name = sim.get("name")
+        if not name:
+            raise ValueError(f"Required attribute 'name' not found in {sim.tag}, attrib:{sim.attrib}")
+        simulators[name] = props
 
     structure = {"header": header, "Simulators": simulators}
-    connections: dict = {}
+    connections: dict[str, list[list[str]]] = {}
     for c in ("Variable", "Signal", "Group", "SignalGroup"):
         cons: list[list[str]] = []
         for con in el.findall(".//{*}" + c + "Connection"):

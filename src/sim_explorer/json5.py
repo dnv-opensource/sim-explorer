@@ -106,7 +106,7 @@ class Json5:
 
     def _lines(self) -> tuple[str, list[int]]:
         """Map start positions of lines and replace all newline CR-LF combinations with single newline (LF)."""
-        c: re.Pattern = re.compile(r"\n\r|\r\n|\r|\n")
+        c: re.Pattern[str] = re.compile(r"\n\r|\r\n|\r|\n")
         pos: int = 0
         lines: list[int] = [0]
         js: str = ""
@@ -121,7 +121,7 @@ class Json5:
         """Replace unnecessary line feeds with spaces and return list of start position per line."""
         qt1: int = 0  # single quote state
         qt2: int = 0  # double quote state
-        c: re.Pattern = re.compile(r'"|\'|\n\r|\r\n|\r|\n')
+        c: re.Pattern[str] = re.compile(r'"|\'|\n\r|\r\n|\r|\n')
         pos: int = 0
         lines: list[int] = [0]
         js: str = ""
@@ -186,15 +186,15 @@ class Json5:
 
         js5_without_comments: str = js5 or self.js5
         comments: dict[int, str] = {}
-        cq: re.Pattern = re.compile(r"'([^']*)'")  #  single quotes
-        cq2: re.Pattern = re.compile(r'"([^"]*)"')  # double quotes
+        cq: re.Pattern[str] = re.compile(r"'([^']*)'")  #  single quotes
+        cq2: re.Pattern[str] = re.compile(r'"([^"]*)"')  # double quotes
         _js5: str
         pos: int
 
         for cmt in self.comments_eol:  # handle end-of-line comments
             _js5 = js5_without_comments
             js5_without_comments = ""
-            c: re.Pattern = re.compile(pattern=f"{cmt}.*$", flags=re.MULTILINE)  # eol comments
+            c: re.Pattern[str] = re.compile(pattern=f"{cmt}.*$", flags=re.MULTILINE)  # eol comments
             pos = 0
             s: re.Match[str] | None
             while s := c.search(string=_js5[pos:]):
@@ -248,8 +248,8 @@ class Json5:
         for cmt in self.comments_ml:  # handle multi-line comments
             _js5 = js5_without_comments
             js5_without_comments = ""
-            c1: re.Pattern = re.compile(f"{_re(cmt)}")
-            c2: re.Pattern = re.compile(f"{_re(cmt[::-1])}")
+            c1: re.Pattern[str] = re.compile(f"{_re(cmt)}")
+            c2: re.Pattern[str] = re.compile(f"{_re(cmt[::-1])}")
             pos = 0
             s1: re.Match[str] | None
             while s1 := c1.search(_js5[pos:]):
@@ -274,7 +274,7 @@ class Json5:
 
     def _strip(self, txt: str) -> str:
         """Strip white space from txt."""
-        if txt == "":
+        if not txt:
             return txt
         len0 = len(txt)
         while True:
@@ -519,7 +519,7 @@ class Json5:
         spath = spath.lstrip("$.")
         if spath.startswith("$["):
             spath = spath[1:]
-        c: re.Pattern = re.compile(r"\[(.*?)\]")
+        c: re.Pattern[str] = re.compile(r"\[(.*?)\]")
         while m := c.search(spath):
             if m.start() > 0:
                 keys.extend(spath[: m.start()].split("."))

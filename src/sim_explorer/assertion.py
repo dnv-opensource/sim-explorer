@@ -57,9 +57,9 @@ class Assertion:
         self._expr: dict[str, str] = {}  # the raw expression
         self._compiled: dict[str, CodeType] = {}  # the byte-compiled expression
         self._temporal: dict[str, dict[str, Any]] = {}  # additional information for evaluation as time series
-        self._description: dict = {}
+        self._description: dict[str, str] = {}
         self._cases_variables: dict[str, dict[str, Any]] = {}  #: set to Cases.variables when calling self.register_vars
-        self._assertions: dict = {}  #: assertion results, set by do_assert
+        self._assertions: dict[str, dict[str, Any]] = {}  #: assertion results, set by do_assert
 
     def info(self, sym: str, typ: str = "instance") -> str | int:
         """Retrieve detailed information related to the registered symbol 'sym'."""
@@ -258,15 +258,13 @@ class Assertion:
         res: bool | None = None,
         details: str | None = None,
         case_name: str | None = None,
-    ) -> int | float | bool:
+    ) -> dict[str, Any]:
         """Get or set an assertion result."""
         if res is None:  # getter
             try:
-                _res = self._assertions[key]
+                return self._assertions[key]
             except KeyError as e:
                 raise KeyError(f"Assertion results for {key} not found") from e
-            else:
-                return _res
         else:  # setter
             self._assertions.update({key: {"passed": res, "details": details, "case": case_name}})
             return self._assertions[key]
