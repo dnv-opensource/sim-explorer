@@ -112,7 +112,14 @@ default-groups = [
     "dev",
 ]
 native-tls = true
-
+# Below overrides are temporary, to allow Python 3.13 support despite
+# component-model not yet supporting it.
+# TODO @ClaasRostock: Remove once component-model supports Python 3.13.
+# ClaasRostock, 2025-01-30
+override-dependencies = [
+    "component-model>=0.1.0; python_version >= '3.13'",
+    "numpy>=2.2; python_version >= '3.13'",
+]
 
 [project.scripts]
 sim-explorer = "sim_explorer.cli.__main__:main"
