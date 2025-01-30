@@ -28,7 +28,7 @@ name = "sim-explorer"
 version = "0.2.1"
 description = "Experimentation tools on top of OSP simulation models."
 readme = "README.rst"
-requires-python = ">= 3.10, < 3.14"
+requires-python = ">= 3.10, < 3.13"
 license = { file = "LICENSE" }
 authors = [
     { name = "Siegfried Eisinger", email = "Siegfried.Eisinger@dnv.com" },
@@ -45,7 +45,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
+    # "Programming Language :: Python :: 3.13",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS",
@@ -112,15 +112,7 @@ default-groups = [
     "dev",
 ]
 native-tls = true
-# Below overrides are temporary, to test Python 3.13 support despite
-# component-model and libcosimpy not yet supporting it.
-# TODO @ClaasRostock: Remove once both component-model and libcosimpy support Python 3.13.
-# ClaasRostock, 2025-01-30
-override-dependencies = [
-    "component-model>=0.1.0; python_version >= '3.13'",
-    "numpy>=2.2; python_version >= '3.13'",
-    "libcosimpy==0.0.2; python_version >= '3.13'"
-]
+
 
 [project.scripts]
 sim-explorer = "sim_explorer.cli.__main__:main"
