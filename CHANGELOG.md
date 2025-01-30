@@ -20,6 +20,7 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
 * Modularized `SystemInterface`, and abstracted it away from the specific simulator: <br>
   `SystemInterface` managing only the specifications, `SystemInterfaceOSP` also being able to run simulations.
 * Updated code base to be in sync with latest changes in python_project_template
+* tests/test_oscillator_fmu.py : Skip test `test_run_osp_system_structure()` on Linux. The HarmonicOscillator.fmu throws an error on Linux (not though on Windows).
 
 ### Solved
 * Updated `make_osp_system_structure()` to correctly handle bool
