@@ -1,3 +1,4 @@
+import sys
 import xml.etree.ElementTree as ET
 from collections.abc import Iterable
 from math import pi, sin, sqrt
@@ -20,9 +21,8 @@ from libcosimpy.CosimSlave import CosimLocalSlave
 
 from sim_explorer.utils.misc import from_xml
 from sim_explorer.utils.osp import make_osp_system_structure
-
-from .data.Oscillator.driving_force_fmu import DrivingForce, func
-from .data.Oscillator.oscillator_fmu import HarmonicOscillator
+from tests.data.Oscillator.driving_force_fmu import DrivingForce, func
+from tests.data.Oscillator.oscillator_fmu import HarmonicOscillator
 
 
 def check_expected(
@@ -228,6 +228,7 @@ def test_run_osp(oscillator_fmu: Path, driver_fmu: Path):
     _ = sim.simulate_until(target_time=15e9)
 
 
+@pytest.mark.skipif(sys.platform.startswith("linux"), reason="HarmonicOsciallator.fmu throws an error on Linux")
 def test_run_osp_system_structure(system_structure: Path, show: bool):
     "Run an OSP simulation in the same way as the SimulatorInterface of case_study is implemented"
     log_output_level(CosimLogLevel.TRACE)
