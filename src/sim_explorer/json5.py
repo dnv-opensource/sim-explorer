@@ -23,7 +23,7 @@ class Json5Error(Exception):
 
 
 class Json5:
-    """Work with json5 files (e.g. cases specification and results).
+    r"""Work with json5 files (e.g. cases specification and results).
 
     * Read Json5 code from file, string or dict, representing the result internally as Python code (dict of dicts,lists,values)
     * Searching for elements using JsonPath expressions
@@ -34,7 +34,7 @@ class Json5:
         js5 (Path,str): Path to json5 file or json5 string
         auto (bool)=True: Determine whether running to_py automatically
         comments_eol (tuple)= ('//', '#') : tuple of end-of-line comment strings which shall be recognised
-        comments_ml (tuple)= ('/*', "'''") : tuple of multi-line comment strings which shall be recognised.
+        comments_ml (tuple)= ('/\*', "'''") : tuple of multi-line comment strings which shall be recognised.
             End of comment is always the reversed of the start of comment.
             Double-quote ml comments are also supported per default
     """
@@ -460,7 +460,7 @@ class Json5:
         *,
         error_msg: bool = False,
     ) -> _VT | Any | None:
-        """Evaluate a JsonPath expression on the Json5 code and return the result.
+        r"""Evaluate a JsonPath expression on the Json5 code and return the result.
 
         Syntax see `RFC9535 <https://datatracker.ietf.org/doc/html/rfc9535>`_
         and `jsonpath-ng (used here) <https://pypi.org/project/jsonpath-ng/>`_
@@ -469,12 +469,12 @@ class Json5:
         * @: current node identifier (Section 2.3.5) (valid only within filter selectors)
         * [<selectors>]: child segment (Section 2.5.1): selects zero or more children of a node
         * .name: shorthand for ['name']
-        * .*: shorthand for [*]
+        * .\*: shorthand for [*]
         * ..⁠[<selectors>]: descendant segment (Section 2.5.2): selects zero or more descendants of a node
         * ..name: shorthand for ..['name']
-        * ..*: shorthand for ..[*]
+        * ..\*: shorthand for ..[*]
         * 'name': name selector (Section 2.3.1): selects a named child of an object
-        * *: wildcard selector (Section 2.3.2): selects all children of a node
+        * \*: wildcard selector (Section 2.3.2): selects all children of a node
         * i: (int) index selector (Section 2.3.3): selects an indexed child of an array (from 0)
         * 0:100:5: array slice selector (Section 2.3.4): start:end:step for arrays
         * ?<logical-expr>: filter selector (Section 2.3.5): selects particular children using a logical expression

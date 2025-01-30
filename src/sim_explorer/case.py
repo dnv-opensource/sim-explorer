@@ -1,6 +1,6 @@
-"""
+r"""
 Python module to manage cases
-with respect to reading *.cases files, running cases and storing results.
+with respect to reading \*.cases files, running cases and storing results.
 """
 
 # pyright: reportUnnecessaryTypeIgnoreComment=false
