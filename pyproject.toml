@@ -28,7 +28,7 @@ name = "sim-explorer"
 version = "0.2.1"
 description = "Experimentation tools on top of OSP simulation models."
 readme = "README.rst"
-requires-python = ">= 3.10, < 3.13"
+requires-python = ">= 3.10, < 3.14"
 license = { file = "LICENSE" }
 authors = [
     { name = "Siegfried Eisinger", email = "Siegfried.Eisinger@dnv.com" },
@@ -45,7 +45,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    # "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.13",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS",
