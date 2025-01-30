@@ -570,7 +570,11 @@ class Json5:
             # accept as atom
         return True
 
-    def update(self, spath: str, data: Any) -> None:  # noqa: ANN401
+    def update(
+        self,
+        spath: str,
+        data: dict[str, Any] | list[Any] | Any,  # noqa: ANN401
+    ) -> None:
         """Append data to the js_py dict at the path pointed to by keys.
         So far this is a minimum implementation for adding data. Probably this could be done using jysonpath-ng.
         """

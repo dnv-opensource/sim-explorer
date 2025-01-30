@@ -3,6 +3,8 @@ Python module to manage cases
 with respect to reading *.cases files, running cases and storing results.
 """
 
+# pyright: reportUnnecessaryTypeIgnoreComment=false
+
 from __future__ import annotations
 
 import copy

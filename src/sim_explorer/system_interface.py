@@ -2,6 +2,8 @@
 Currently only Open Simulation Platform (OSP) is supported.
 """
 
+# pyright: reportUnnecessaryTypeIgnoreComment=false
+
 from collections.abc import Callable, Generator, Sequence
 from enum import Enum
 from pathlib import Path

@@ -153,7 +153,7 @@ typeCheckingMode = "basic"
 useLibraryCodeForTypes = true
 reportMissingParameterType = "error"
 reportUnknownParameterType = "warning"
-reportUnknownMemberType = "warning"                # TODO @EisDNV: Consider to resolve and set back to "warning". ClaasRostock, 2025-01-24
+reportUnknownMemberType = false                # consider to set to `false` if you work a lot with matplotlib and pandas, which are both not properly typed and known to trigger this warning
 reportMissingTypeArgument = "error"
 reportPropertyTypeMismatch = "error"
 reportFunctionMemberAccess = "warning"
@@ -177,7 +177,7 @@ reportUntypedFunctionDecorator = "warning"
 reportUntypedClassDecorator = "warning"
 reportUntypedBaseClass = "error"
 reportUntypedNamedTuple = "warning"
-reportUnnecessaryTypeIgnoreComment = false     # TODO @EisDNV: Consider to set back to "information" once all other pyright and mypy issues have been resolved. ClaasRostock, 2025-01-24
+reportUnnecessaryTypeIgnoreComment = "information"
 # Activate the following rules only locally and temporary, i.e. for a QA session.
 # (For server side CI they are considered too strict.)
 # reportMissingTypeStubs = true
