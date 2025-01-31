@@ -64,9 +64,9 @@ def test_ast(show: bool):
     assert funcs == ["abs"]
 
     asserts = Assertion()
-    asserts.symbol("t", length=1)
-    asserts.symbol("x", length=3)
-    asserts.symbol("y", length=1)
+    asserts.symbol("t")
+    asserts.symbol("x")
+    asserts.symbol("y")
     _ = asserts.expr(key="1", ex="1+2+x.dot(x) + sin(y)")
     syms, funcs = asserts.expr_get_symbols_functions("1")
     assert syms == ["x", "y"]
@@ -152,7 +152,7 @@ def test_assertion():  # noqa: PLR0915
     asserts.symbol("y")
     _ = asserts.expr(key="3", ex="(y<=4) & (y>=4)")
     expected = ["t", "x", "dummy_x", "y", "dummy_y", "z", "dummy_z"]
-    assert list(asserts._symbols.keys()) == expected, f"Found: {list(asserts._symbols.keys())}"
+    assert list(asserts._symbols) == expected, f"Found: {list(asserts._symbols.keys())}"
     assert asserts.expr_get_symbols_functions(expr="3") == (["y"], [])
     assert asserts.eval_single(key="3", kvargs={"y": 4})
     assert not asserts.eval_series(key="3", data=tuple(zip(_t, _y, strict=True)), ret="bool")[1]
@@ -212,7 +212,7 @@ def test_assertion_spec():
     assert _c.cases.assertion.temporal(key="2")["args"] == ()
     assert _c.cases.assertion.eval_single(key="2", kvargs=(1,)) == 0
     _c.cases.assertion.symbol("y")
-    found = list(_c.cases.assertion._symbols.keys())
+    found = list(_c.cases.assertion._symbols)
     assert found == ["t", "x", "tab_x", "i", "tab_i", "y"], f"Found: {found}"
     _ = _c.read_assertion(key="3@9.85", expr_descr=["x*t", "Test assertion"])
     assert _c.asserts == ["3", "1", "2"], f"Found: {_c.asserts}"
@@ -228,18 +228,13 @@ def test_assertion_spec():
 def test_vector():
     """Test sympy vector operations."""
     asserts = Assertion()
-    asserts.symbol("x", length=3)
+    asserts.symbol("x")
     print("Symbol x", asserts.symbol("x"), type(asserts.symbol("x")))
     _ = asserts.expr(key="1", ex="x.dot(x)")
     assert asserts.expr_get_symbols_functions(expr="1") == (["x"], [])
     _ = asserts.eval_single(key="1", kvargs=((1, 2, 3),))
     _ = asserts.eval_single(key="1", kvargs={"x": (1, 2, 3)})
-    assert asserts.symbol("x").dot(asserts.symbol("x")) == 3.0, "Initialized as ones"
-    assert asserts.symbol("x").dot(np.array((0, 1, 0), dtype=float)) == 1.0, "Initialized as ones"
-    asserts.symbol("y", length=3)  # a vector without explicit components
-    assert all(asserts.symbol("y")[i] == 1.0 for i in range(3))
-    y = asserts.symbol("y")
-    assert y.dot(y) == 3.0, "Initialized as ones"
+    asserts.symbol("y")  # a vector without explicit components
 
 
 def test_do_assert(show: bool):
@@ -264,7 +259,7 @@ def test_do_assert(show: bool):
     # asserts.vector('v', (0,1,0))
     _ = asserts.expr(key="0", ex="x.dot(v)")  # additional expression (not in .cases)
     assert asserts._syms["0"] == ["x", "v"]
-    assert all(asserts.symbol("x")[i] == np.ones(3, dtype=float)[i] for i in range(3)), "Initialized to ones"
+    assert asserts.symbol("x") == "x"
     assert asserts.eval_single(key="0", kvargs=((1, 2, 3), (4, 5, 6))) == 32
     assert asserts.expr(key="1") == "g==1.5"
     assert asserts.temporal(key="1")["type"] == Temporal.A
@@ -300,14 +295,15 @@ def test_do_assert(show: bool):
 
 
 if __name__ == "__main__":
-    retcode = pytest.main(args=["-rA", "-v", __file__, "--show", "False"])
+    retcode = 0  # pytest.main(args=["-rA", "-v", __file__, "--show", "False"])
     assert retcode == 0, f"Non-zero return code {retcode}"
-    # import os
-    # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
+    import os
+
+    os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
+    # test_globals_locals()
     # test_temporal()
     # test_ast( show=True)
-    # test_globals_locals()
     # test_assertion()
     # test_assertion_spec()
     # test_vector()
-    # test_do_assert(show=True)
+    test_do_assert(show=True)

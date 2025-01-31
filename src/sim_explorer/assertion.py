@@ -31,10 +31,11 @@ class Assertion:
     single points of a data series (see `assert_single()` or against a whole series (see `assert_series()`).
 
     Single assertion expressions are stored in the dict self._expr with their key as given in cases file.
-    All assertions have a common symbol basis in self._symbols
+    All assertions have a common symbol basis in self._symbols. time 't' is pre-registered
 
     Args:
-        funcs (dict) : Dictionary of module : <list-of-functions> of allowed functions inside assertion expressions.
+        imports (dict) : Dictionary of default imports which then can be used in expressions
+           {package : [symbol1, symbol2,...], ...}
     """
 
     def __init__(self, imports: dict[str, list[str]] | None = None) -> None:
@@ -42,14 +43,7 @@ class Assertion:
             self._imports = {"math": ["sin", "cos", "sqrt"]}  # default imports
         else:
             self._imports = imports
-        #: list of all symbols and their length
-        # TODO @EisDNV: The meaning of self._symbols is not clear to me.
-        #      On one hand, you write that it is a list of all symbols and their length,
-        #      but on the other hand, in method `symbol` you add numpy array as value for a symbol.
-        #      I hence had difficulties to derive the correct type hint for this attribute
-        #      (and with that, difficulties to understand the meaning of this attribute).
-        #      ClaasRostock, 2025-01-27
-        self._symbols: dict[str, int | np.ndarray[Any, np.dtype[np.float64]]] = {"t": 1}
+        self._symbols: list[str] = ["t"]  # list of all symbols. Time 't' is default
         self._functions: list[str] = []  # list of all functions used in expressions
         # per expression as key:
         self._syms: dict[str, list[str]] = {}  # the symbols used in expression
@@ -96,7 +90,7 @@ class Assertion:
             return self._cases_variables[var]["model"]
         raise KeyError(f"Unknown typ {typ} within info()") from None
 
-    def symbol(self, name: str, length: int = 1) -> Any:  # noqa: ANN401
+    def symbol(self, name: str) -> str:
         """Get or set a symbol.
 
         Args:
@@ -104,18 +98,11 @@ class Assertion:
             length (int)=1: Optional length. 1,2,3 allowed.
                Vectors are registered as <key>#<index> + <key> for the whole vector
 
-        Returns: The sympy Symbol corresponding to the name 'key'
+        Returns: The symbol name
         """
-        try:
-            sym = self._symbols[name]
-        except KeyError:  # not yet registered
-            assert length > 0, f"Vector length should be positive. Found {length}"
-            if length > 1:
-                self._symbols.update({name: np.ones(length, dtype=float)})
-            else:
-                self._symbols.update({name: 1})
-            sym = self._symbols[name]
-        return sym
+        if name not in self._symbols:
+            self._symbols.append(name)
+        return name
 
     def expr(self, key: str, ex: str | None = None) -> str | CodeType:
         """Get or set an expression.
@@ -209,7 +196,7 @@ class Assertion:
         if expr in self._expr:  # assume that actually a key is queried
             expr = self._expr[expr]
         syms, funcs = ast_walk(node=ast.parse(source=expr, filename="<string>", mode="exec"))
-        syms = sorted(syms, key=list(self._symbols.keys()).index)
+        syms = sorted(syms, key=self._symbols.index)
         return (syms, funcs)
 
     def temporal(
@@ -278,8 +265,8 @@ class Assertion:
         for key, info in variables.items():
             for inst in info["instances"]:
                 if len(info["instances"]) == 1:  # the instance is unique
-                    _ = self.symbol(key, len(info["names"]))  # we allow to use the 'short name' if unique
-                _ = self.symbol(f"{inst}_{key}", len(info["names"]))  # fully qualified name can always be used
+                    _ = self.symbol(key)  # we allow to use the 'short name' if unique
+                _ = self.symbol(f"{inst}_{key}")  # fully qualified name can always be used
 
     def make_locals(self, loc: dict[str, Any]) -> dict[str, Any]:
         """Adapt the locals with 'allowed' functions."""
