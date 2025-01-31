@@ -4,7 +4,7 @@
    modelFile : "ForcedOscillator.xml",
    simulator : "OSP"
    logLevel : 'fatal', # possible levels: trace, debug, info, warning, error, fatal
-   timeUnit  : "second", # possible units: ns, us, ms, sec, min, h, d, or extensions of that, like 'second'
+   timeUnit  : "second", # possible units: ns, us, ms, sec, min, h, d, or extensions of that, like 'second'  
    variables : {
       k : ['osc', 'k', "The spring constant in N/m"],
       c : ['osc', 'c', "The damping constant N.s/m"],
@@ -28,9 +28,9 @@ base: {
       f   : 1.0,
       x_z@step : 'res',
    },
-#   assert: { # future results expectation feature
-#      1 : 'abs(c-0.5)<1e-9'
-#   }
+   assert: { 
+      1@Always : ['k==1.0', 'Check setting'],
+   }
    },
 no_damping_no_force: {
    spec: {
