@@ -344,7 +344,7 @@ class Assertion:
                 Callable : run the given callable on times, expr(data)
                 None : Use the internal 'temporal(key)' setting
         Results:
-            tuple of (time(s), value(s)), depending on `ret` parameter
+            tuple of (time(s), value(s)), depending on `ret` parameter.
         """
         bool_type: bool = (ret is None and self.temporal(key)["type"] in (Temporal.A, Temporal.F)) or (
             isinstance(ret, str) and (ret in ["A", "F"] or ret.startswith("bool"))
@@ -413,38 +413,27 @@ class Assertion:
 
         # Apply an evaluation metric on the result values, specified through parameter `ret`.
         # Depending on the value of `ret`, either temporal logic, interpolation, or a user-defined callable function is applied.
+        evaluation : tuple[TNumeric | TTimeColumn, TValue | TDataColumn] # for results. Avoid too many returns
+        if (ret is None and _temp == Temporal.A) or (isinstance(ret, str) and ret in ("A", "bool")):  # Always True?
+            _res = all(r for r in results)
+            evaluation = (times[0] if _res else times[results.index(False)], _res)
 
-        if (ret is None and _temp == Temporal.A) or (isinstance(ret, str) and ret in ("A", "bool")):  # Always True
-            # TODO @EisDNV: Check if this is correct. Irrespective of that I slightly changed the code,
-            #      in both your original version and in the below modified version, the return value will
-            #      be true if _any_ result value in the series is true. I'm not sure if that's the intended behavior.
-            #      The temporal qualifier is set to Temporal.A, which I assume means "Always true for the whole time-series".
-            #      Following that logic, I would expect the return value to be True if, and only if, _all_ results are True.
-            #      ClaasRostock, 2025-01-23
-            return next(
-                ((t, True) for t, r in zip(times, results, strict=False) if r),  # time of first True value
-                (times[-1], False),  # Fallback to (end time, False) if no True value was found in the series
-            )
+        elif (ret is None and _temp == Temporal.F) or (isinstance(ret, str) and ret == "F"):  # Finally True?
+            r_prev = results[-1]
+            t_prev = times[-1]
+            for i in range(min(len(times), len(results)) - 1, -1, -1):
+                if results[i] != r_prev:
+                    evaluation = (t_prev, r_prev)
+                    break
+                t_prev = times[i]
+            if 'evaluation' not in vars(): # not yet defined
+                evaluation = (times[0], r_prev)
 
-        if (ret is None and _temp == Temporal.F) or (isinstance(ret, str) and ret == "F"):  # Finally True
-            # TODO @EisDNV: Check if this is correct. If I read the code correctly, the return value will
-            #      be False if the last result value is True. I'm not sure if that's the intended behavior.
-            #      The temporal qualifier is set to Temporal.F, which I assume means "Finally true at the end of the time-series".
-            #      Following that logic, I would expect the return value to be True if the last result value is True.
-            #      ClaasRostock, 2025-01-23
-            t_true = times[-1]
-            for t, r in zip(times, results, strict=False):
-                if r and t_true > t:
-                    t_true = t
-                elif not r and t_true < t:  # detected False after expression became True
-                    t_true = times[-1]
-            return (t_true, t_true < times[-1])
-
-        if isinstance(ret, str) and ret == "bool-list":
+        elif isinstance(ret, str) and ret == "bool-list":
             assert all(isinstance(r, bool) for r in results), "Only boolean results can be returned as bool-list"
-            return (times, results)
+            evaluation = (times, results)
 
-        if (ret is None and _temp == Temporal.T) or (isinstance(ret, float)):
+        elif (ret is None and _temp == Temporal.T) or (isinstance(ret, float)):
             t0: float
             if isinstance(ret, float):
                 t0 = ret
@@ -452,12 +441,15 @@ class Assertion:
                 assert len(self._temporal[key]["args"]), "Need a temporal argument (time at which to interpolate)"
                 t0 = float(self._temporal[key]["args"][0])
             interpolated: float = float(np.interp(t0, times, results))
-            return (t0, bool(interpolated) if all(isinstance(r, bool) for r in results) else interpolated)
+            evaluation = (t0, bool(interpolated) if all(isinstance(r, bool) for r in results) else interpolated)
 
-        if callable(ret):
-            return (times, ret(results))
-
-        raise ValueError(f"Unknown return type '{ret}'")
+        elif callable(ret):
+            evaluation = (times, ret(results))
+        else:
+            raise ValueError(f"Unknown return type '{ret}'") from None
+        if 'evaluation' not in vars():
+            raise Exception(f"Forgotten evaluation case key {key}, ret {ret}? No result yet") from None
+        return evaluation
 
     def do_assert(
         self,

@@ -1,7 +1,7 @@
 # pyright: reportPrivateUsage=false
 
 import ast
-from math import cos, sin
+from math import cos, sin, sqrt
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -91,10 +91,14 @@ def test_ast(show: bool):
     assert funcs == ["sqrt"]
 
 
-def show_data():
+def show_data(signals: list[list[bool | float]] = [_x, _y]):
     fig, ax = plt.subplots()
-    _ = ax.plot(_x, _y)
-    _ = plt.title("Data (_x, _y)", loc="left")
+    if len(signals) == 2:
+        _ = ax.plot(signals[0], signals[1])
+        _ = plt.title("x-y", loc="left")
+    else:
+        for sig in signals:
+            _ = ax.plot(sig)
     plt.show()
 
 
@@ -109,86 +113,104 @@ def test_temporal():
     assert str(err.value) == "'G'", f"Found:{err.value}"
 
 
-def test_assertion():  # noqa: PLR0915
-    # sourcery skip: extract-duplicate-method
-    # show_data()print("Analyze", analyze( "t>8 & x>0.1"))
+@pytest.fixture(scope="session")
+def asserts():
+    return _asserts()
+
+
+def _asserts():
+    """Define and return Assertion object with symbols and expressions."""
     asserts = Assertion()
     asserts.symbol("t")
+    # two ways to register symbols
+    asserts.symbol("x")
     asserts.register_vars(
         variables={
-            "x": {"instances": ("dummy",), "names": ("x[0]",)},
             "y": {"instances": ("dummy",), "names": ("y[0]",)},
             "z": {"instances": ("dummy",), "names": ("z[0]", "z[1]")},
         }
     )
     _ = asserts.expr(key="1", ex="t>8")
+    _ = asserts.expr(key="2", ex="(t>8) and (x>0.1)")
+    _ = asserts.expr(key="3", ex="(y<=4) & (y>=4)")
+    _ = asserts.expr(key="4", ex="y==4"), "Also equivalence check is allowed here"
+    _ = asserts.expr(key="5", ex="abs(y-4)<0.11")  # abs function can also be used
+    _ = asserts.expr(key="6", ex="sin(t)**2 + cos(t)**2")
+    _ = asserts.expr(key="7", ex="sqrt(t)")
+    _ = asserts.expr(key="8", ex="x*dummy_y")  # fully qualified name instance=dummy, variable=y used
+    _ = asserts.expr(key="9", ex="x*dummy_y* z[0]")
+    _ = asserts.expr(key="10", ex="sin(t)>0.5")
+    return asserts
+
+
+def test_assertion_single(asserts):
+    """Test Assertion.eval_single() on symbols and expressions defined in asserts."""
+    # sourcery skip: extract-duplicate-method
+    # show_data()print("Analyze", analyze( "t>8 & x>0.1"))
     assert asserts.eval_single(key="1", kvargs={"t": 9.0})
     assert not asserts.eval_single(key="1", kvargs={"t": 7})
+    expected = ["t", "x", "y", "dummy_y", "z", "dummy_z"]
+    assert asserts._symbols == expected, f"Found: {asserts._symbols}"
+    assert asserts.expr_get_symbols_functions(expr="3") == (["y"], [])
+    assert asserts.eval_single(key="3", kvargs={"y": 4})
+    assert asserts.eval_single(key="4", kvargs={"y": 4})
+    assert asserts.eval_single(key="5", kvargs=(4.1,))
+    assert asserts.eval_single(key="6", kvargs={"t": 123}) == 1.0
+    assert abs(asserts.eval_single(key="7", kvargs={"t": 2}) - sqrt(2.0)) < 1e-15, "Also sqrt works out of the box"
+    assert asserts.eval_single(key="10", kvargs={"t": 1.5})
+
+
+def test_assertion_series(asserts, show):
+    """Test Assertion.eval_single() and Assertion.eval_series() on various expressions."""
+    # sourcery skip: extract-duplicate-method
+    # show_data()print("Analyze", analyze( "t>8 & x>0.1"))
     times: TNumeric | TTimeColumn
     results: TValue | TDataColumn
     times, results = asserts.eval_series(key="1", data=_t, ret="bool-list")
-    assert isinstance(times, list)
-    assert isinstance(results, list)
+    assert isinstance(times, list) and isinstance(results, list)
     assert True in results, "There is at least one point where the assertion is True"
     assert results.index(True) == 81, f"Element {results.index(True)} is True"
     assert all(results[i] for i in range(81, 100)), "Assertion remains True"
     assert asserts.eval_series(key="1", data=_t, ret=max)[1]
     assert results == asserts.eval_series(key="1", data=_t, ret="bool-list")[1]
     assert asserts.eval_series(key="1", data=_t, ret="F") == (8.1, True), "Finally True"
-    asserts.symbol("x")
-    _ = asserts.expr(key="2", ex="(t>8) and (x>0.1)")
     times, results = asserts.eval_series(key="2", data=tuple(zip(_t, _x, strict=True)), ret="bool")
-    assert times == 8.1, f"Should be 'True' (at some point). Found {times}, {results}. Expr: {asserts.expr(key='2')}"
+    assert times == 0.0, f"Wrong from start. Found {times}, {results}. Expr: {asserts.expr(key='2')}"
     times, results = asserts.eval_series(key="2", data=tuple(zip(_t, _x, strict=True)), ret="bool-list")
-    assert isinstance(times, list)
-    assert isinstance(results, list)
+    assert isinstance(times, list) and isinstance(results, list)
     time_interval = [r[0] for r in filter(lambda res: res[1], zip(times, results, strict=False))]
     assert (time_interval[0], time_interval[-1]) == (8.1, 9.0)
     assert len(time_interval) == 10
     with pytest.raises(ValueError, match="Unknown return type 'Hello'") as err:
         _ = asserts.eval_series(key="2", data=tuple(zip(_t, _x, strict=True)), ret="Hello")
     assert str(err.value) == "Unknown return type 'Hello'"
-    # Checking equivalence. '==' does not work
-    asserts.symbol("y")
-    _ = asserts.expr(key="3", ex="(y<=4) & (y>=4)")
-    expected = ["t", "x", "dummy_x", "y", "dummy_y", "z", "dummy_z"]
-    assert list(asserts._symbols) == expected, f"Found: {list(asserts._symbols.keys())}"
-    assert asserts.expr_get_symbols_functions(expr="3") == (["y"], [])
-    assert asserts.eval_single(key="3", kvargs={"y": 4})
     assert not asserts.eval_series(key="3", data=tuple(zip(_t, _y, strict=True)), ret="bool")[1]
-    _ = asserts.expr(key="4", ex="y==4"), "Also equivalence check is allowed here"
-    assert asserts.eval_single(key="4", kvargs={"y": 4})
-    _ = asserts.expr(key="5", ex="abs(y-4)<0.11")  # abs function can also be used
-    assert asserts.eval_single(key="5", kvargs=(4.1,))
-    _ = asserts.expr(key="6", ex="sin(t)**2 + cos(t)**2")
     result = asserts.eval_series(key="6", data=_t, ret=max)[1]
     assert isinstance(result, float)
     assert abs(result - 1.0) < 1e-15, "sin and cos accepted"
-    _ = asserts.expr(key="7", ex="sqrt(t)")
     result = asserts.eval_series(key="7", data=_t, ret=max)[1]
     assert isinstance(result, float)
     assert abs(result**2 - _t[-1]) < 1e-14, "Also sqrt works out of the box"
-    _ = asserts.expr(key="8", ex="dummy_x*dummy_y")
     result = asserts.eval_series(key="8", data=tuple(zip(_t, _x, _y, strict=False)), ret=max)[1]
     assert isinstance(result, float)
     assert abs(result - 0.14993604045622577) < 1e-14
-    _ = asserts.expr(key="9", ex="dummy_x*dummy_y* z[0]")
     _x_y: tuple[tuple[TValue, ...], ...] = tuple(zip(_x, _y, strict=False))
     result = asserts.eval_series(
         key="9",
-        data=tuple(
-            zip(
-                _t,
-                _x,
-                _y,
-                _x_y,
-                strict=False,
-            )
-        ),
+        data=tuple(zip(_t, _x, _y, _x_y, strict=False)),
         ret=max,
     )[1]
     assert isinstance(result, float)
     assert abs(result - 0.03455981729517478) < 1e-14
+    result = asserts.eval_series(key="10", data=_t, ret="bool-list")
+    if show:
+        show_data([result[1]])
+    result = asserts.eval_series(key="10", data=_t, ret="A")
+    assert result == (0.0, False), "False from first element"
+    result = asserts.eval_series(key="10", data=_t, ret="F")
+    assert result == (9.0, False), "Becomes False at time 9.0"
+    result = asserts.eval_series(key="10", data=_t[:89], ret="F")
+    assert result == (6.9, True), "Finally True from time 6.9"
 
 
 def test_assertion_spec():
@@ -295,15 +317,16 @@ def test_do_assert(show: bool):
 
 
 if __name__ == "__main__":
-    retcode = 0  # pytest.main(args=["-rA", "-v", __file__, "--show", "False"])
+    retcode = pytest.main(args=["-rA", "-v", __file__, "--show", "False"])
     assert retcode == 0, f"Non-zero return code {retcode}"
-    import os
+    # import os
 
-    os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
+    # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
     # test_globals_locals()
     # test_temporal()
     # test_ast( show=True)
-    # test_assertion()
+    # test_assertion_single(_asserts())
+    # test_assertion_series(_asserts(), show=True)
     # test_assertion_spec()
     # test_vector()
-    test_do_assert(show=True)
+    # test_do_assert(show=True)
