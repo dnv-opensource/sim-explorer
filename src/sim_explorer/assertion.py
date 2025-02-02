@@ -413,7 +413,7 @@ class Assertion:
 
         # Apply an evaluation metric on the result values, specified through parameter `ret`.
         # Depending on the value of `ret`, either temporal logic, interpolation, or a user-defined callable function is applied.
-        evaluation : tuple[TNumeric | TTimeColumn, TValue | TDataColumn] # for results. Avoid too many returns
+        evaluation: tuple[TNumeric | TTimeColumn, TValue | TDataColumn]  # for results. Avoid too many returns
         if (ret is None and _temp == Temporal.A) or (isinstance(ret, str) and ret in ("A", "bool")):  # Always True?
             _res = all(r for r in results)
             evaluation = (times[0] if _res else times[results.index(False)], _res)
@@ -426,7 +426,7 @@ class Assertion:
                     evaluation = (t_prev, r_prev)
                     break
                 t_prev = times[i]
-            if 'evaluation' not in vars(): # not yet defined
+            if "evaluation" not in vars():  # not yet defined
                 evaluation = (times[0], r_prev)
 
         elif isinstance(ret, str) and ret == "bool-list":
@@ -447,8 +447,8 @@ class Assertion:
             evaluation = (times, ret(results))
         else:
             raise ValueError(f"Unknown return type '{ret}'") from None
-        if 'evaluation' not in vars():
-            raise Exception(f"Forgotten evaluation case key {key}, ret {ret}? No result yet") from None
+        if "evaluation" not in vars():
+            raise ValueError(f"Forgotten evaluation case key {key}, ret {ret}? No result yet") from None
         return evaluation
 
     def do_assert(

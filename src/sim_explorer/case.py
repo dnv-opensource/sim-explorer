@@ -8,6 +8,7 @@ with respect to reading \*.cases files, running cases and storing results.
 from __future__ import annotations
 
 import copy
+import warnings
 from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
 from datetime import datetime, timezone
 from pathlib import Path
@@ -159,25 +160,6 @@ class Case:
     def append(self, case: Case) -> None:
         """Append a case as sub-case to this case."""
         self.subs.append(case)
-
-    # TODO @EisDNV: This method is nowhere used in the code base. Mabe remove?
-    #      ClaasRostock, 2025-01-26
-    '''
-    def _add_actions(
-        self,
-        act_type: str,
-        at_time: float,
-        act_list: list[Callable],
-    ) -> None:
-        """Add actions to one of the properties act_get, act_set.
-        The act_list should be prepared by the system_interface in the way it is needed there.
-        """
-        dct = self.act_get if act_type == "get" else self.act_set
-
-        if at_time not in dct:
-            dct.update({at_time: []})
-        dct[at_time].extend(act_list)
-    '''
 
     @staticmethod
     def _num_elements(obj: object) -> int:
@@ -623,9 +605,6 @@ class Cases:
         "timefac",
         "variables",
     )
-    # TODO @EisDNV: The class attribute `assertion_results` is nowhere used. Maybe remove?
-    #      ClaasRostock, 2025-01-26
-    # assertion_results: list[AssertionResult] = []  # noqa: ERA001
 
     def __init__(self, spec: str | Path) -> None:
         self.file: Path = Path(spec)  # everything relative to the folder of this file!
@@ -840,9 +819,7 @@ class Cases:
         ) -> tuple[str, dict[str, Any] | None, list[int]]:
             if level > 0:
                 if level == 1:
-                    # TODO @EisDNV: This should be logged instead of printed.
-                    #      ClaasRostock, 2025-01-26
-                    print(msg)  # noqa: T201
+                    warnings.warn(msg, stacklevel=1)
                 else:
                     raise AssertionError(msg) from err
             return ("", None, [])
