@@ -344,7 +344,7 @@ def test_results_header():
 def test_read_cases():
     bb_cases = Path(__file__).parent.joinpath("data/BouncingBall0/BouncingBall.cases")
     js = Json5(bb_cases)
-    assert Json5.check_valid_js(js.js_py, print_msg=True)
+    assert Json5.check_valid_js(js.js_py)
     assert js.jspath("$.header.name") == "BouncingBall"
 
 

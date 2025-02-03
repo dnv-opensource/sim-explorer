@@ -8,7 +8,7 @@ with respect to reading \*.cases files, running cases and storing results.
 from __future__ import annotations
 
 import copy
-import warnings
+import logging
 from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
 from datetime import datetime, timezone
 from pathlib import Path
@@ -37,6 +37,8 @@ if TYPE_CHECKING:
         TTimeColumn,
         TValue,
     )
+logger = logging.getLogger(__name__)
+
 
 """
 sim_explorer module for definition and execution of simulation experiments
@@ -819,7 +821,7 @@ class Cases:
         ) -> tuple[str, dict[str, Any] | None, list[int]]:
             if level > 0:
                 if level == 1:
-                    warnings.warn(msg, stacklevel=1)
+                    logger.warning(msg)
                 else:
                     raise AssertionError(msg) from err
             return ("", None, [])

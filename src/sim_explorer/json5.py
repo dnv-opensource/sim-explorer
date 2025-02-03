@@ -1,10 +1,11 @@
 """Python module for working with json5 files."""
 
-# ruff: noqa: ERA001  # TODO @EisDNV: Consider removing commented out code in this module. ClaasRostock, 2025-01-26
+# ruff: noqa: ERA001
 
 from __future__ import annotations
 
 import contextlib
+import logging
 import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar, overload
@@ -16,6 +17,8 @@ from jsonpath_ng.jsonpath import DatumInContext
 if TYPE_CHECKING:
     import os
     from collections.abc import Sequence
+
+logger = logging.getLogger(__name__)
 
 
 class Json5Error(Exception):
@@ -56,7 +59,6 @@ class Json5:
         auto: bool | int = True,
         comments_eol: tuple[str, ...] = ("//", "#"),
         comments_ml: tuple[str, ...] = ("/*", "'" * 3, '"' * 3),
-        # keys_unique: bool = True,  # TODO @EisDNV: `keys_unique` is nowhere used. Remove?  ClaasRostock, 2025-01-26
     ) -> None:
         self.pos: int = 0
         self.comments_eol: tuple[str, ...] = comments_eol
@@ -530,42 +532,32 @@ class Json5:
         return keys
 
     @staticmethod
-    def check_valid_js(  # noqa: C901
+    def check_valid_js(
         js_py: dict[str, Any] | Any,  # noqa: ANN401
-        *,
-        print_msg: bool = False,
     ) -> bool:
         """Check whether the dict js_py is a valid Json dict."""
 
         def check_valid_js_list(lst: list[Any]) -> bool:
             for itm in lst:
                 if isinstance(itm, dict):
-                    return Json5.check_valid_js(itm, print_msg=False)
+                    return Json5.check_valid_js(itm)
                 if isinstance(itm, list):
                     return check_valid_js_list(itm)
                 # accept as Json atom
             return True
 
         if not isinstance(js_py, dict):
-            if print_msg:
-                # TODO @EisDNV: Consider using logging instead of print statements.
-                print(f"Error Not a (sub-)dict. Found type {type(js_py)}: {js_py}")  # noqa: T201
+            logger.warning(f"Not a (sub-)dict. Found type {type(js_py)}: {js_py}")
             return False
         for k, v in js_py.items():
             if not isinstance(k, str):
-                if print_msg:
-                    # TODO @EisDNV: Consider using logging instead of print statements.
-                    print(f"Error: Key {k} is not a string. (sub-)dict:{js_py}")  # noqa: T201
+                logger.error(f"Key {k} is not a string. (sub-)dict:{js_py}")
                 return False
-            if isinstance(v, dict) and not Json5.check_valid_js(js_py=v, print_msg=print_msg):
-                if print_msg:
-                    # TODO @EisDNV: Consider using logging instead of print statements.
-                    print(f"Error: Not a valid Json dict: {v}")  # noqa: T201
+            if isinstance(v, dict) and not Json5.check_valid_js(js_py=v):
+                logger.error(f"Not a valid Json dict: {v}")
                 return False
             if isinstance(v, list) and not check_valid_js_list(lst=v):
-                if print_msg:
-                    # TODO @EisDNV: Consider using logging instead of print statements.
-                    print(f"Error: Not a valid Json list: {v}")  # noqa: T201
+                logger.error(f"Not a valid Json list: {v}")
                 return False
             # accept as atom
         return True
