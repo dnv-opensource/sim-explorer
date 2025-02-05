@@ -120,9 +120,9 @@ def test_jpath(ex: Json5):
     assert ex.jspath(path="$..book[2].author", typ=float, error_msg=False) is None, "Fail silently"
     with pytest.raises(ValueError) as err:
         found = ex.jspath(path="$..book[2].author", typ=float, error_msg=True)
-    assert str(err.value) == "$..book[2].author matches, but type <class 'float'> does not match <class 'str'>.", (
-        f"ERR:{err.value}"
-    )
+    assert (
+        str(err.value) == "$..book[2].author matches, but type <class 'float'> does not match <class 'str'>."
+    ), f"ERR:{err.value}"
 
     # some selected jsonpath extensions:
     # not yet tested (not found out how it is done):
@@ -131,9 +131,9 @@ def test_jpath(ex: Json5):
     # |: works but strange result: found = ex.jspath( '$..book[?@.price<10] | $..book[?@.price>10]', None)
 
     js = Json5("{header : { case : 'Test', timeFactor : 1.0}, 0.0 : { bb: { h : [0,0,1], v : 2.3}}}")
-    assert js.jspath(path="$['0.0']", typ=dict) == {"bb": {"h": [0, 0, 1], "v": 2.3}}, (
-        "Use [] notation when path includes '.'"
-    )
+    assert js.jspath(path="$['0.0']", typ=dict) == {
+        "bb": {"h": [0, 0, 1], "v": 2.3}
+    }, "Use [] notation when path includes '.'"
     # print("FOUND", type(found), 0 if found is None else len(found), found)
 
     # run directly on dict:
@@ -245,9 +245,9 @@ def test_json5_syntax():
         "Hi": 1.0,
         "Ho": 2.0,
     }, "Simple dict expected. Second key without '"
-    assert Json5("{'Hello:@#%&/=?World':1}").to_py() == {"Hello:@#%&/=?World": 1}, (
-        "Literal string keys should handle any character, including':' and comments"
-    )
+    assert Json5("{'Hello:@#%&/=?World':1}").to_py() == {
+        "Hello:@#%&/=?World": 1
+    }, "Literal string keys should handle any character, including':' and comments"
 
     js = Json5("{Start: {\n   'H':1,\n   99:{'e':11,'l':12}},\nLast:999}")
     assert js.to_py() == {

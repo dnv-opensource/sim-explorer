@@ -89,9 +89,9 @@ def test_step_by_step_cosim(mobile_crane_fmu: Path):  # noqa: C901
                 assert sim.slave_variables(slave)[i].reference == i
                 assert sim.slave_variables(slave)[i].type == 0
                 found_expected[k] = True
-    assert False not in found_expected, (
-        f"Not all expected names were found: {expected_names[found_expected.index(False)]}"
-    )
+    assert (
+        False not in found_expected
+    ), f"Not all expected names were found: {expected_names[found_expected.index(False)]}"
     assert set_initial(name="pedestal_boom[0]", value=3.0)
     assert set_initial(name="boom_boom[0]", value=8.0)
     assert set_initial(name="boom_boom[1]", value=0.7854)
@@ -188,9 +188,11 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
     print("ACT", static.act_get[-1][0])
     assert static.act_get[-1][0] == ("T", "mobileCrane", (10, 11, 12))
     _ = sim.init_simulator()
-    assert sim.observer.last_real_values(slave_index=0, variable_references=(10, 11, 12)) == [0.0, 0.0, 0.0], (
-        "Initial value of T"
-    )
+    assert sim.observer.last_real_values(slave_index=0, variable_references=(10, 11, 12)) == [
+        0.0,
+        0.0,
+        0.0,
+    ], "Initial value of T"
     # msg = f"SET actions argument: {static.act_set[0][0].args}"
     # assert static.act_set[0][0].args == (0, 0, (13, 15), (3, 1.5708)), msg
     # sim.set_initial(0, 0, (13, 15), (3, 0))

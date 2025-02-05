@@ -403,9 +403,9 @@ class Assertion:
         # Results: Assert that all values in temporary list `_results` are of a valid type and of the same type,
         # then cast the temporary list `_results` into list `results` of invariant type `TDataColumn`.
         if _results:
-            assert all(isinstance(r, TValue) for r in _results), (
-                f"Result data in eval_series is of an invalid type: {_results}"
-            )
+            assert all(
+                isinstance(r, TValue) for r in _results
+            ), f"Result data in eval_series is of an invalid type: {_results}"
             if not all(isinstance(r, type(_results[0])) for r in _results):
                 warning("Result data in eval_series has varying type. All result values will be converted to bool.")
                 _results = [bool(r) for r in _results]

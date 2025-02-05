@@ -1,3 +1,5 @@
+import sys
+
 from rich.console import Console
 from rich.panel import Panel
 
@@ -65,6 +67,10 @@ def log_assertion_results(results: dict[str, list[AssertionResult]]) -> None:
             f"{passed_tests}{padding}{failed_tests}", title="[bold blue]Test Summary[/bold blue]", border_style="blue"
         )
     )
+
+    # Exit with error code if any test failed
+    if total_failed > 0:
+        sys.exit(1)
 
 
 def group_assertion_results(results: list[AssertionResult]) -> dict[str, list[AssertionResult]]:

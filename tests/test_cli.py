@@ -1,12 +1,19 @@
 import os
-from pathlib import Path
-
-import pytest
 from importlib.metadata import version
+from pathlib import Path
 from subprocess import run
-#from types import SimpleNamespace as Namespace
 
-def shell(command: str, **kwargs) -> dict[str,int|str]:
+# from types import SimpleNamespace as Namespace
+from typing import Any, TypedDict
+
+
+class CommandResult(TypedDict):
+    exit_code: int
+    stdout: str
+    stderr: str
+
+
+def shell(command: str, **kwargs: Any) -> CommandResult:
     """
     Execute a shell command capturing output and exit code.
 
@@ -14,10 +21,13 @@ def shell(command: str, **kwargs) -> dict[str,int|str]:
     returns a convenient dict object.
     This code is inspired by the same command from cli_test_helpers.
     """
-    completed = run(command, shell=True, capture_output=True, check=False, **kwargs)
-    return {'exit_code' : completed.returncode,
-            'stdout' : completed.stdout.decode(encoding='utf-8'),#, errors='surrogatepass'),
-            'stderr' : completed.stderr.decode(encoding='utf-8')}#, errors='ignore')}
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    completed = run(
+        command, shell=True, capture_output=True, check=False, encoding="cp437", errors="replace", env=env, **kwargs
+    )
+    return {"exit_code": completed.returncode, "stdout": completed.stdout, "stderr": completed.stderr}
+
 
 def test_entrypoint():
     exit_status = os.system("sim-explorer --help")
@@ -40,7 +50,7 @@ def test_info():
 
 def test_help():
     """Does info display the correct information."""
-    result = shell(f"sim-explorer --help")
+    result = shell("sim-explorer --help")
     assert result["exit_code"] == 0
     assert result["stdout"].startswith("usage: sim-explorer cases [options [args]]")
     assert "sim-explorer cases --info" in result["stdout"]
@@ -58,7 +68,7 @@ def test_help():
 
 def test_version():
     """Does info display the correct information."""
-    result = shell(f"sim-explorer --version")
+    result = shell("sim-explorer --version")
     assert result["exit_code"] == 0
     expected = version("sim-explorer")
     assert result["exit_code"] == 0
@@ -77,14 +87,14 @@ def test_run():
     if log.exists():
         log.unlink()
     result = shell(f"sim-explorer {cases} --run {case} --log test.log --log-level DEBUG")
-    assert result["exit_code"] == 0
+    assert result["exit_code"] == 1
     assert case in result["stdout"]
     assert "6@A(g==9.81): Check wrong gravity." in result["stdout"]
     assert "Error: Assertion has failed" in result["stdout"]
     assert "1 tests failed" in result["stdout"]
     assert res.exists(), f"No results file {res} produced"
     assert log.exists(), f"log file {log} was not produced as requested"
-    #print(result)
+    # print(result)
 
 
 def test_Run():
@@ -106,7 +116,7 @@ def test_Run():
 
 
 if __name__ == "__main__":
-    retcode = 0#pytest.main(["-rA", "-v", __file__, "--show", "True"])
+    retcode = 0  # pytest.main(["-rA", "-v", __file__, "--show", "True"])
     assert retcode == 0, f"Non-zero return code {retcode}"
     os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
     # test_entrypoint()

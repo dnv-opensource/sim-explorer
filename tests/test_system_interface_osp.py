@@ -22,9 +22,9 @@ def test_pytype():
     assert SystemInterfaceOSP.pytype(fmu_type="Integer", val="99") == 99, "Expected 99 as int type"
     assert SystemInterfaceOSP.pytype(fmu_type="Boolean", val="fmi2True"), "Expected True as bool type"
     assert not SystemInterfaceOSP.pytype(fmu_type="Boolean", val="fmi2false"), "Expected True as bool type"
-    assert SystemInterfaceOSP.pytype(fmu_type="String", val="fmi2False") == "fmi2False", (
-        "Expected fmi2False as str type"
-    )
+    assert (
+        SystemInterfaceOSP.pytype(fmu_type="String", val="fmi2False") == "fmi2False"
+    ), "Expected fmi2False as str type"
     with pytest.raises(ValueError) as err:
         _ = SystemInterfaceOSP.pytype(fmu_type="Real", val="fmi2False")
     assert str(err.value).startswith("could not convert string to float:"), "No error raised as expected"
@@ -122,9 +122,9 @@ def test_simulator_from_system_structure():
     assert not system.allowed_action(action="set", comp="bb", var="der(v)", time=100), system.message
     assert system.allowed_action(action="set", comp="bb", var="v_min", time=0), system.message
     assert system.allowed_action(action="set", comp="bb", var=(1, 3), time=0), system.message  # combination of h,v
-    assert not system.allowed_action(action="set", comp="bb", var=(1, 3), time=100), (
-        system.message
-    )  # combination of h,v
+    assert not system.allowed_action(
+        action="set", comp="bb", var=(1, 3), time=100
+    ), system.message  # combination of h,v
 
 
 def test_simulator_reset():
@@ -137,9 +137,10 @@ def test_simulator_reset():
     h0, g0 = (9.9, -4.81)
     system.simulator.real_initial_value(slave_index=0, variable_reference=1, value=h0)  # initial height h
     system.simulator.real_initial_value(slave_index=0, variable_reference=5, value=g0)  # g
-    assert system.observer.last_real_values(slave_index=0, variable_references=(1, 5)) == [0.0, 0.0], (
-        "Values only when the simulation starts!"
-    )
+    assert system.observer.last_real_values(slave_index=0, variable_references=(1, 5)) == [
+        0.0,
+        0.0,
+    ], "Values only when the simulation starts!"
     _ = system.simulator.simulate_until(target_time=1e9)
     assert system.simulator.status().current_time == 1e9
     values = system.observer.last_real_values(slave_index=0, variable_references=(1, 5))
@@ -157,9 +158,10 @@ def test_simulator_reset():
     h0, g0 = (19.9, -2.81)
     system.simulator.real_initial_value(slave_index=0, variable_reference=1, value=h0)  # initial height h
     system.simulator.real_initial_value(slave_index=0, variable_reference=5, value=g0)  # g
-    assert system.observer.last_real_values(slave_index=0, variable_references=(1, 5)) == [0.0, 0.0], (
-        "Values only when the simulation starts!"
-    )
+    assert system.observer.last_real_values(slave_index=0, variable_references=(1, 5)) == [
+        0.0,
+        0.0,
+    ], "Values only when the simulation starts!"
     _ = system.simulator.simulate_until(target_time=1e9)
     assert system.simulator.status().current_time == 1e9
     values = system.observer.last_real_values(slave_index=0, variable_references=(1, 5))

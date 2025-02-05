@@ -10,9 +10,9 @@ from sim_explorer.case import Case, Cases
 
 
 def arrays_equal(res: Sequence[Any], expected: Sequence[Any], eps: float = 1e-7):
-    assert len(res) == len(expected), (
-        f"Tuples of different lengths cannot be equal. Found {len(res)} != {len(expected)}"
-    )
+    assert len(res) == len(
+        expected
+    ), f"Tuples of different lengths cannot be equal. Found {len(res)} != {len(expected)}"
     for i, (x, y) in enumerate(zip(res, expected, strict=False)):
         assert abs(x - y) < eps, f"Element {i} not nearly equal in {x}, {y}"
 
