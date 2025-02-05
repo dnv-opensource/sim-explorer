@@ -97,9 +97,9 @@ New Assertions release:
 
 
 <!-- Markdown link & img dfn's -->
-[unreleased]: https://github.com/dnv-innersource/sim-explorer/compare/v0.2.1...HEAD
-[0.2.1]: https://github.com/dnv-innersource/sim-explorer/releases/tag/v0.2.0...v0.2.1
-[0.2.0]: https://github.com/dnv-innersource/sim-explorer/releases/tag/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/dnv-innersource/sim-explorer/releases/tag/v0.0.1...v0.1.0
-[0.0.1]: https://github.com/dnv-innersource/sim-explorer/releases/tag/v0.0.1
-[sim-explorer]: https://github.com/dnv-innersource/sim-explorer
+[unreleased]: https://github.com/dnv-opensource/sim-explorer/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/dnv-opensource/sim-explorer/releases/tag/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/dnv-opensource/sim-explorer/releases/tag/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/dnv-opensource/sim-explorer/releases/tag/v0.0.1...v0.1.0
+[0.0.1]: https://github.com/dnv-opensource/sim-explorer/releases/tag/v0.0.1
+[sim-explorer]: https://github.com/dnv-opensource/sim-explorer
