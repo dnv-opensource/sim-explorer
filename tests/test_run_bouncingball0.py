@@ -42,9 +42,9 @@ def test_step_by_step():
     assert path.exists(), "System structure file not found"
     sim = SystemInterfaceOSP(path)
     _ = sim.init_simulator()
-    assert sim.simulator.real_initial_value(
-        slave_index=0, variable_reference=6, value=0.35
-    ), "Setting of 'e' did not work"
+    assert sim.simulator.real_initial_value(slave_index=0, variable_reference=6, value=0.35), (
+        "Setting of 'e' did not work"
+    )
     for t in np.linspace(start=1, stop=1e9, num=100):
         _ = sim.simulator.simulate_until(t)
         print(sim.observer.last_real_values(slave_index=0, variable_references=[0, 1, 6]))

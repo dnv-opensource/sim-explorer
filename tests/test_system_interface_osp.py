@@ -22,9 +22,9 @@ def test_pytype():
     assert SystemInterfaceOSP.pytype(fmu_type="Integer", val="99") == 99, "Expected 99 as int type"
     assert SystemInterfaceOSP.pytype(fmu_type="Boolean", val="fmi2True"), "Expected True as bool type"
     assert not SystemInterfaceOSP.pytype(fmu_type="Boolean", val="fmi2false"), "Expected True as bool type"
-    assert (
-        SystemInterfaceOSP.pytype(fmu_type="String", val="fmi2False") == "fmi2False"
-    ), "Expected fmi2False as str type"
+    assert SystemInterfaceOSP.pytype(fmu_type="String", val="fmi2False") == "fmi2False", (
+        "Expected fmi2False as str type"
+    )
     with pytest.raises(ValueError) as err:
         _ = SystemInterfaceOSP.pytype(fmu_type="Real", val="fmi2False")
     assert str(err.value).startswith("could not convert string to float:"), "No error raised as expected"
@@ -122,9 +122,9 @@ def test_simulator_from_system_structure():
     assert not system.allowed_action(action="set", comp="bb", var="der(v)", time=100), system.message
     assert system.allowed_action(action="set", comp="bb", var="v_min", time=0), system.message
     assert system.allowed_action(action="set", comp="bb", var=(1, 3), time=0), system.message  # combination of h,v
-    assert not system.allowed_action(
-        action="set", comp="bb", var=(1, 3), time=100
-    ), system.message  # combination of h,v
+    assert not system.allowed_action(action="set", comp="bb", var=(1, 3), time=100), (
+        system.message
+    )  # combination of h,v
 
 
 def test_simulator_reset():

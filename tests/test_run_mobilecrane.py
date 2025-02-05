@@ -89,9 +89,9 @@ def test_step_by_step_cosim(mobile_crane_fmu: Path):  # noqa: C901
                 assert sim.slave_variables(slave)[i].reference == i
                 assert sim.slave_variables(slave)[i].type == 0
                 found_expected[k] = True
-    assert (
-        False not in found_expected
-    ), f"Not all expected names were found: {expected_names[found_expected.index(False)]}"
+    assert False not in found_expected, (
+        f"Not all expected names were found: {expected_names[found_expected.index(False)]}"
+    )
     assert set_initial(name="pedestal_boom[0]", value=3.0)
     assert set_initial(name="boom_boom[0]", value=8.0)
     assert set_initial(name="boom_boom[1]", value=0.7854)

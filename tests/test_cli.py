@@ -2,6 +2,7 @@ import os
 from importlib.metadata import version
 from pathlib import Path
 from subprocess import run
+import pytest
 
 # from types import SimpleNamespace as Namespace
 from typing import Any, TypedDict
@@ -116,13 +117,13 @@ def test_Run():
 
 
 if __name__ == "__main__":
-    retcode = 0  # pytest.main(["-rA", "-v", __file__, "--show", "True"])
+    retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
     assert retcode == 0, f"Non-zero return code {retcode}"
-    os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
+    # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
     # test_entrypoint()
     # test_help()
     # test_version()
     # test_info()
-    test_run()
+    # test_run()
     # test_Run()
     # test_cli()

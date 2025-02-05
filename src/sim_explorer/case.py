@@ -344,9 +344,9 @@ class Case:
             if at_time_type in ("get", "step"):
                 value = None
             key, cvar_info, rng = self.cases.disect_variable(key)
-            assert (
-                cvar_info is not None
-            ), f"No variable specification found for variable {key} not found in variable specification"
+            assert cvar_info is not None, (
+                f"No variable specification found for variable {key} not found in variable specification"
+            )
             key = key.strip()
             if value is not None:  # check also the number of supplied values
                 if isinstance(value, str | float | int | bool):  # make sure that there are always lists
@@ -358,9 +358,9 @@ class Case:
             varnames = tuple(_names[r] for r in rng)
             # print(f"CASE.read_spec, {key}@{at_time_arg}({at_time_type}):{value}[{rng}], alias={cvar_info}")  # noqa: ERA001
             _instances = cvar_info["instances"]
-            assert isinstance(
-                _instances, Sequence
-            ), f"Attribute `instances` in variable {key} is not a sequence: {_instances}"
+            assert isinstance(_instances, Sequence), (
+                f"Attribute `instances` in variable {key} is not a sequence: {_instances}"
+            )
             if not self.cases.simulator.allowed_action(
                 action=at_time_type, comp=_instances[0], var=varnames, time=at_time_arg
             ):
@@ -683,9 +683,9 @@ class Cases:
             # The type, causality and variability shall be equal for all variables.
             for n in _varnames:
                 for test in ["type", "causality", "variability"]:
-                    assert (
-                        model_vars[model][n][test] == prototype[test]
-                    ), f"Model {model} variable {n} != {test} as {prototype}"
+                    assert model_vars[model][n][test] == prototype[test], (
+                        f"Model {model} variable {n} != {test} as {prototype}"
+                    )
             starts: list[TValue] = []
             starts.extend(
                 info["type"](info["start"])
@@ -1243,9 +1243,9 @@ class Results:
                 if len(_cv) > 2:  # variable is indexed  # noqa: PLR2004
                     label += f"[{_cv[2]}]"  # append the element index
             _values = [rec[i + 1] for rec in data]
-            assert all(
-                type[v] is type[_values[0]] for v in _values
-            ), f"values of variable {label} have non-uniform types: {_values}"
+            assert all(type[v] is type[_values[0]] for v in _values), (
+                f"values of variable {label} have non-uniform types: {_values}"
+            )
             values: TDataColumn = cast(TDataColumn, _values)
             _ = plt.plot(times, values, label=_cv, linewidth=3)
 
