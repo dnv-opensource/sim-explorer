@@ -26,7 +26,7 @@ copyright = "2024, DNV AS. All rights reserved."
 author = "Siegfried Eisinger, DNV Simulation Technology Team, SEACo project team"
 
 # The full version, including alpha/beta/rc tags
-release = "0.2.0"
+release = "0.2.1"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -40,6 +40,12 @@ extensions = [
     "sphinx.ext.autosummary",
     "sphinx.ext.todo",
     "sphinxcontrib.mermaid",
+]
+
+# Extenstion for myst_parser
+myst_enable_extensions = [
+    "dollarmath",
+    "attrs_inline",
 ]
 
 # The file extensions of source files.
@@ -72,6 +78,8 @@ autodoc_default_options = {
 autodoc_preserve_defaults = True
 
 myst_heading_anchors = 3
+
+todo_include_todos = False
 
 # add markdown mermaid support
 myst_fence_as_directive = ["mermaid"]

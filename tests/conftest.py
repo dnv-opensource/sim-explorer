@@ -29,6 +29,7 @@ output_dirs = [
 ]
 output_files = [
     "*test*.pdf",
+    "systemModel.xml",
 ]
 
 
@@ -71,10 +72,10 @@ def logger() -> logging.Logger:
     return logging.getLogger()
 
 
-def pytest_addoption(parser):
+def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption("--show", action="store", default=False)
 
 
 @pytest.fixture(scope="session")
-def show(request):
+def show(request: pytest.FixtureRequest) -> bool:
     return request.config.getoption("--show") == "True"

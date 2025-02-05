@@ -3,6 +3,8 @@ header: {
    name        : 'BouncingBall',
    description : 'Simple sim explorer with the basic BouncingBall FMU (ball dropped from h=1m',
    modelFile : "OspSystemStructure.xml",
+   simulator : "OSP"
+   logLevel : 'fatal', # possible levels: trace, debug, info, warning, error, fatal
    timeUnit  : "second",
    variables : {
       g : ['bb', 'g', "Gravity acting on the ball"],

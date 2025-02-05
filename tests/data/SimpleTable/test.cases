@@ -2,6 +2,8 @@
 header : {
    name : 'Testing',
    description : 'Simple sim explorer for testing purposes',
+   logLevel : 'info',
+   simulator : 'OSP'
    timeUnit : 'second',
    variables : {
          x : ['tab','outs','Outputs (3-dim)'],

@@ -6,7 +6,7 @@ from libcosimpy.CosimEnums import (
     CosimVariableType,
     CosimVariableVariability,
 )
-from libcosimpy.CosimExecution import CosimExecution  # type: ignore
+from libcosimpy.CosimExecution import CosimExecution
 
 
 def test_system_structure():

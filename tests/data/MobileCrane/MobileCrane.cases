@@ -2,23 +2,24 @@
    name        : 'MobileCrane',
    description : 'sim explorer with the MobileCrane FMU (standalone)',
    modelFile : "OspSystemStructure.xml",
-   logLevel : "TRACE",
+   simulator : "OSP",
+   logLevel : 'trace', # possible levels: trace, debug, info, warning, error, fatal
    timeUnit  : "second",
    variables : {
       p     : ['mobileCrane', 'pedestal_boom', "Length and angle of pedestal. Use p[2] to set pedestal azimuth [degrees]"],
       b     : ['mobileCrane', 'boom_boom', "Length and angle of boom. Use b[1] to set boom polar angle [degrees]"],
-      r     : ['mobileCrane', 'rope_boom', "Length and angle of rope. Use r[0] to set rope length [m]"],   
+      r     : ['mobileCrane', 'rope_boom', "Length and angle of rope. Use r[0] to set rope length [m]"],
       df_dt : ['mobileCrane', 'fixation_angularVelocity', "Angular velocity of whole crane with respect to base. [polar/time, azimuth/time]"],
       dp_dt : ['mobileCrane', 'pedestal_angularVelocity[1]', "Angular velocity of pedestal (around z-axis). [azimuth/time]"],
       db_dt : ['mobileCrane', 'boom_angularVelocity[0]', "Angular velocity of boom (polar direction). [polar/time]"],
-      dr_dt : ['mobileCrane', 'rope_lengthVelocity', "Linear length change of crane rope. [m/s]"],   
+      dr_dt : ['mobileCrane', 'rope_lengthVelocity', "Linear length change of crane rope. [m/s]"],
       v     : ['mobileCrane', 'fixation_angularVelocity', "Linear velocity of whole crane with respect to base. [|v|, normal]"],
       T     : ['mobileCrane', 'fixation_torque', "Total torque of the crane with respect to its base, i.e. the sum of static and dynamic torques. Provided as 3D spherical vector."],
       x_pedestal : ['mobileCrane', 'pedestal_end', "Cartesian coordinate of pedestal tip"],
       x_boom : ['mobileCrane', 'boom_end', "Cartesian coordinate of booom tip"],
       x_load : ['mobileCrane', 'rope_end', "Cartesian coordinate of rope tip (load position)"],
       load : ['mobileCrane', 'dLoad', "Rope mass (load) [kg]"],
-   }},  
+   }},
 base : {
    description : "Variable settings for the base case. Represents a mobile crane folded for street use.",
    spec: {
@@ -38,7 +39,7 @@ base : {
       T@step,
       x_pedestal@step,
       x_boom@step,
-      x_load@step,      
+      x_load@step,
    ]},
 static : {
     description : "Static end position. Represents a mobile crane during lifting (turned 90deg, boom lifted 45 deg, load lifted 1 m)",
@@ -47,7 +48,7 @@ static : {
       b[1]  : 45, #0.785398, # 45 deg polar (turned 45 deg up)
       r[0]  : 7.657,  # length of rope such that load 1m over floor
       load  : 1000,   # load weight in kg
-   }},   
+   }},
 dynamic : {
     description : "Movement to end position. Represents a mobile crane during lifting (turned 90deg, boom lifted 45 deg, load lifted 1 m)",
     spec: {
@@ -59,5 +60,5 @@ dynamic : {
       db_dt@1.0 : 0.0,
       dr_dt@1.0 : -10,  # lift 1m / 0.1sec
       load@1.0 : 1000,
-   }},   
+   }},
 }

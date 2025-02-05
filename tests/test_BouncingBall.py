@@ -5,17 +5,17 @@ import pytest
 from fmpy import plot_result, simulate_fmu
 
 
-def nearly_equal(res: tuple, expected: tuple, eps=1e-7):
-    assert len(res) == len(
-        expected
-    ), f"Tuples of different lengths cannot be equal. Found {len(res)} != {len(expected)}"
+def nearly_equal(res: tuple[float, ...], expected: tuple[float, ...], eps: float = 1e-7):
+    assert len(res) == len(expected), (
+        f"Tuples of different lengths cannot be equal. Found {len(res)} != {len(expected)}"
+    )
     for i, (x, y) in enumerate(zip(res, expected, strict=False)):
         assert abs(x - y) < eps, f"Element {i} not nearly equal in {x}, {y}"
 
 
-def test_run_fmpy(show):
+def test_run_fmpy(show: bool):
     """Test and validate the basic BouncingBall using fmpy and not using OSP or sim_explorer."""
-    path = Path(Path(__file__).parent, "data/BouncingBall0/BouncingBall.fmu")
+    path = Path(__file__).parent / "data" / "BouncingBall0" / "BouncingBall.fmu"
     assert path.exists(), f"File {path} does not exist"
     stepsize = 0.01
     result = simulate_fmu(
@@ -32,6 +32,8 @@ def test_run_fmpy(show):
             "e": 0.71,
             "g": -9.81,
         },
+        step_finished=None,  # pyright: ignore[reportArgumentType]  # (typing incorrect in fmpy)
+        fmu_instance=None,  # pyright: ignore[reportArgumentType]  # (typing incorrect in fmpy)
     )
     if show:
         plot_result(result)
@@ -61,3 +63,4 @@ def test_run_fmpy(show):
 if __name__ == "__main__":
     retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
     assert retcode == 0, f"Non-zero return code {retcode}"
+    # test_run_fmpy(show=True)
