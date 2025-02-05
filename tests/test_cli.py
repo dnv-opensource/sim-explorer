@@ -2,10 +2,11 @@ import os
 from importlib.metadata import version
 from pathlib import Path
 from subprocess import run
-import pytest
 
 # from types import SimpleNamespace as Namespace
 from typing import Any, TypedDict
+
+import pytest
 
 
 class CommandResult(TypedDict):
@@ -14,7 +15,10 @@ class CommandResult(TypedDict):
     stderr: str
 
 
-def shell(command: str, **kwargs: Any) -> CommandResult:
+def shell(
+    command: str,
+    **kwargs: Any,  # noqa: ANN401
+) -> CommandResult:
     """
     Execute a shell command capturing output and exit code.
 
@@ -24,14 +28,25 @@ def shell(command: str, **kwargs: Any) -> CommandResult:
     """
     env = os.environ.copy()
     env["PYTHONIOENCODING"] = "utf-8"
-    completed = run(
-        command, shell=True, capture_output=True, check=False, encoding="cp437", errors="replace", env=env, **kwargs
+    completed = run(  # noqa: S602
+        command,
+        shell=True,
+        capture_output=True,
+        check=False,
+        encoding="cp437",
+        errors="replace",
+        env=env,
+        **kwargs,
     )
-    return {"exit_code": completed.returncode, "stdout": completed.stdout, "stderr": completed.stderr}
+    return {
+        "exit_code": completed.returncode,
+        "stdout": completed.stdout,
+        "stderr": completed.stderr,
+    }
 
 
 def test_entrypoint():
-    exit_status = os.system("sim-explorer --help")
+    exit_status = os.system("sim-explorer --help")  # noqa: S605, S607
     assert exit_status == 0
 
 
@@ -81,7 +96,7 @@ def test_run():
     case = "gravity"
     path = Path(__file__).parent / "data" / "BouncingBall3D"
     cases = path / "BouncingBall3D.cases"
-    res = path / (case + ".js5")
+    res = path / f"{case}.js5"
     log = Path(__file__).parent / "test_working_directory" / "test.log"
     if res.exists():
         res.unlink()
@@ -103,7 +118,7 @@ def test_Run():
     case = "restitution"
     path = Path(__file__).parent / "data" / "BouncingBall3D"
     cases = path / "BouncingBall3D.cases"
-    res = path / (case + ".js5")
+    res = path / f"{case}.js5"
     res2 = path / "restitutionAndGravity.js5"
     if res.exists():
         res.unlink()
