@@ -2,7 +2,7 @@ import ast
 from collections.abc import Callable, Iterable, Iterator
 from logging import warning
 from types import CodeType
-from typing import Any, cast
+from typing import Any, TypeVar, cast, overload
 
 import numpy as np
 
@@ -320,12 +320,38 @@ class Assertion:
         # print("kvargs", kvargs, self._syms[key], self.expr_get_symbols_functions(key))  # noqa: ERA001
         return self._eval(locals()[f"_{key}"], kvargs)
 
+    _VT = TypeVar("_VT", bound=TDataColumn | TValue)
+
+    @overload
+    def eval_series(
+        self,
+        key: str,
+        data: TDataTable | TTimeColumn,
+        ret: float,
+    ) -> tuple[TNumeric, TValue]: ...
+
+    @overload
+    def eval_series(
+        self,
+        key: str,
+        data: TDataTable | TTimeColumn,
+        ret: str | None = None,
+    ) -> tuple[TNumeric | TTimeColumn, TValue | TDataColumn]: ...
+
+    @overload
+    def eval_series(
+        self,
+        key: str,
+        data: TDataTable | TTimeColumn,
+        ret: Callable[[TDataColumn], _VT],
+    ) -> tuple[TTimeColumn, _VT]: ...
+
     def eval_series(  # noqa: C901, PLR0912, PLR0915
         self,
         key: str,
-        data: TDataTable | TDataColumn,
-        ret: float | str | Callable[[TDataColumn], TDataColumn | TValue] | None = None,
-    ) -> tuple[TNumeric | TTimeColumn, TValue | TDataColumn]:
+        data: TDataTable | TTimeColumn,
+        ret: float | str | Callable[[TDataColumn], _VT] | None = None,
+    ) -> tuple[TNumeric | TTimeColumn, TValue | TDataColumn] | tuple[TTimeColumn, _VT]:
         """Perform assertion on a (time) series.
 
         Args:
@@ -415,7 +441,7 @@ class Assertion:
         # Depending on the value of `ret`, either temporal logic, interpolation, or a user-defined callable function is applied.
         evaluation: tuple[TNumeric | TTimeColumn, TValue | TDataColumn]  # for results. Avoid too many returns
         if (ret is None and _temp == Temporal.A) or (isinstance(ret, str) and ret in ("A", "bool")):  # Always True?
-            _res = all(r for r in results)
+            _res = all(results)
             evaluation = (times[0] if _res else times[results.index(False)], _res)
 
         elif (ret is None and _temp == Temporal.F) or (isinstance(ret, str) and ret == "F"):  # Finally True?
