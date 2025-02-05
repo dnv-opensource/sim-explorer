@@ -1,0 +1,17 @@
+{
+header : {
+   xmlns : "http://opensimulationplatform.com/MSMI/OSPSystemStructure",
+   version : "0.1",
+   StartTime : 0.0,
+   Algorithm : "fixedStep",
+   BaseStepSize : 0.01,
+   },
+Simulators : {
+   simpleTable : {source: "../SimpleTable/SimpleTable.fmu", interpolate: True},
+   mobileCrane : {source: "MobileCrane.fmu" stepSize: 0.01,
+                  pedestal.pedestalMass: 5000.0, boom.boom[0]: 20.0},
+   },
+ConnectionsVariable : [
+   ["simpleTable", "outputs[0]", "mobileCrane", "pedestal.angularVelocity"],
+   ],
+}

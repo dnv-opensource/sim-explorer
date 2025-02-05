@@ -35,7 +35,7 @@ Cases files use the following general layout::
         case-specification-similar-to-base
     }
     # ... as many cases as desired
-}
+    }
 
 Header elements
 ---------------

@@ -24,6 +24,8 @@ rule_settings:
     - default
   disable: # A list of rule IDs Sourcery will never suggest.
     - inline-immediately-returned-variable
+    - no-conditionals-in-tests
+    - no-loop-in-tests
   rule_types:
     - refactoring
     - suggestion

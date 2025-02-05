@@ -2,8 +2,9 @@
    name        : '<simulation-exploration-name>',
    description : 'Simulation-exploration-description>',
    modelFile : "OspSystemStructure.xml", # this will often be ok
-   logLevel : 'FATAL', # possible levels: TRACE, DEBUG, INFO, WARNING, ERROR, FATAL
-   timeUnit  : "second", # possible units: ns, us, ms, sec, min, h, d, or extensions of that, like 'second'  
+   simulator : "OSP"
+   logLevel : 'fatal', # possible levels: trace, debug, info, warning, error, fatal
+   timeUnit  : "second", # possible units: ns, us, ms, sec, min, h, d, or extensions of that, like 'second'
    variables : {
       <variable-key> : [<model-name>, <variab-name>, <optional-description>],
       # ...

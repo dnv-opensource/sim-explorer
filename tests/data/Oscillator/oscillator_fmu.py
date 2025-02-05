@@ -1,3 +1,4 @@
+from typing import Any
 import numpy as np
 from component_model.model import Model
 from component_model.variable import Variable
@@ -18,17 +19,16 @@ class HarmonicOscillator(Model):
     See also `Wikipedia <https://en.wikipedia.org/wiki/Harmonic_oscillator>`_
     """
 
-    def __init__(self, k: float = 1.0, c: float = 0.0, m: float = 1.0, **kwargs):
+    def __init__(self, k: float = 1.0, c: float = 0.0, m: float = 1.0, **kwargs: Any):
         super().__init__(
-            "Oscillator", "A simple harmonic oscillator", "Siegfried Eisinger", **kwargs
+            "Oscillator", "A simple harmonic oscillator", "Siegfried Eisinger", **kwargs,
         )
-        """self.k = k
+        self.k = k
         self.c = c
         self.m = m
         self.x = np.array( (0,0,0), float)
         self.v = np.array( (0,0,0), float)
         self.f = np.array( (0,0,0), float)
-        """
         self._interface(k, c, m)
 
     def do_step(self, time: float, dt: float):

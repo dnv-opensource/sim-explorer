@@ -83,9 +83,7 @@ def test_from_override_set():
     assert observer.last_real_values(slave_index=slave_index, variable_references=variable_references) == [0.0]
     assert observer.last_integer_values(slave_index=slave_index, variable_references=variable_references) == [0]
     assert observer.last_boolean_values(slave_index=slave_index, variable_references=variable_references) == [False]
-    assert observer.last_string_values(slave_index=slave_index, variable_references=variable_references) == [
-        "".encode()
-    ]
+    assert observer.last_string_values(slave_index=slave_index, variable_references=variable_references) == [b""]
     assert manipulator.slave_real_values(
         slave_index=slave_index, variable_references=variable_references, values=[99.9]
     )
@@ -94,7 +92,7 @@ def test_from_override_set():
     assert observer.last_real_values(slave_index=slave_index, variable_references=variable_references) == [99.9]
 
 
-def test_from_override_set_multiple(test_dir):
+def test_from_override_set_multiple(test_dir: Path):
     if platform() == "Windows":
         execution = CosimExecution.from_ssp_file(ssp_path=f"{test_dir}/data/dp-ship")
         manipulator = CosimManipulator.create_override()
@@ -127,7 +125,7 @@ def test_from_override_set_multiple(test_dir):
         ]
 
 
-def test_load_scenario(test_dir):
+def test_load_scenario(test_dir: Path):
     if platform() == "Windows":
         execution = CosimExecution.from_ssp_file(ssp_path=f"{test_dir}/data/dp-ship")
         manipulator = CosimManipulator.create_scenario_manager()

@@ -1,3 +1,5 @@
+import sys
+
 from rich.console import Console
 from rich.panel import Panel
 
@@ -17,7 +19,7 @@ def reconstruct_assertion_name(result: AssertionResult) -> str:
     return f"{result.key}@{result.temporal.name}{time}({result.expression})"
 
 
-def log_assertion_results(results: dict[str, list[AssertionResult]]):
+def log_assertion_results(results: dict[str, list[AssertionResult]]) -> None:
     """
     Log test scenarios and results in a visually appealing bullet-point list format.
 
@@ -65,6 +67,10 @@ def log_assertion_results(results: dict[str, list[AssertionResult]]):
             f"{passed_tests}{padding}{failed_tests}", title="[bold blue]Test Summary[/bold blue]", border_style="blue"
         )
     )
+
+    # Exit with error code if any test failed
+    if total_failed > 0:
+        sys.exit(1)
 
 
 def group_assertion_results(results: list[AssertionResult]) -> dict[str, list[AssertionResult]]:
