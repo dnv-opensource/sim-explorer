@@ -8,7 +8,7 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
 -/-
 
 
-## [0.2.1] - 2025-01-30
+## [0.2.1] - 2025-02-05
 
 ### Added
 * Added CITATION.cff file
