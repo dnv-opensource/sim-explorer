@@ -1,0 +1,22 @@
+﻿sim\_explorer.json5
+===================
+
+.. automodule:: sim_explorer.json5
+   :members:
+   :exclude-members: Json5,
+   
+
+
+   
+   .. rubric:: Classes
+   .. autosummary::
+      :toctree:
+      :template: custom-class.rst
+   
+      Json5
+   
+   .. rubric:: Exceptions
+   .. autosummary::
+   
+      Json5Error
+   

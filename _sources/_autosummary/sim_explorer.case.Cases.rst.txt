@@ -1,0 +1,45 @@
+Cases
+=====
+
+.. currentmodule:: sim_explorer.case
+
+.. autoclass:: Cases
+   :members:
+   :show-inheritance:
+
+
+   
+   .. automethod:: __init__
+   
+   .. rubric:: Methods
+   .. autosummary::
+   
+      ~Cases.__init__
+      ~Cases.case_by_name
+      ~Cases.case_variable
+      ~Cases.disect_variable
+      ~Cases.get_case_variables
+      ~Cases.get_starts
+      ~Cases.info
+      ~Cases.read_cases
+      ~Cases.run_case
+   
+   
+
+
+   
+   
+   .. rubric:: Attributes
+   .. autosummary::
+   
+      ~Cases.assertion
+      ~Cases.base
+      ~Cases.file
+      ~Cases.js
+      ~Cases.results_print_type
+      ~Cases.simulator
+      ~Cases.spec
+      ~Cases.timefac
+      ~Cases.variables
+   
+   

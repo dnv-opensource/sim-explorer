@@ -1,0 +1,49 @@
+SystemInterface
+===============
+
+.. currentmodule:: sim_explorer.system_interface
+
+.. autoclass:: SystemInterface
+   :members:
+   :show-inheritance:
+
+
+   
+   .. automethod:: __init__
+   
+   .. rubric:: Methods
+   .. autosummary::
+   
+      ~SystemInterface.__init__
+      ~SystemInterface.action_step
+      ~SystemInterface.add_actions
+      ~SystemInterface.allowed_action
+      ~SystemInterface.comp_model_var
+      ~SystemInterface.component_id_from_name
+      ~SystemInterface.component_name_from_id
+      ~SystemInterface.default_initial
+      ~SystemInterface.do_action
+      ~SystemInterface.init_simulator
+      ~SystemInterface.match_components
+      ~SystemInterface.match_variables
+      ~SystemInterface.model_from_component
+      ~SystemInterface.pytype
+      ~SystemInterface.read_system_structure
+      ~SystemInterface.run_until
+      ~SystemInterface.update_refs_values
+      ~SystemInterface.variable_iter
+      ~SystemInterface.variable_name_from_ref
+      ~SystemInterface.variables
+   
+   
+
+
+   
+   
+   .. rubric:: Attributes
+   .. autosummary::
+   
+      ~SystemInterface.models
+      ~SystemInterface.path
+   
+   
