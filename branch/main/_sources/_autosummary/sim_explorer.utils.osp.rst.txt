@@ -1,0 +1,15 @@
+sim\_explorer.utils.osp
+=======================
+
+.. automodule:: sim_explorer.utils.osp
+   :members:
+
+
+   
+   .. rubric:: Functions
+   .. autosummary::
+   
+      make_osp_system_structure
+      osp_system_structure_from_js5
+      read_system_structure_xml
+   

@@ -1,0 +1,41 @@
+Json5
+=====
+
+.. currentmodule:: sim_explorer.json5
+
+.. autoclass:: Json5
+   :members:
+   :show-inheritance:
+
+
+   
+   .. automethod:: __init__
+   
+   .. rubric:: Methods
+   .. autosummary::
+   
+      ~Json5.__init__
+      ~Json5.check_valid_js
+      ~Json5.jspath
+      ~Json5.line
+      ~Json5.to_py
+      ~Json5.update
+      ~Json5.write
+   
+   
+
+
+   
+   
+   .. rubric:: Attributes
+   .. autosummary::
+   
+      ~Json5.comments
+      ~Json5.comments_eol
+      ~Json5.comments_ml
+      ~Json5.js5
+      ~Json5.js_py
+      ~Json5.lines
+      ~Json5.pos
+   
+   

@@ -1,0 +1,29 @@
+Results
+=======
+
+.. currentmodule:: sim_explorer.case
+
+.. autoclass:: Results
+   :members:
+   :show-inheritance:
+
+
+   
+   .. automethod:: __init__
+   
+   .. rubric:: Methods
+   .. autosummary::
+   
+      ~Results.__init__
+      ~Results.add
+      ~Results.inspect
+      ~Results.plot_time_series
+      ~Results.retrieve
+      ~Results.save
+   
+   
+
+
+   
+   
+   
