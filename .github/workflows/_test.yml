@@ -10,11 +10,7 @@ jobs:
       fail-fast: true
       matrix:
         os: [ubuntu-latest, windows-latest]
-        python:
-          - version: '3.10'
-          - version: '3.11'
-          - version: '3.12'
-          # - version: '3.13'
+        python: ['3.10', '3.11', '3.12']
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
