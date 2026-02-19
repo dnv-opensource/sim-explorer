@@ -138,7 +138,7 @@ files = [
     # "demos",
 ]
 exclude = [
-    "tests/data/",
+    "tests/data",
 ]
 check_untyped_defs = true
 disable_error_code = [
