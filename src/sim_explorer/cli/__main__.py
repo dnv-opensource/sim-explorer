@@ -11,14 +11,6 @@ from sim_explorer.case import Case, Cases
 from sim_explorer.cli.display_results import group_assertion_results, log_assertion_results
 from sim_explorer.utils.logging import configure_logging
 
-# Remove current directory from Python search path.
-# Only through this trick it is possible that the current CLI file 'sim_explorer.py'
-# carries the same name as the package 'sim_explorer' we import from in the next lines.
-# If we did NOT remove the current directory from the Python search path,
-# Python would start searching for the imported names within the current file (sim_explorer.py)
-# instead of the package 'sim_explorer' (and the import statements fail).
-sys.path = [path for path in sys.path if Path(path) != Path(__file__).parent]
-
 logger = logging.getLogger(__name__)
 
 
@@ -134,11 +126,12 @@ def main() -> None:
     log_level_file: str = args.log_level
     configure_logging(log_level_console, log_file, log_level_file)
 
-    cases_path: Path = Path(args.cases)
+    cases_file: Path = Path(args.cases)
     # Check whether sim-explorer cases file exists
-    if not cases_path.is_file():
-        logger.error(f"sim-explorer.py: File {cases_path} not found.")
+    if not cases_file.is_file():
+        logger.error(f"sim-explorer.py: File {cases_file} not found.")
         return
+
     logger.info(f"ARGS: {args}")
 
     try:
