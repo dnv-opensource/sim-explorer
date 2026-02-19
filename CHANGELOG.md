@@ -45,6 +45,12 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
 * Sphinx Documentation:
   * Sphinx conf.py: Removed ruff rule exception on file level
   * Sphinx conf.py: Updated year in copyright statement to 2026
+* VS Code Settings:
+  * VS Code Settings: (Recommended extensions): Removed 'njqdev.vscode-python-typehint' (Python Type Hint). Not maintained since 1 year, and the functionality is now covered by GitHub Copilot.
+VS Code Settings: (Recommended extensions): Added 'ms-python.debugpy' (Python Debugger).
+VS Code Settings: (Recommended extensions): Added 'ms-python.vscode-python-envs' (Python Environments).
+  * VS Code settings: (Recommended extensions): Removed deprecated IntelliCode extension and replaced it by GitHub Copilot Chat as recommended replacement.
+  * VS Code settings: Updated 'mypy-type-checker.reportingScope' to 'custom'.
 
 
 ## [0.2.1] - 2025-02-05
