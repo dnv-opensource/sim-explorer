@@ -65,7 +65,7 @@ dependencies = [
     "numpy>=2.3; python_version >= '3.13'",
     "matplotlib>=3.10",
     "pint>=0.24",
-    "sympy>=1.13",
+    "sympy>=1.14.0",
     "jsonpath-ng>=1.7.0",
     "libcosimpy==0.0.2",
     "fmpy>=0.3.21",
