@@ -96,7 +96,7 @@ Changelog = "https://github.com/dnv-opensource/sim-explorer/blob/main/CHANGELOG.
 
 [dependency-groups]
 dev = [
-    "pytest>=8.3",
+    "pytest>=9.0",
     "pytest-cov>=6.0",
     "ruff>=0.9.2",
     "pyright>=1.1.408",
