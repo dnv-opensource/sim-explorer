@@ -76,7 +76,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-modelTest = [
+test = [
     "fmpy>=0.3.21",
 ]
 rest = [
