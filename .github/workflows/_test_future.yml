@@ -1,4 +1,4 @@
-name: Unit Tests (py313)
+name: Unit Tests (py315)
 # Test also with Python 3.15 (experimental; workflow will not fail on error.)
 
 on: workflow_call
