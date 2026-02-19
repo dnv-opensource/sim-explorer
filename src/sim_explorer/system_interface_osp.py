@@ -16,14 +16,14 @@ class SystemInterfaceOSP(SystemInterface):
     """Implements the SystemInterface as a OSP.
 
     Args:
-       structure_file (Path): Path to system model definition file
-       name (str)="System": Possibility to provide an explicit system name (if not provided by system file)
-       description (str)="": Optional possibility to provide a system description
-       log_level (str) = 'fatal': Per default the level is set to 'fatal',
-          but it can be set to 'trace', 'debug', 'info', 'warning', 'error' or 'fatal' (e.g. for debugging purposes)
+        structure_file (Path): Path to system model definition file
+        name (str)="System": Possibility to provide an explicit system name (if not provided by system file)
+        description (str)="": Optional possibility to provide a system description
+        log_level (str) = 'fatal': Per default the level is set to 'fatal',
+            but it can be set to 'trace', 'debug', 'info', 'warning', 'error' or 'fatal' (e.g. for debugging purposes)
         **kwargs: Optional possibility to supply additional keyword arguments:
 
-            * full_simulator_available=True to overwrite the oposite when called from a superclass
+    Note: This class sets full_simulator_available=True , in contrast to the superclass where it is by default value set to False.
     """
 
     def __init__(
