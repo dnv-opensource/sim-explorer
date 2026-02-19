@@ -61,8 +61,8 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "numpy>=1.26; python_version < '3.13'",
-    "numpy>=2.2; python_version >= '3.13'",
+    "numpy>=2.3; python_version < '3.13'",
+    "numpy>=2.3; python_version >= '3.13'",
     "matplotlib>=3.10",
     "pint>=0.24",
     "sympy>=1.13",
