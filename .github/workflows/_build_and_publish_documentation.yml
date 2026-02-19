@@ -20,9 +20,9 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
-          cache-dependency-glob: "uv.lock"
+          cache-dependency-glob: 'uv.lock'
       - name: Install the project
-        run: uv sync -U
+        run: uv sync --frozen
       - name: Print debugging information
         run: |
           echo "github.ref:" ${{github.ref}}
