@@ -71,7 +71,7 @@ dependencies = [
     "fmpy>=0.3.21",
     "component-model>=0.1.0",
     "plotly>=6.5",
-    "pydantic>=2.10.3",
+    "pydantic>=2.12",
     "rich>=13.9.4",
 ]
 
