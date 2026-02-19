@@ -8,6 +8,10 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
 * -/-
 
 
+### Dependencies
+* Updated to sphinx>=9.0
+
+
 ## [0.2.2] - 2026-02-19
 
 ### Removed
