@@ -8,7 +8,7 @@ jobs:
     name: ruff format
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
@@ -24,7 +24,7 @@ jobs:
     name: ruff check
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
@@ -40,7 +40,7 @@ jobs:
     name: pyright
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
@@ -56,7 +56,7 @@ jobs:
     name: mypy
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:

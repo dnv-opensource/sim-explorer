@@ -13,7 +13,7 @@ jobs:
     environment: release
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           # Fetch the whole history to prevent unrelated history errors
           fetch-depth: 0
