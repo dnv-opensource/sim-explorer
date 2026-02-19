@@ -10,9 +10,7 @@ jobs:
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       matrix:
-        platform:
-          - runner: ubuntu-latest
-          - runner: windows-latest
+        os: [ubuntu-latest, windows-latest]
         python:
           - version: '3.13.0-alpha - 3.13.0'
             uvpy: '3.13'
