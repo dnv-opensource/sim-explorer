@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<OspSystemStructure xmlns="http://opensimulationplatform.com/MSMI/OSPSystemStructure"
-                    version="0.1">
+<OspSystemStructure xmlns="http://opensimulationplatform.com/MSMI/OSPSystemStructure" version="0.1">
     <BaseStepSize>0.01</BaseStepSize>
+    <Algorithm>fixedStep</Algorithm>
     <Simulators>
         <Simulator name="bb" source="BouncingBall3D.fmu">
         </Simulator>
