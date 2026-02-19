@@ -80,7 +80,7 @@ modelTest = [
     "fmpy>=0.3.21",
 ]
 rest = [
-    "docutils>=0.21",
+    "docutils>=0.22.4",
 ]
 editor = [
     "thonny>=4.1",
