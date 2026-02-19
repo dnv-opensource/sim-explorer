@@ -5,14 +5,13 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
 
 ## [Unreleased]
 
--/-
+* -/-
 
+
+## [0.2.2] - 2026-02-19
 
 ### Changed
 * GitHub Workflows:
-  * _test_future.yml: Updated name of test_future job to 'test315'
-  * _test_future.yml: Updated Python specifier in comment to 3.15
-  * _test_future.yml: Updated Python specifier in workflow name to py315
   * _test_future.yml: Updated Python version in test_future to 3.15.0-alpha - 3.15.0
   * _test.yml: Updated Python versions in test matrix to 3.11, 3.12, 3.13, 3.14
   * Added 'name: Checkout code' to uses of 'actions/checkout', for better readability and consistency across workflow files.
@@ -27,12 +26,12 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
   * Replaced 'Run twine check' with 'Check build artifacts' in workflow step names, to better reflect the purpose of the step.
   * Updated the syntax used for the OS and Python matrix in test workflows.
 * pyproject.toml:
-  * pyproject.toml: Added required-environments to uv.tools (windows, linux)
-  * pyproject.toml: Removed deprecated mypy plugin 'numpy.typing.mypy_plugin'
-  * pyproject.toml: Removed deprecated pyright setting 'reportShadowedImports'
-  * pyproject.toml: Removed leading carets and trailing slashes from 'exclude' paths
-  * pyproject.toml: Removed trailing slashes from 'exclude' paths
-  * pyproject.toml: Updated supported Python versions to 3.11, 3.12, 3.13, 3.14
+  * Added required-environments to uv.tools (windows, linux)
+  * Removed deprecated mypy plugin 'numpy.typing.mypy_plugin'
+  * Removed deprecated pyright setting 'reportShadowedImports'
+  * Removed leading carets and trailing slashes from 'exclude' paths
+  * Removed trailing slashes from 'exclude' paths
+  * Updated supported Python versions to 3.11, 3.12, 3.13, 3.14
   * Removed upper version constraint from required Python version, i.e. changed the "requires-python" field from ">= 3.11, < 3.15" to ">= 3.11". <br>
     Detailed background and reasoning in this good yet long post by Henry Schreiner:
     https://iscinumpy.dev/post/bound-version-constraints/#pinning-the-python-version-is-special <br>
@@ -46,25 +45,24 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
   * Sphinx conf.py: Removed ruff rule exception on file level
   * Sphinx conf.py: Updated year in copyright statement to 2026
 * VS Code Settings:
-  * VS Code Settings: (Recommended extensions): Removed 'njqdev.vscode-python-typehint' (Python Type Hint). Not maintained since 1 year, and the functionality is now covered by GitHub Copilot.
-VS Code Settings: (Recommended extensions): Added 'ms-python.debugpy' (Python Debugger).
-VS Code Settings: (Recommended extensions): Added 'ms-python.vscode-python-envs' (Python Environments).
-  * VS Code settings: (Recommended extensions): Removed deprecated IntelliCode extension and replaced it by GitHub Copilot Chat as recommended replacement.
-  * VS Code settings: Updated 'mypy-type-checker.reportingScope' to 'custom'.
+  * Recommended extensions:
+    * Removed 'njqdev.vscode-python-typehint' (Python Type Hint). Not maintained since 1 year, and the functionality is now covered by GitHub Copilot.
+    * Added 'ms-python.debugpy' (Python Debugger).
+    * Added 'ms-python.vscode-python-envs' (Python Environments).
+    * Removed deprecated IntelliCode extension and replaced it by GitHub Copilot Chat as recommended replacement.
+  * Updated 'mypy-type-checker.reportingScope' to 'custom'.
 * .pre-commit-config.yaml: Updated id of ruff to ruff-check
 * .sourcery.yaml: Updated the lowest Python version the project supports to '3.11'
 * ruff.toml: Updated target Python version to "py311"
 
-
 ### Dependencies
-* .pre-commit-config.yaml: Updated rev of pre-commit-hooks to v6.0.0
-* .pre-commit-config.yaml: Updated rev of ruff-pre-commit to v0.15.1
 * Updated to docutils>=0.22.4
 * Updated to furo>=2025.12
 * Updated to jupyter>=1.1.1
+* Updated to libcosimpy>=0.0.5
 * Updated to mypy>=1.19.1
 * Updated to myst-parser>=5.0
-* Updated to numpy>=2.3
+* Updated to numpy>=2.3  (removed split version specifiers)
 * Updated to plotly>=6.5
 * Updated to pre-commit>=4.5
 * Updated to pydantic>=2.12
@@ -77,6 +75,9 @@ VS Code Settings: (Recommended extensions): Added 'ms-python.vscode-python-envs'
 * Updated to sphinx-autodoc-typehints>=3.6
 * Updated to sphinxcontrib-mermaid>=2.0
 * Updated to sympy>=1.14.0
+* .pre-commit-config.yaml:
+  * Updated rev of pre-commit-hooks to v6.0.0
+  * Updated rev of ruff-pre-commit to v0.15.1
 * GitHub Workflows:
   * Updated 'checkout' action to v5
   * Updated 'download-artifact' action to v5
@@ -173,7 +174,8 @@ New Assertions release:
 
 
 <!-- Markdown link & img dfn's -->
-[unreleased]: https://github.com/dnv-opensource/sim-explorer/compare/v0.2.1...HEAD
+[unreleased]: https://github.com/dnv-opensource/sim-explorer/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/dnv-opensource/sim-explorer/releases/tag/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/dnv-opensource/sim-explorer/releases/tag/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/dnv-opensource/sim-explorer/releases/tag/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/dnv-opensource/sim-explorer/releases/tag/v0.0.1...v0.1.0
