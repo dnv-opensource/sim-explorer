@@ -601,9 +601,7 @@ class Cases:
         "base",
         "file",
         "js",
-        "results_print_type",
         "simulator",
-        "spec",
         "timefac",
         "variables",
     )

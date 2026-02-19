@@ -533,14 +533,20 @@ class Assertion:
         """
 
         def do_report(key: str) -> AssertionResult:
-            time_arg = self._temporal[key].get("args", None)
+            time_arg: list[Any] | None = self._temporal[key].get("args", None)
+            time: int | float | None = (
+                time_arg[0] if time_arg and len(time_arg) > 0 and isinstance(time_arg[0], (int, float)) else None
+            )
+            temporal: Temporal | None = self._temporal[key].get("type", None)
+            if temporal is None:
+                raise ValueError(f"Temporal for assertion {key} is not defined.")
             return AssertionResult(
                 key=key,
                 expression=self._expr[key],
-                time=(time_arg[0] if len(time_arg) > 0 and (isinstance(time_arg[0], int | float)) else None),
+                time=time,
                 result=self._assertions[key].get("passed", False),
                 description=self._description[key],
-                temporal=self._temporal[key].get("type", None),
+                temporal=temporal,
                 case=self._assertions[key].get("case", None),
                 details="No details",
             )

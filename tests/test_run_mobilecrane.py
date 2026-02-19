@@ -136,13 +136,13 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
         assert isinstance(cases.simulator, SystemInterfaceOSP)
         cases.simulator.manipulator.slave_real_values(
             slave_index=0,
-            variable_references=(
+            variable_references=[
                 get_ref("pedestal_boom[0]"),
                 get_ref("boom_boom[0]"),
                 get_ref("boom_boom[1]"),
                 get_ref("rope_boom[0]"),
                 get_ref("dLoad"),
-            ),
+            ],
             values=(3.0, 8.0, 0.7854, 1e-6, 50.0),
         )
 
@@ -188,7 +188,7 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
     print("ACT", static.act_get[-1][0])
     assert static.act_get[-1][0] == ("T", "mobileCrane", (10, 11, 12))
     _ = sim.init_simulator()
-    assert sim.observer.last_real_values(slave_index=0, variable_references=(10, 11, 12)) == [
+    assert sim.observer.last_real_values(slave_index=0, variable_references=[10, 11, 12]) == [
         0.0,
         0.0,
         0.0,

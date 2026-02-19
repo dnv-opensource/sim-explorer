@@ -7,7 +7,7 @@ Currently only Open Simulation Platform (OSP) is supported.
 from collections.abc import Callable, Generator, Sequence
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, SupportsFloat, cast
 
 import numpy as np
 
@@ -574,8 +574,8 @@ class SystemInterface:
         cvar: str,
         cvar_info: dict[str, Any],
         values: tuple[TValue, ...] | None,
-        at_time: float,
-        stoptime: float,
+        at_time: SupportsFloat,
+        stoptime: SupportsFloat,
         rng: tuple[int, ...] | None = None,
     ) -> None:
         """Add specified actions to the provided action dict.
@@ -588,8 +588,8 @@ class SystemInterface:
             cvar_info (dict): dict of variable info: {model, instances, names, refs, type, causality, variability}
                 see Cases.get_case_variables() for details.
             values (TValue) = None: Optional values (mandatory for 'set' actions)
-            at_time (float): time at which actions shall be triggered (may be scaled)
-            stoptime (float): simulation stop time (needed to handle 'step' actions)
+            at_time (SupportsFloat): time at which actions shall be triggered (may be scaled)
+            stoptime (SupportsFloat): simulation stop time (needed to handle 'step' actions)
             rng (Iterable)=None: Optional range specification for compound variables (indices to address)
 
         Returns
@@ -599,7 +599,18 @@ class SystemInterface:
             where value-list and rng are only present for set actions
             at-time=-1 for get actions denote step actions
         """
-        assert isinstance(at_time, float | int), f"Actions require a defined time as float. Found {at_time}"
+        try:
+            at_time = float(at_time)
+        except Exception as e:
+            raise ValueError(
+                f"Parameter `at_time` must be a float. Value {at_time} could not be converted to float."
+            ) from e
+        try:
+            stoptime = float(stoptime)
+        except Exception as e:
+            raise ValueError(
+                f"Parameter `stoptime` must be a float. Value {stoptime} could not be converted to float."
+            ) from e
         if at_time not in actions:
             actions[at_time] = []  # make sure that there is a suitable slot
         for comp in cvar_info["instances"]:
@@ -619,7 +630,7 @@ class SystemInterface:
                 assert all(len(args) == 3 for t in actions for args in actions[t]), (  # noqa: PLR2004
                     "Get actions must be tuples of (cvar, comp, refs)"
                 )
-                for time in np.arange(start=at_time, stop=stoptime, step=at_time):
+                for time in np.linspace(start=at_time, stop=stoptime, num=int(stoptime / at_time) + 1):
                     self._add_get(
                         actions=cast("dict[float, list[TGetActionArgs]]", actions),
                         time=time,

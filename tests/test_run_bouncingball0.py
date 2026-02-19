@@ -66,12 +66,12 @@ def test_step_by_step_interface():
     # print(f"Variables: {sim.get_variables( 0, as_numbers = False)}")
     # assert sim.get_variables(0)["e"] == {"reference": 6, "type": 0, "causality": 1, "variability": 2}
     _ = sim.init_simulator()
-    sim.manipulator.slave_real_values(slave_index=0, variable_references=(6,), values=(0.35,))
+    sim.manipulator.slave_real_values(slave_index=0, variable_references=[6], values=(0.35,))
     for t in np.linspace(start=1, stop=1e9, num=1):
         _ = sim.simulator.simulate_until(t)
-        assert sim.observer.last_real_values(slave_index=0, variable_references=(0, 1, 6)) == [0.01, 0.99955855, 0.35]
+        assert sim.observer.last_real_values(slave_index=0, variable_references=[0, 1, 6]) == [0.01, 0.99955855, 0.35]
         if t == int(0.11 * 1e9):
-            assert sim.observer.last_real_values(slave_index=0, variable_references=(0, 1, 6)) == [
+            assert sim.observer.last_real_values(slave_index=0, variable_references=[0, 1, 6]) == [
                 0.11,
                 0.9411890500000001,
                 0.35,
