@@ -51,6 +51,9 @@ VS Code Settings: (Recommended extensions): Added 'ms-python.debugpy' (Python De
 VS Code Settings: (Recommended extensions): Added 'ms-python.vscode-python-envs' (Python Environments).
   * VS Code settings: (Recommended extensions): Removed deprecated IntelliCode extension and replaced it by GitHub Copilot Chat as recommended replacement.
   * VS Code settings: Updated 'mypy-type-checker.reportingScope' to 'custom'.
+* .pre-commit-config.yaml: Updated id of ruff to ruff-check
+* .sourcery.yaml: Updated the lowest Python version the project supports to '3.11'
+* ruff.toml: Updated target Python version to "py311"
 
 
 ## [0.2.1] - 2025-02-05
