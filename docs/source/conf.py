@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path("../../src").absolute()))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "sim-explorer"
-copyright = "2024, DNV AS. All rights reserved."
+copyright = "2026, DNV AS. All rights reserved."
 author = "Siegfried Eisinger, DNV Simulation Technology Team, SEACo project team"
 
 # The full version, including alpha/beta/rc tags
