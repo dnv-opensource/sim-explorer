@@ -130,7 +130,6 @@ sim-explorer = "sim_explorer.cli.__main__:main"
 
 [tool.mypy]
 plugins = [
-    "numpy.typing.mypy_plugin",
 ]
 mypy_path = "stubs"
 files = [
