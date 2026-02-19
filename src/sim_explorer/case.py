@@ -1,6 +1,19 @@
-r"""
-Python module to manage cases
-with respect to reading \*.cases files, running cases and storing results.
+r"""sim_explorer module for definition and execution of simulation experiments.
+
+This module serves the definition and execution of simulation experiments, defined as 'cases'.
+With respect to DoE or "smart testing", this module serves the preparation of start conditions.
+
+Main functionalities are:
+* Read and compile the case definitions from a \*.cases configuration file
+Note that Json5 is restriced to 'ordered keys' and 'unique keys within an object'
+* Set the start variables for a given case
+* Run cases
+* Manipulate variables according to conditions during the simulation run
+* Save requested variables at given communication points during a simulation run
+* Collect and store results
+* Check the validity of results when saving variables
+
+Note: The classes Case and Cases should be kept together in this file to avoid circular references.
 """
 
 # pyright: reportUnnecessaryTypeIgnoreComment=false
@@ -10,7 +23,7 @@ from __future__ import annotations
 import copy
 import logging
 from collections.abc import Callable, Generator, Iterable, Iterator, Sequence
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar, cast, overload
 
@@ -38,20 +51,6 @@ if TYPE_CHECKING:
         TValue,
     )
 logger = logging.getLogger(__name__)
-
-
-"""
-sim_explorer module for definition and execution of simulation experiments
-* read and compile the case definitions from configuration file
-  Note that Json5 is here restriced to 'ordered keys' and 'unique keys within an object'
-* set the start variables for a given case
-* manipulate variables according to conditions during the simulation run
-* save requested variables at given communication points during a simulation run
-* check the validity of results when saving variables
-
-With respect to MVx in general, this module serves the preparation of start conditions for smart testing.
-Note: The classes Case and Cases should be kept together in this file to avoid circular references.
-"""
 
 
 class Case:
@@ -140,7 +139,7 @@ class Case:
             if nxt.parent is None:
                 break
             nxt = nxt.parent
-        while len(h):
+        while h:
             yield h.pop()
 
     def case_by_name(self, name: str) -> Case | None:
@@ -202,7 +201,7 @@ class Case:
                 for i in range(len(at) - 1, -1, -1):
                     try:
                         typ = Temporal[at[i]]
-                    except KeyError:  # noqa: PERF203
+                    except KeyError:
                         pass
                     else:
                         if at[i + 1 :].strip() == "":
@@ -567,7 +566,7 @@ class Case:
                 time=time,
             )
 
-            if len(act_step):  # there are step-always actions
+            if act_step:  # there are step-always actions
                 for cvar, comp, _refs, a in act_step:
                     assert self.res is not None
                     self.res.add(
@@ -1021,12 +1020,10 @@ class Results:
         results: dict[str, dict[str, Any]] = {
             "header": {
                 "case": self.case.name,
-                "dateTime": datetime.now(tz=timezone.utc).isoformat(),
+                "dateTime": datetime.now(tz=UTC).isoformat(),
                 "cases": self.case.cases.js.jspath(path="$.header.name", typ=str, error_msg=True),
                 "file": relative_path(p1=Path(self.case.cases.file), p2=self.file),
-                "casesDate": datetime.fromtimestamp(
-                    timestamp=self.case.cases.file.stat().st_mtime, tz=timezone.utc
-                ).isoformat(),
+                "casesDate": datetime.fromtimestamp(timestamp=self.case.cases.file.stat().st_mtime, tz=UTC).isoformat(),
                 "timeUnit": self.case.cases.js.jspath(path="$.header.timeUnit", typ=str) or "sec",
                 "timeFactor": self.case.cases.timefac,
             }
@@ -1246,7 +1243,7 @@ class Results:
             assert all(type[v] is type[_values[0]] for v in _values), (
                 f"values of variable {label} have non-uniform types: {_values}"
             )
-            values: TDataColumn = cast(TDataColumn, _values)
+            values: TDataColumn = cast("TDataColumn", _values)
             _ = plt.plot(times, values, label=_cv, linewidth=3)
 
         if len(title):
