@@ -56,6 +56,29 @@ VS Code Settings: (Recommended extensions): Added 'ms-python.vscode-python-envs'
 * ruff.toml: Updated target Python version to "py311"
 
 
+### Dependencies
+* .pre-commit-config.yaml: Updated rev of pre-commit-hooks to v6.0.0
+* .pre-commit-config.yaml: Updated rev of ruff-pre-commit to v0.15.1
+* Updated to docutils>=0.22.4
+* Updated to furo>=2025.12
+* Updated to jupyter>=1.1.1
+* Updated to mypy>=1.19.1
+* Updated to myst-parser>=5.0
+* Updated to numpy>=2.3
+* Updated to plotly>=6.5
+* Updated to pre-commit>=4.5
+* Updated to pydantic>=2.12
+* Updated to pyright>=1.1.408
+* Updated to pytest-cov>=7.0
+* Updated to pytest>=9.0
+* Updated to ruff>=0.15.1
+* Updated to sourcery>=1.43.0
+* Updated to sphinx-argparse-cli>=1.20.1
+* Updated to sphinx-autodoc-typehints>=3.6
+* Updated to sphinxcontrib-mermaid>=2.0
+* Updated to sympy>=1.14.0
+
+
 ## [0.2.1] - 2025-02-05
 
 ### Added
