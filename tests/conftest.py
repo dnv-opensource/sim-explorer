@@ -1,3 +1,5 @@
+"""Test configuration and fixtures."""
+
 import logging
 import os
 from pathlib import Path
@@ -53,7 +55,8 @@ def _remove_output_dirs_and_files() -> None:
     for pattern in output_files:
         for file in Path.cwd().glob(pattern):
             _file = Path(file)
-            _file.unlink(missing_ok=True)
+            if _file.is_file():
+                _file.unlink(missing_ok=True)
 
 
 @pytest.fixture(autouse=True)

@@ -1,3 +1,4 @@
+# pyright: reportPrivateUsage=false
 import sys
 from argparse import ArgumentError
 from dataclasses import dataclass, field
@@ -6,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from sim_explorer.cli import __main__
-from sim_explorer.cli.__main__ import _argparser, main  # pyright: ignore[reportPrivateUsage]
+from sim_explorer.cli.__main__ import _argparser, main
 
 # *****Test commandline interface (CLI)************************************************************
 
@@ -78,10 +79,7 @@ class ConfigureLoggingArgs:
         ([], ArgumentError),
         (["test_config_file"], ConfigureLoggingArgs()),
         (["test_config_file", "-q"], ConfigureLoggingArgs(log_level_console="ERROR")),
-        (
-            ["test_config_file", "--quiet"],
-            ConfigureLoggingArgs(log_level_console="ERROR"),
-        ),
+        (["test_config_file", "--quiet"], ConfigureLoggingArgs(log_level_console="ERROR")),
         (["test_config_file", "-v"], ConfigureLoggingArgs(log_level_console="INFO")),
         (
             ["test_config_file", "--verbose"],
