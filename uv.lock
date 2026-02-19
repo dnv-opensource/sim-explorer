@@ -3055,11 +3055,11 @@ dependencies = [
 editor = [
     { name = "thonny" },
 ]
-modeltest = [
-    { name = "fmpy" },
-]
 rest = [
     { name = "docutils" },
+]
+test = [
+    { name = "fmpy" },
 ]
 
 [package.dev-dependencies]
@@ -3088,7 +3088,7 @@ requires-dist = [
     { name = "component-model", specifier = ">=0.1.0" },
     { name = "docutils", marker = "extra == 'rest'", specifier = ">=0.22.4" },
     { name = "fmpy", specifier = ">=0.3.21" },
-    { name = "fmpy", marker = "extra == 'modeltest'", specifier = ">=0.3.21" },
+    { name = "fmpy", marker = "extra == 'test'", specifier = ">=0.3.21" },
     { name = "jsonpath-ng", specifier = ">=1.7.0" },
     { name = "libcosimpy", specifier = ">=0.0.5" },
     { name = "matplotlib", specifier = ">=3.10" },
@@ -3100,7 +3100,7 @@ requires-dist = [
     { name = "sympy", specifier = ">=1.14.0" },
     { name = "thonny", marker = "extra == 'editor'", specifier = ">=4.1" },
 ]
-provides-extras = ["modeltest", "rest", "editor"]
+provides-extras = ["test", "rest", "editor"]
 
 [package.metadata.requires-dev]
 dev = [
