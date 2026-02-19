@@ -50,7 +50,7 @@ def arrays_equal(
 
 
 def do_show(time: list[float], z: list[float], v: list[float]):
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     _ = ax.plot(time, z, label="z-position")
     _ = ax.plot(time, v, label="z-speed")
     _ = ax.legend()

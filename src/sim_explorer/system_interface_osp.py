@@ -91,7 +91,7 @@ class SystemInterfaceOSP(SystemInterface):
     def do_action(self, time: int | float, act_info: TActionArgs, typ: type) -> bool:
         """Do the action described by the tuple using OSP functions."""
         if len(act_info) == 4:  # set action  # noqa: PLR2004
-            cvar, comp, refs, values = act_info
+            _cvar, comp, refs, values = act_info
             _comp = self.component_id_from_name(comp)
             if time <= 0:  # initial setting
                 func = self._action_func(0, typ)
@@ -99,7 +99,7 @@ class SystemInterfaceOSP(SystemInterface):
 
             return self._action_func(1, typ)(_comp, refs, values)
         # get action
-        cvar, comp, refs = act_info
+        _cvar, comp, refs = act_info
         _comp = self.component_id_from_name(comp)
         assert time >= 0, "Get actions for all communication points shall be pre-compiled"
         return self._action_func(2, typ)(_comp, refs)
@@ -109,7 +109,7 @@ class SystemInterfaceOSP(SystemInterface):
         so that it can be called at communication points.
         """
         assert len(act_info) == 3, f"Exactly 3 arguments expected. Found {act_info}"  # noqa: PLR2004
-        cvar, comp, refs = act_info
+        _cvar, comp, refs = act_info
         _comp = self.component_id_from_name(comp)
         return partial(self._action_func(act_type=2, var_type=typ), _comp, refs)
 

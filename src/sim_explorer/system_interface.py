@@ -145,7 +145,7 @@ class SystemInterface:
                     if m == model and k not in collect:
                         collect.append(k)
         assert model is not None, f"No model match for {comps}"
-        assert len(collect), f"No component match for {comps}"
+        assert collect, f"No component match for {comps}"
         return (model, tuple(collect))
 
     def _get_variables(self, source: Path) -> dict[str, dict[int | str, Any]]:
@@ -608,7 +608,7 @@ class SystemInterface:
                     "Get actions must be tuples of (cvar, comp, refs)"
                 )
                 self._add_get(
-                    actions=cast(dict[float, list[TGetActionArgs]], actions),
+                    actions=cast("dict[float, list[TGetActionArgs]]", actions),
                     time=at_time,
                     cvar=cvar,
                     comp=comp,
@@ -621,7 +621,7 @@ class SystemInterface:
                 )
                 for time in np.arange(start=at_time, stop=stoptime, step=at_time):
                     self._add_get(
-                        actions=cast(dict[float, list[TGetActionArgs]], actions),
+                        actions=cast("dict[float, list[TGetActionArgs]]", actions),
                         time=time,
                         cvar=cvar,
                         comp=comp,
@@ -635,7 +635,7 @@ class SystemInterface:
                     "Get actions must be tuples of (cvar, comp, refs, values)"
                 )
                 self._add_set(
-                    actions=cast(dict[float, list[TSetActionArgs]], actions),
+                    actions=cast("dict[float, list[TSetActionArgs]]", actions),
                     time=at_time,
                     cvar=cvar,
                     comp=comp,

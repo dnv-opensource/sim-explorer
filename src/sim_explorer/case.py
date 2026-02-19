@@ -30,6 +30,7 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast, overload
 import matplotlib.pyplot as plt
 import numpy as np
 
+from sim_explorer.assertion import Assertion
 from sim_explorer.exceptions import CaseInitError
 from sim_explorer.json5 import Json5
 from sim_explorer.models import Temporal
@@ -626,7 +627,6 @@ class Cases:
         self.timefac: float = self._get_time_unit() * 1e9  # internally OSP uses pico-seconds as integer!
         # read the 'variables' section and generate dict { alias : { (instances), (variables)}}:
         self.variables: dict[str, dict[str, Any]] = self.get_case_variables()
-        from sim_explorer.assertion import Assertion
 
         self.assertion: Assertion = Assertion()
         self.assertion.register_vars(self.variables)  # register variables as symbols
@@ -1153,7 +1153,7 @@ class Results:
                                     cont[ident]["range"][1] = time  # update upper bound
                                     cont[ident]["len"] += 1  # update length
                                 else:  # new entry
-                                    v_name, v_info, v_range = self.case.cases.disect_variable(v, err_level=0)
+                                    v_name, v_info, _v_range = self.case.cases.disect_variable(v, err_level=0)
                                     assert len(v_name), f"Variable {v} not found in cases spec {self.case.cases.file}"
                                     cont[ident] = {
                                         "len": 1,

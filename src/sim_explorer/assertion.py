@@ -1,6 +1,7 @@
 import ast
+import logging
 from collections.abc import Callable, Iterable, Iterator
-from logging import warning
+from importlib import import_module
 from types import CodeType
 from typing import Any, TypeVar, cast, overload
 
@@ -16,6 +17,8 @@ from sim_explorer.utils.types import (
     TTimeColumn,
     TValue,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class Assertion:
@@ -242,6 +245,7 @@ class Assertion:
     def assertions(
         self,
         key: str,
+        *,
         res: bool | None = None,
         details: str | None = None,
         case_name: str | None = None,
@@ -270,8 +274,6 @@ class Assertion:
 
     def make_locals(self, loc: dict[str, Any]) -> dict[str, Any]:
         """Adapt the locals with 'allowed' functions."""
-        from importlib import import_module
-
         for modulename, funclist in self._imports.items():
             module = import_module(modulename)
             for func in funclist:
@@ -422,9 +424,9 @@ class Assertion:
         if _times:
             assert all(isinstance(t, TNumeric) for t in _times), f"Time data in eval_series is not numeric: {_times}"
             if not all(isinstance(t, type(_times[0])) for t in _times):
-                warning("Time data in eval_series has varying type. All time values will be converted to float.")
+                logger.warning("Time data in eval_series has varying type. All time values will be converted to float.")
                 _times = [float(t) for t in _times]
-            times = cast(TTimeColumn, list(_times))
+            times = cast("TTimeColumn", list(_times))
 
         # Results: Assert that all values in temporary list `_results` are of a valid type and of the same type,
         # then cast the temporary list `_results` into list `results` of invariant type `TDataColumn`.
@@ -433,9 +435,11 @@ class Assertion:
                 f"Result data in eval_series is of an invalid type: {_results}"
             )
             if not all(isinstance(r, type(_results[0])) for r in _results):
-                warning("Result data in eval_series has varying type. All result values will be converted to bool.")
+                logger.warning(
+                    "Result data in eval_series has varying type. All result values will be converted to bool."
+                )
                 _results = [bool(r) for r in _results]
-            results = cast(TDataColumn, list(_results))
+            results = cast("TDataColumn", list(_results))
 
         # Apply an evaluation metric on the result values, specified through parameter `ret`.
         # Depending on the value of `ret`, either temporal logic, interpolation, or a user-defined callable function is applied.
@@ -486,7 +490,6 @@ class Assertion:
         """Perform assert action 'key' on data of 'result' object."""
         assert isinstance(key, str), f"Key should be a string. Found {key}"
         assert key in self._temporal, f"Assertion key {key} not found"
-        from sim_explorer.case import Results
 
         assert isinstance(result, Results), f"Results object expected. Found {result}"
         inst: list[str] = []
@@ -498,7 +501,7 @@ class Assertion:
             assert isinstance(_var, str), f"Variable should be a string. Found {_var}"
             inst.append(_inst)
             var.append(_var)
-        assert len(var), "No variables to retrieve"
+        assert var, "No variables to retrieve"
         if var[0] == "t":  # the independent variable is always the first column in data
             _ = inst.pop(0)
             _ = var.pop(0)

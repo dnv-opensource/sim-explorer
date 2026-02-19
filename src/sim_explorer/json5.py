@@ -184,7 +184,7 @@ class Json5:
         """
 
         def _re(txt: str) -> str:
-            return "".join("\\" + ch if ch in ("*",) else ch for ch in txt)
+            return "".join("\\" + ch if ch == "*" else ch for ch in txt)
 
         js5_without_comments: str = js5 or self.js5
         comments: dict[int, str] = {}
@@ -393,7 +393,7 @@ class Json5:
             self.pos += m.start()
             v = self._object() if m.group() == "{" else self._list()
             m = re.search(r"[,\}\]]", self.js5[self.pos :])
-            cr, cc = self._get_line_number(self.pos)
+            _cr, _cc = self._get_line_number(self.pos)
             assert m is not None, self._msg(f"End of value or end of object/list '{str(v)[:50]}..' expected")
         elif m.group() in ("]", "}", ","):  # any allowed value separator (also last list/object value)
             v = self.js5[self.pos : self.pos + m.start()].strip() if q2 < 0 else self.js5[q1 + 1 : q2 - 1]

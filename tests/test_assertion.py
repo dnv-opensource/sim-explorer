@@ -2,6 +2,7 @@
 
 import ast
 from collections.abc import Sequence
+from importlib import import_module
 from math import cos, sin, sqrt
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -29,7 +30,6 @@ _y = [1.0 * cos(t) for t in _t]
 
 def test_globals_locals():
     """Test the usage of the globals and locals arguments within exec."""
-    from importlib import import_module
 
     module = import_module("math")
     locals()["sin"] = module.sin
@@ -95,7 +95,7 @@ def test_ast(show: bool):
 
 def show_data(signals: Sequence[TValue | TDataColumn] | None = None):
     signals = signals or [_x, _y]
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     if len(signals) == 2:
         _ = ax.plot(signals[0], signals[1])
         _ = plt.title("x-y", loc="left")

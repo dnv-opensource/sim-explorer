@@ -79,7 +79,7 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
 
         def make_initial_value(
             var: str,
-            val: int | float | bool | str,
+            val: int | float | bool | str,  # noqa: FBT001
         ) -> ET.Element:
             """Make a <InitialValue> element from the provided var dict."""
             typ: str = {int: "Integer", float: "Real", bool: "Boolean", str: "String"}[type(val)]
@@ -332,9 +332,9 @@ def read_system_structure_xml(file: Path) -> dict[str, Any]:
         for con in el.findall(".//{*}" + c + "Connection"):
             assert len(con) == 2, f"Two sub-elements expected. Found {len(con)}"  # noqa: PLR2004
             cons.append([p for i in range(2) for p in con[i].attrib.values()])
-        if len(cons):
+        if cons:
             connections[f"Connections{c}"] = cons
-    if len(connections):
+    if connections:
         structure.update(connections)
 
     return structure

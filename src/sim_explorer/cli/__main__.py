@@ -4,7 +4,6 @@
 import argparse
 import importlib.metadata
 import logging
-import sys
 from pathlib import Path
 
 from sim_explorer.case import Case, Cases
