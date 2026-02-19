@@ -15,7 +15,6 @@ Note that Json5 is restriced to 'ordered keys' and 'unique keys within an object
 
 Note: The classes Case and Cases should be kept together in this file to avoid circular references.
 """
-
 # pyright: reportUnnecessaryTypeIgnoreComment=false
 
 from __future__ import annotations
@@ -30,7 +29,6 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast, overload
 import matplotlib.pyplot as plt
 import numpy as np
 
-from sim_explorer.assertion import Assertion
 from sim_explorer.exceptions import CaseInitError
 from sim_explorer.json5 import Json5
 from sim_explorer.models import Temporal
@@ -625,6 +623,8 @@ class Cases:
         self.timefac: float = self._get_time_unit() * 1e9  # internally OSP uses pico-seconds as integer!
         # read the 'variables' section and generate dict { alias : { (instances), (variables)}}:
         self.variables: dict[str, dict[str, Any]] = self.get_case_variables()
+
+        from sim_explorer.assertion import Assertion  # noqa: PLC0415  # to avoid circular import
 
         self.assertion: Assertion = Assertion()
         self.assertion.register_vars(self.variables)  # register variables as symbols
