@@ -573,7 +573,7 @@ class SystemInterface:
         act_type: str,
         cvar: str,
         cvar_info: dict[str, Any],
-        values: tuple[TValue, ...] | None,
+        values: Sequence[TValue] | None,
         at_time: SupportsFloat,
         stoptime: SupportsFloat,
         rng: tuple[int, ...] | None = None,
