@@ -13,7 +13,13 @@ authors:
   - given-names: Siegfried
     family-names: Eisinger
     affiliation: DNV
-    email: Siegfried.Eisinger@dnv.com
+    email: siegfried.eisinger@dnv.com
+    website: 'https://www.linkedin.com/in/siegfried-eisinger-a337638b'
+  - given-names: Jorge Luis
+    family-names: Mendez
+    affiliation: DNV
+    email: jorge.luis.mendez@dnv.com
+    website: 'https://www.linkedin.com/in/jorgelmh'
 keywords:
   - simulation
   - model

@@ -11,7 +11,6 @@ only-include = [
     ".coveragerc",
     ".editorconfig",
     ".pre-commit-config.yaml",
-    "manage.py",
     "pyproject.toml",
     "pytest.ini",
     "ruff.toml",
@@ -23,6 +22,9 @@ packages = [
     "src/sim_explorer",
 ]
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [project]
 name = "sim-explorer"
 version = "0.2.1"
@@ -31,7 +33,11 @@ readme = "README.rst"
 requires-python = ">= 3.11"
 license = { file = "LICENSE" }
 authors = [
-    { name = "Siegfried Eisinger", email = "Siegfried.Eisinger@dnv.com" },
+    { name = "Siegfried Eisinger", email = "siegfried.eisinger@dnv.com" },
+    { name = "Jorge Luis Mendez", email = "jorge.luis.mendez@dnv.com" },
+]
+maintainers = [
+    { name = "Claas Rostock", email = "claas.rostock@dnv.com" },
 ]
 keywords = [
     "simulation",
@@ -48,7 +54,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
     "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX :: Linux",
-    "Operating System :: MacOS",
+    # "Operating System :: MacOS",
     "Environment :: Console",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
@@ -97,13 +103,14 @@ dev = [
     "mypy>=1.19.1",
     "sourcery>=1.43.0",
     "pre-commit>=4.5",
-    "Sphinx>=8.1",
+    "Sphinx>=8.2",
     "sphinx-argparse-cli>=1.20.1",
     "sphinx-autodoc-typehints>=3.6",
     "sphinxcontrib-mermaid>=2.0",
     "myst-parser>=5.0",
     "furo>=2025.12",
     "jupyter>=1.1.1",
+    "plotly-stubs>=0.1.2",
 ]
 
 [tool.uv]
@@ -123,8 +130,7 @@ sim-explorer = "sim_explorer.cli.__main__:main"
 
 
 [tool.mypy]
-plugins = [
-]
+plugins = []
 mypy_path = "stubs"
 files = [
     "src",
@@ -175,7 +181,6 @@ reportUnnecessaryContains = "warning"
 reportUnusedCallResult = "warning"
 reportUnusedExpression = "warning"
 reportMatchNotExhaustive = "warning"
-
 reportUntypedFunctionDecorator = "warning"
 reportUntypedClassDecorator = "warning"
 reportUntypedBaseClass = "error"

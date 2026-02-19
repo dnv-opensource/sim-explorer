@@ -169,11 +169,16 @@ raises-require-match-for = [
 "**/utils/logging.py" = [
     "A005", # Module `logging` shadows a Python standard-library module
 ]
-# utils/types specific ignores
-"**/utils/types.py" = [
+# docs/source/conf.py specific ignores
+"docs/source/conf.py" = [
+    "INP001", # File is part of an implicit namespace package. Add an `__init__.py`. (NOTE: conf.py is not intended to be a module, __init__.py hence not required.)
+    "A001",   # Variable {name} is shadowing a Python builtin
+    "D100",   # Missing docstring in public module
+]
+# types.py specific ignores
+"**/types.py" = [
     "A005", # Module `types` shadows a Python standard-library module
 ]
-
 
 [lint.pydocstyle]
 convention = "numpy"

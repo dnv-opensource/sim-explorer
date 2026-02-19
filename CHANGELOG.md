@@ -10,6 +10,10 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
 
 ## [0.2.2] - 2026-02-19
 
+### Removed
+* Removed qa.bat
+* Removed \_\_init\_\_.py files in /tests
+
 ### Changed
 * GitHub Workflows:
   * _test_future.yml: Updated Python version in test_future to 3.15.0-alpha - 3.15.0
