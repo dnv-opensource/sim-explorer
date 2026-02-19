@@ -21,8 +21,9 @@ from libcosimpy.CosimSlave import CosimLocalSlave
 
 from sim_explorer.utils.misc import from_xml
 from sim_explorer.utils.osp import make_osp_system_structure
-from tests.data.Oscillator.driving_force_fmu import DrivingForce, func
-from tests.data.Oscillator.oscillator_fmu import HarmonicOscillator
+
+from .data.Oscillator.driving_force_fmu import DrivingForce, func
+from .data.Oscillator.oscillator_fmu import HarmonicOscillator
 
 
 def check_expected(
