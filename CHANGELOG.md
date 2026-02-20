@@ -8,11 +8,10 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
 * -/-
 
 
-### Dependencies
-* Updated to sphinx>=9.0
+## [0.3.0] - 2026-02-23
 
-
-## [0.2.2] - 2026-02-19
+### Resolved
+* src/sim_explorer/__init__.py: Added `import libcosimpy.CosimLibrary` in `__init__.py` on package root level. This to make sure the libcosimc dll gets loaded only once. This resolves a runtime error observed with libcosimpy. (Although the root bug is likely in libcosimpy; should be reviewed by the libcosimpy team).
 
 ### Added
 * Added a new module `codegen.py` in sub-package `utils`, defining a helper function `get_callable_function()`:
@@ -39,6 +38,7 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
   * Replaced 'Build source distribution and wheel' with 'Build source distribution and wheels' (plural) in workflow step names.
   * Replaced 'Run twine check' with 'Check build artifacts' in workflow step names, to better reflect the purpose of the step.
   * Updated the syntax used for the OS and Python matrix in test workflows.
+  * Added `--extra test` to the workflows running tests, as the test workflows will need these additional dependencies to run the FMUs in /tests/data/..
 * pyproject.toml:
   * Added required-environments to uv.tools (windows, linux)
   * Removed deprecated mypy plugin 'numpy.typing.mypy_plugin'
@@ -55,6 +55,7 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
     In the majority of cases, the newer Python version will anyhow be backward-compatible. And in the rare case where your package would really not work with a newer Python version,
     users can at least find a solution manually to resolve the conflict, e.g. by pinning your package to the last version compatible with the environment they install it in.
     That way, we ensure it remains _possible_ for users to find a solution, instead of rendering it impossible forever.
+  * Added scipy>=1.16 to optional dependency group 'test', as TimeTableFMU.fmu requires scipy to be installed in the calling environment.
 * Sphinx Documentation:
   * Sphinx conf.py: Removed ruff rule exception on file level
   * Sphinx conf.py: Updated year in copyright statement to 2026
@@ -68,6 +69,16 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
 * .pre-commit-config.yaml: Updated id of ruff to ruff-check
 * .sourcery.yaml: Updated the lowest Python version the project supports to '3.11'
 * ruff.toml: Updated target Python version to "py311"
+
+### Tests
+* tests/data/BouncingBall3D: Updated `BouncingBall3D.fmu` and related tests.
+* tests/data/MobileCrane: Updated `MobileCrane.fmu` and related tests.
+* tests/data/Oscillator: Updated `HarmonicOscillator.fmu`
+* Renamed folder `tests/data/SimpleTable` to `tests/data/TimeTable`
+* Replaced `SimpleTable.fmu` with `TimeTableFMU.fmu` (in folder `tests/data/TimeTable`)
+* tests/conftest.py:
+  * Changed scope of top level fixtures from "package" to "session", because "session" scoped fixtures gets called before "package" scoped fixtures
+* Repaired all failing tests
 
 ### Dependencies
 * Updated to docutils>=0.22.4
@@ -85,6 +96,7 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
 * Updated to pytest>=9.0
 * Updated to ruff>=0.15.1
 * Updated to sourcery>=1.43.0
+* Updated to sphinx>=9.0
 * Updated to sphinx-argparse-cli>=1.20.1
 * Updated to sphinx-autodoc-typehints>=3.6
 * Updated to sphinxcontrib-mermaid>=2.0
@@ -188,8 +200,8 @@ New Assertions release:
 
 
 <!-- Markdown link & img dfn's -->
-[unreleased]: https://github.com/dnv-opensource/sim-explorer/compare/v0.2.2...HEAD
-[0.2.2]: https://github.com/dnv-opensource/sim-explorer/releases/tag/v0.2.1...v0.2.2
+[unreleased]: https://github.com/dnv-opensource/sim-explorer/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/dnv-opensource/sim-explorer/releases/tag/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/dnv-opensource/sim-explorer/releases/tag/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/dnv-opensource/sim-explorer/releases/tag/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/dnv-opensource/sim-explorer/releases/tag/v0.0.1...v0.1.0
