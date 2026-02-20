@@ -8,20 +8,20 @@ from shutil import rmtree
 import pytest
 
 
-@pytest.fixture(scope="package", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def chdir() -> None:
     """
     Fixture that changes the current working directory to the 'test_working_directory' folder.
-    This fixture is automatically used for the entire package.
+    This fixture is automatically used for the entire session.
     """
     os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
 
 
-@pytest.fixture(scope="package", autouse=True)
+@pytest.fixture(scope="session", autouse=True)
 def test_dir() -> Path:
     """
     Fixture that returns the absolute path of the directory containing the current file.
-    This fixture is automatically used for the entire package.
+    This fixture is automatically used for the entire session.
     """
     return Path(__file__).parent.absolute()
 
