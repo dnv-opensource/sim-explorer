@@ -13,18 +13,18 @@ from sim_explorer.utils.types import TValue
 
 
 @pytest.fixture(scope="module", autouse=True)
-def simpletable():
-    return _simpletable()
+def timetable():
+    return _timetable()
 
 
-def _simpletable():
+def _timetable():
     path = Path(__file__).parent / "data" / "TimeTable" / "test.cases"
-    assert path.exists(), "SimpleTable cases file not found"
+    assert path.exists(), "TimeTable cases file not found"
     return Cases(path)
 
 
-def test_fixture(simpletable: Cases):
-    assert isinstance(simpletable, Cases), f"Cases object expected. Found:{simpletable}"
+def test_fixture(timetable: Cases):
+    assert isinstance(timetable, Cases), f"Cases object expected. Found:{timetable}"
 
 
 # TODO @EisDNV: This function is nowhere used in the code base. Maybe remove it? ClaasRostock, 2025-01-27
@@ -44,7 +44,7 @@ def _make_cases():
             "Simulator",
             attrib={
                 "name": "tab",
-                "source": "SimpleTable.fmu",
+                "source": "TimeTableFMU.fmu",
                 "stepSize": "0.1",
             },
         )
@@ -90,27 +90,27 @@ def _make_cases():
 
 
 # @pytest.mark.skip(reason="Deactivated")
-def test_case_at_time(simpletable: Cases):
-    # print("DISECT", simpletable.case_by_name("base")._disect_at_time_spec("x@step", ""))
-    do_case_at_time(txt="v@1.0", casename="base", value="res", expected=("v", "get", 1.0), simpletable=simpletable)
-    # do_case_at_time(txt="x@step", casename="base", value="res", expected=("x", "step", -1), simpletable=simpletable)
+def test_case_at_time(timetable: Cases):
+    # print("DISECT", timetable.case_by_name("base")._disect_at_time_spec("x@step", ""))
+    do_case_at_time(txt="v@1.0", casename="base", value="res", expected=("v", "get", 1.0), timetable=timetable)
+    # do_case_at_time(txt="x@step", casename="base", value="res", expected=("x", "step", -1), timetable=timetable)
     # do_case_at_time(
-    #     txt="x@step 2.0", casename="base", value="res", expected=("x", "step", 2.0), simpletable=simpletable
+    #     txt="x@step 2.0", casename="base", value="res", expected=("x", "step", 2.0), timetable=timetable
     # )
-    # do_case_at_time(txt="v@1.0", casename="base", value="res", expected=("v", "get", 1.0), simpletable=simpletable)
+    # do_case_at_time(txt="v@1.0", casename="base", value="res", expected=("v", "get", 1.0), timetable=timetable)
     # # value retrieval per case at specified time
-    # do_case_at_time(txt="v@1.0", casename="caseX", value="res", expected=("v", "get", 1.0), simpletable=simpletable)
+    # do_case_at_time(txt="v@1.0", casename="caseX", value="res", expected=("v", "get", 1.0), timetable=timetable)
     # do_case_at_time(
     #     txt="@1.0",
     #     casename="base",
     #     value="result",
     #     expected="'@1.0' is not allowed as basis for _disect_at_time_spec",
-    #     simpletable=simpletable,
+    #     timetable=timetable,
     # )
     # # "report the value at end of sim"
-    # do_case_at_time(txt="i", casename="base", value="res", expected=("i", "get", 1), simpletable=simpletable)
+    # do_case_at_time(txt="i", casename="base", value="res", expected=("i", "get", 1), timetable=timetable)
     # # "Initial value setting"
-    # do_case_at_time(txt="y", casename="caseX", value=99.9, expected=("y", "set", 0), simpletable=simpletable)
+    # do_case_at_time(txt="y", casename="caseX", value=99.9, expected=("y", "set", 0), timetable=timetable)
     return
 
 
@@ -119,11 +119,11 @@ def do_case_at_time(
     casename: str,
     value: TValue,
     expected: tuple[str, str, float],
-    simpletable: Cases,
+    timetable: Cases,
 ):
     """Test the Case.disect_at_time function"""
     # print(f"TEST_AT_TIME {txt}, {casename}, {value}, {expected}")
-    case = simpletable.case_by_name(casename)
+    case = timetable.case_by_name(casename)
     assert case is not None, f"Case {casename} was not found"
     if isinstance(expected, str):  # error case
         with pytest.raises(AssertionError) as err:
@@ -135,24 +135,22 @@ def do_case_at_time(
 
 
 # @pytest.mark.skip(reason="Deactivated")
-def test_case_range(simpletable: Cases):
-    x_inf = simpletable.variables["x"]
-    # print("RNG", simpletable.case_by_name("results").cases.disect_variable("x"))
-    do_case_range(txt="x", casename="base", expected=("x", x_inf, list(range(3))), simpletable=simpletable)
-    do_case_range(txt="x[2]", casename="base", expected=("x", x_inf, [2]), simpletable=simpletable)
-    do_case_range(txt="x[2]", casename="caseX", expected=("x", x_inf, [2]), simpletable=simpletable)
-    do_case_range(txt="x[1..2]", casename="base", expected=("x", x_inf, list(range(1, 2))), simpletable=simpletable)
-    do_case_range(txt="x[0,1,2]", casename="base", expected=("x", x_inf, [0, 1, 2]), simpletable=simpletable)
-    do_case_range(txt="x[0...2]", casename="caseX", expected=("x", x_inf, list(range(2))), simpletable=simpletable)
+def test_case_range(timetable: Cases):
+    x_inf = timetable.variables["x"]
+    # print("RNG", timetable.case_by_name("results").cases.disect_variable("x"))
+    do_case_range(txt="x", casename="base", expected=("x", x_inf, list(range(3))), timetable=timetable)
+    do_case_range(txt="x[2]", casename="base", expected=("x", x_inf, [2]), timetable=timetable)
+    do_case_range(txt="x[2]", casename="caseX", expected=("x", x_inf, [2]), timetable=timetable)
+    do_case_range(txt="x[1..2]", casename="base", expected=("x", x_inf, list(range(1, 2))), timetable=timetable)
+    do_case_range(txt="x[0,1,2]", casename="base", expected=("x", x_inf, [0, 1, 2]), timetable=timetable)
+    do_case_range(txt="x[0...2]", casename="caseX", expected=("x", x_inf, list(range(2))), timetable=timetable)
     do_case_range(
-        txt="x", casename="caseX", expected=("x", x_inf, list(range(3))), simpletable=simpletable
+        txt="x", casename="caseX", expected=("x", x_inf, list(range(3))), timetable=timetable
     )  # assume all values
-    do_case_range(txt="x[3]", casename="caseX", expected="Index 3 of variable x out of range", simpletable=simpletable)
-    do_case_range(
-        txt="x[1,2,4]", casename="caseX", expected="Index 4 of variable x out of range", simpletable=simpletable
-    )
-    do_case_range(txt="x[1.3]", casename="caseX", expected="Unhandled index", simpletable=simpletable)
-    case_x = simpletable.case_by_name("caseX")
+    do_case_range(txt="x[3]", casename="caseX", expected="Index 3 of variable x out of range", timetable=timetable)
+    do_case_range(txt="x[1,2,4]", casename="caseX", expected="Index 4 of variable x out of range", timetable=timetable)
+    do_case_range(txt="x[1.3]", casename="caseX", expected="Unhandled index", timetable=timetable)
+    case_x = timetable.case_by_name("caseX")
     assert case_x is not None, "Case with name 'caseX' does not exist."
     assert case_x.cases.disect_variable("x[99]", err_level=0) == ("", None, list(range(0)))
     assert case_x.cases.disect_variable("x[1]")[2] == [1]
@@ -165,10 +163,10 @@ def do_case_range(
     txt: str,
     casename: str,
     expected: tuple[str, dict[str, Any] | None, list[int]] | str,
-    simpletable: Cases,
+    timetable: Cases,
 ):
     """Test the .cases.disect_variable function"""
-    case = simpletable.case_by_name(casename)
+    case = timetable.case_by_name(casename)
     assert case is not None, f"Case {casename} was not found"
     if isinstance(expected, str):  # error case
         with pytest.raises(Exception) as err:  # noqa: PT011
@@ -190,20 +188,20 @@ def check_value(case: Case, var: str, val: TValue):
 
 
 # @pytest.mark.skip(reason="Deactivated")
-def test_case_set_get(simpletable: Cases):
+def test_case_set_get(timetable: Cases):
     """Test of the features provided by the Case class"""
-    print(simpletable.base.list_cases())
-    assert simpletable.base.list_cases()[1] == [
+    print(timetable.base.list_cases())
+    assert timetable.base.list_cases()[1] == [
         "case1",
         ["caseX"],
     ], "Error in list_cases"
-    assert simpletable.base.special == {
+    assert timetable.base.special == {
         "stopTime": 1,
         "startTime": 0.0,
         "stepSize": 0.1,
-    }, f"Base case special not as expected. Found {simpletable.base.special}"
+    }, f"Base case special not as expected. Found {timetable.base.special}"
     # iter()
-    caseX = simpletable.case_by_name("caseX")
+    caseX = timetable.case_by_name("caseX")
     assert caseX is not None, "CaseX does not seem to exist"
     assert [c.name for c in caseX.iter()] == [
         "base",
@@ -230,7 +228,7 @@ if __name__ == "__main__":
     import os
 
     os.chdir(Path(__file__).parent.absolute() / "test_working_directory")
-    # test_fixture(_simpletable())
-    # test_case_at_time(_simpletable())
-    # test_case_range(_simpletable())
-    # test_case_set_get(_simpletable())
+    # test_fixture(_timetable())
+    # test_case_at_time(_timetable())
+    # test_case_range(_timetable())
+    # test_case_set_get(_timetable())

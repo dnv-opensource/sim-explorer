@@ -7,11 +7,11 @@ header : {
    BaseStepSize : 0.01,
    },
 Simulators : {
-   simpleTable : {source: "../TimeTable/SimpleTable.fmu", interpolate: True},
+   timeTable : {source: "../TimeTable/TimeTableFMU.fmu", interpolate: True},
    mobileCrane : {source: "MobileCrane.fmu" stepSize: 0.01,
                   pedestal.pedestalMass: 5000.0, boom.boom[0]: 20.0},
    },
 ConnectionsVariable : [
-   ["simpleTable", "outputs[0]", "mobileCrane", "pedestal.angularVelocity"],
+   ["timeTable", "outputs[0]", "mobileCrane", "pedestal.angularVelocity"],
    ],
 }

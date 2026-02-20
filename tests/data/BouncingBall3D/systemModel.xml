@@ -4,13 +4,13 @@
     <BaseStepSize>0.01</BaseStepSize>
     <Algorithm>fixedStep</Algorithm>
     <Simulators>
-        <Simulator name="simpleTable" source="SimpleTable.fmu" stepSize="0.01" />
+        <Simulator name="timeTable" source="TimeTableFMU.fmu" stepSize="0.01" />
         <Simulator name="mobileCrane" source="MobileCrane.fmu" stepSize="0.01" />
     </Simulators>
     <Functions />
     <Connections>
         <VariableConnection>
-            <Variable simulator="simpleTable" name="outputs[0]" />
+            <Variable simulator="timeTable" name="outputs[0]" />
             <Variable simulator="mobileCrane" name="pedestal.angularVelocity" />
         </VariableConnection>
     </Connections>
