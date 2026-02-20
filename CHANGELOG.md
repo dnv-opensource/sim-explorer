@@ -14,6 +14,12 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
 
 ## [0.2.2] - 2026-02-19
 
+### Added
+* Added a new module `codegen.py` in sub-package `utils`, defining a helper function `get_callable_function()`:
+  * `get_callable_function()` executes compiled code in explicit namespaces, retrieves a named function, validates it is callable, and eventually returns the created function.
+  * Refactored class `Assertion` in module `assertion.py` to use the new helper function `get_callable_function()`. That way, the code in `Assertion` no longer relies on mutating `locals()`, which is known to be unreliable and can cause hard-to-track side effects.
+  * Updated the related tests in `tests/test_assertion.py`.
+
 ### Removed
 * Removed qa.bat
 * Removed \_\_init\_\_.py files in /tests
