@@ -36,8 +36,9 @@ def run_in_subprocess(
         shell=False,  # Must be False for debugger attachment
         capture_output=True,
         check=False,
-        # encoding="utf-8",
-        encoding="cp437",  # Use cp437 to avoid decoding errors on Windows with non-UTF-8 locale
+        encoding="utf-8",
+        errors="replace",  # Replace undecodable bytes to avoid errors on Windows with non-UTF-8 locale
+        # encoding="cp437",  # Use cp437 to avoid decoding errors on Windows with non-UTF-8 locale
         **kwargs,
     )
     return result
