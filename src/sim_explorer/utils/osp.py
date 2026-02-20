@@ -16,7 +16,7 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
     version: str = "0.1",
     start: float = 0.0,
     base_step: float = 0.01,
-    algorithm: str = "fixedStep",  # noqa: ARG001
+    algorithm: str = "fixedStep",
     simulators: dict[str, Any] | None = None,
     functions_linear: dict[str, Any] | None = None,
     functions_sum: dict[str, Any] | None = None,
@@ -254,11 +254,12 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
     )
     osp.append(element_text(tag="StartTime", text=str(start)))
     osp.append(element_text(tag="BaseStepSize", text=str(base_step)))
+    osp.append(element_text(tag="Algorithm", text=algorithm))
     osp.append(make_simulators(simulators))
     osp.append(make_functions(functions_linear, functions_sum, functions_vectorsum))
     osp.append(make_connections(connections_variable, connections_signal, connections_group, connections_signalgroup))
     tree = ET.ElementTree(osp)
-    ET.indent(tree, space="   ", level=0)
+    ET.indent(tree, space="    ", level=0)
     file: Path = Path(path).absolute() / f"{name}.xml"
     tree.write(file, encoding="utf-8")
     return file
