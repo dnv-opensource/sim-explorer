@@ -45,7 +45,7 @@ def test_read_cases():
     assert "# lift 1m / 0.1sec" in list(json5.comments.values())
     # for e in json5.js_py:
     #   print(f"{e}: {json5.js_py[e]}")
-    assert json5.jspath(path="$.base.spec.df_dt", typ=list) == [0.0, 0.0]
+    assert json5.jspath(path="$.base.spec.df_dt", typ=list) == [0.0, 0.0, 0.0]
     # json5_write( json5.js_py, "MobileCrane.js5")
     assert json5.jspath(path="$.dynamic.spec.db_dt", typ=float) == 0.785498
 
@@ -77,10 +77,10 @@ def test_step_by_step_cosim(mobile_crane_fmu: Path):  # noqa: C901
     assert slave == 0, f"Slave index should be '0', found {slave}"
 
     expected_names = (
-        "boom_angularVelocity[0]",
-        "pedestal_boom[0]",
-        "boom_boom[1]",
-        "rope_boom[2]",
+        "der(pedestal.boom[2])",
+        "pedestal.boom[0]",
+        "boom.boom[1]",
+        "wire.boom[2]",
     )
     found_expected = [False] * len(expected_names)
     for i in range(len(sim.slave_variables(slave))):
@@ -92,10 +92,10 @@ def test_step_by_step_cosim(mobile_crane_fmu: Path):  # noqa: C901
     assert False not in found_expected, (
         f"Not all expected names were found: {expected_names[found_expected.index(False)]}"
     )
-    assert set_initial(name="pedestal_boom[0]", value=3.0)
-    assert set_initial(name="boom_boom[0]", value=8.0)
-    assert set_initial(name="boom_boom[1]", value=0.7854)
-    assert set_initial(name="rope_boom[0]", value=1e-6)
+    assert set_initial(name="pedestal.boom[0]", value=3.0)
+    assert set_initial(name="boom.boom[0]", value=8.0)
+    assert set_initial(name="boom.boom[1]", value=0.7854)
+    assert set_initial(name="wire.boom[0]", value=1e-6)
     #    for idx in range( sim.num_slave_variables(slave)):
     #        print(f"{sim.slave_variables(slave)[idx].name.decode()}: {observer.last_real_values(slave, [idx])}")
     step_count = 0
@@ -103,7 +103,7 @@ def test_step_by_step_cosim(mobile_crane_fmu: Path):  # noqa: C901
         step_count += 1
         status = sim.status()
         print(f"STATUS:{status}, {status.state}={CosimExecutionState.ERROR}")
-        if status.current_time > 1e9:
+        if status.current_time > 10e9:
             break
         if status.state == CosimExecutionState.ERROR.value:
             raise AssertionError(f"Error state at time {status.current_time}") from None
@@ -137,11 +137,11 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
         cases.simulator.manipulator.slave_real_values(
             slave_index=0,
             variable_references=[
-                get_ref("pedestal_boom[0]"),
-                get_ref("boom_boom[0]"),
-                get_ref("boom_boom[1]"),
-                get_ref("rope_boom[0]"),
-                get_ref("dLoad"),
+                get_ref("pedestal.boom[0]"),
+                get_ref("boom.boom[0]"),
+                get_ref("boom.boom[1]"),
+                get_ref("wire.boom[0]"),
+                get_ref("wire.mass"),
             ],
             values=(3.0, 8.0, 0.7854, 1e-6, 50.0),
         )
@@ -186,9 +186,9 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
         "load": 1000,
     }
     print("ACT", static.act_get[-1][0])
-    assert static.act_get[-1][0] == ("T", "mobileCrane", (10, 11, 12))
+    assert static.act_get[-1][0] == ("T", "mobileCrane", (18, 19, 20))
     _ = sim.init_simulator()
-    assert sim.observer.last_real_values(slave_index=0, variable_references=[10, 11, 12]) == [
+    assert sim.observer.last_real_values(slave_index=0, variable_references=[18, 19, 20]) == [
         0.0,
         0.0,
         0.0,
@@ -200,23 +200,23 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
     print(f"Special: {static.special}")
     assert static.act_set == {
         0: [
-            ("p", "mobileCrane", (18, 20), (3.0, 1.570796)),
-            ("b", "mobileCrane", (34, 35), (8.0, 45.0)),
-            ("r", "mobileCrane", (50,), (7.657,)),
-            ("df_dt", "mobileCrane", (7, 8), (0.0, 0.0)),
-            ("dp_dt", "mobileCrane", (25,), (0.0,)),
-            ("db_dt", "mobileCrane", (40,), (0.0,)),
-            ("dr_dt", "mobileCrane", (58,), (0.0,)),
-            ("v", "mobileCrane", (7, 8), (0.0, 0.0)),
-            ("load", "mobileCrane", (16,), (1000.0,)),
+            ("p", "mobileCrane", (22, 24), (3.0, 1.570796)),
+            ("b", "mobileCrane", (35, 36), (8.0, 45.0)),
+            ("r", "mobileCrane", (48,), (7.657,)),
+            ("df_dt", "mobileCrane", (9, 10, 11), (0.0, 0.0, 0.0)),
+            ("dp_dt", "mobileCrane", (30,), (0.0,)),
+            ("db_dt", "mobileCrane", (42,), (0.0,)),
+            ("dr_dt", "mobileCrane", (54,), (0.0,)),
+            ("v", "mobileCrane", (0, 1, 2), (0.0, 0.0, 0.0)),
+            ("load", "mobileCrane", (47,), (1000.0,)),
         ]
     }
     assert static.act_get == {
         -1: [
-            ("T", "mobileCrane", (10, 11, 12)),
-            ("x_pedestal", "mobileCrane", (21, 22, 23)),
-            ("x_boom", "mobileCrane", (37, 38, 39)),
-            ("x_load", "mobileCrane", (53, 54, 55)),
+            ("T", "mobileCrane", (18, 19, 20)),
+            ("x_pedestal", "mobileCrane", (25, 26, 27)),
+            ("x_boom", "mobileCrane", (38, 39, 40)),
+            ("x_load", "mobileCrane", (51, 52, 53)),
         ]
     }
 
@@ -227,11 +227,11 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
     assert slave == 0, f"Slave index should be '0', found {slave}"
 
     expected_names = (
-        "boom_angularVelocity[0]",
-        "pedestal_boom[0]",
-        "boom_boom[1]",
-        "rope_boom[2]",
-        "dLoad",
+        "der(boom.boom[1])",
+        "pedestal.boom[0]",
+        "boom.boom[1]",
+        "wire.boom[2]",
+        "wire.mass",
     )
     found_expected = [-1] * len(expected_names)
     for i in range(len(cosim.slave_variables(slave))):
@@ -255,7 +255,7 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
     while True:
         step_count += 1
         status = cosim.status()
-        if status.current_time > 1e9:
+        if status.current_time > 10e9:
             break
         if status.state == CosimExecutionState.ERROR.value:
             raise AssertionError(f"Error state at time {status.current_time}") from None
@@ -300,10 +300,10 @@ def test_run_cases():
     static = cases.case_by_name("static")
     assert static is not None
     assert static.act_get[-1] == [
-        ("T", "mobileCrane", (10, 11, 12)),
-        ("x_pedestal", "mobileCrane", (21, 22, 23)),
-        ("x_boom", "mobileCrane", (37, 38, 39)),
-        ("x_load", "mobileCrane", (53, 54, 55)),
+        ("T", "mobileCrane", (18, 19, 20)),
+        ("x_pedestal", "mobileCrane", (25, 26, 27)),
+        ("x_boom", "mobileCrane", (38, 39, 40)),
+        ("x_load", "mobileCrane", (51, 52, 53)),
     ]
 
     print("Running case 'base'...")
