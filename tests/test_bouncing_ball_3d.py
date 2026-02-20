@@ -227,6 +227,7 @@ def test_run_cases():
         x_z=1 / 0.0254,
         hf=0.0254,
     )
+    cases.run_case(name="base", dump="results")
 
 
 if __name__ == "__main__":

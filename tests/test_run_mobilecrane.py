@@ -282,7 +282,7 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
 
 # @pytest.mark.skip("Alternative only using SystemInterfaceOSP")
 def test_run_basic():
-    path = Path(Path(__file__).parent / "data" / "MobileCrane" / "OspSystemStructure.xml")
+    path = Path(__file__).parent / "data" / "MobileCrane" / "OspSystemStructure.xml"
     assert path.exists(), "System structure file not found"
     sim = SystemInterfaceOSP(path)
     _ = sim.init_simulator()
@@ -290,8 +290,8 @@ def test_run_basic():
 
 
 def test_run_cases():
-    path = Path(Path(__file__).parent / "data" / "MobileCrane" / "MobileCrane.cases")
-    # system_structure = Path(Path(__file__).parent, "data/MobileCrane/OspSystemStructure.xml")
+    path = Path(__file__).parent / "data" / "MobileCrane" / "MobileCrane.cases"
+    # system_structure = Path(__file__).parent / "data" / "MobileCrane" / "OspSystemStructure.xml"
     assert path.exists(), "MobileCrane cases file not found"
     cases = Cases(spec=path)
     case: Case | None

@@ -38,7 +38,7 @@ def expect_bounce_at(results: Json5, time: float, eps: float = 0.02):
 
 def test_step_by_step():
     """Do the simulation step-by step, only using libcosimpy"""
-    path = Path(Path(__file__).parent, "data/BouncingBall0/OspSystemStructure.xml")
+    path = Path(__file__).parent / "data/BouncingBall0/OspSystemStructure.xml"
     assert path.exists(), "System structure file not found"
     sim = SystemInterfaceOSP(path)
     _ = sim.init_simulator()
@@ -80,7 +80,7 @@ def test_step_by_step_interface():
 
 def test_run_cases():  # noqa: PLR0915
     # sourcery skip: extract-duplicate-method
-    path = Path(Path(__file__).parent, "data/BouncingBall0/BouncingBall.cases")
+    path = Path(__file__).parent / "data/BouncingBall0/BouncingBall.cases"
     assert path.exists(), "BouncingBall cases file not found"
     cases = Cases(spec=path)
     case: Case | None
