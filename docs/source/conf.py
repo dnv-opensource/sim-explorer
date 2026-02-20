@@ -25,7 +25,7 @@ copyright = "2026, DNV AS. All rights reserved."
 author = "Siegfried Eisinger, Jorge Luis Mendez, SEACo project team"
 
 # The full version, including alpha/beta/rc tags
-release = "0.2.1"
+release = "0.3.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
