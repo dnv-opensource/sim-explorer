@@ -6,7 +6,7 @@ from sim_explorer.case import Case, Cases
 
 
 def test_cases_management():
-    cases = Cases(Path(__file__).parent / "data" / "SimpleTable" / "test.cases")
+    cases = Cases(Path(__file__).parent / "data" / "TimeTable" / "test.cases")
     assert isinstance(cases.base.act_get, dict)
     assert len(cases.base.act_get) > 0
 

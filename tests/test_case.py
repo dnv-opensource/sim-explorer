@@ -18,7 +18,7 @@ def simpletable():
 
 
 def _simpletable():
-    path = Path(__file__).parent / "data" / "SimpleTable" / "test.cases"
+    path = Path(__file__).parent / "data" / "TimeTable" / "test.cases"
     assert path.exists(), "SimpleTable cases file not found"
     return Cases(path)
 

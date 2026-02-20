@@ -222,7 +222,7 @@ def test_assertion_series(asserts: Assertion, show: bool):
 
 
 def test_assertion_spec():
-    cases = Cases(spec=Path(__file__).parent / "data" / "SimpleTable" / "test.cases")
+    cases = Cases(spec=Path(__file__).parent / "data" / "TimeTable" / "test.cases")
     _c = cases.case_by_name("case1")
     assert _c is not None
     _ = _c.read_assertion(key="3@9.85", expr_descr=["x*t", "Description"])

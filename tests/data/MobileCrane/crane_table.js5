@@ -7,7 +7,7 @@ header : {
    BaseStepSize : 0.01,
    },
 Simulators : {
-   simpleTable : {source: "../SimpleTable/SimpleTable.fmu", interpolate: True},
+   simpleTable : {source: "../TimeTable/SimpleTable.fmu", interpolate: True},
    mobileCrane : {source: "MobileCrane.fmu" stepSize: 0.01,
                   pedestal.pedestalMass: 5000.0, boom.boom[0]: 20.0},
    },

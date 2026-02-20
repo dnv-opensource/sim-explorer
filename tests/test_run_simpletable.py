@@ -6,8 +6,8 @@ from sim_explorer.case import Cases
 
 
 def test_run_casex():
-    path = Path(Path(__file__).parent, "data/SimpleTable/test.cases")
-    assert path.exists(), "SimpleTable cases file not found"
+    path = Path(Path(__file__).parent, "data/TimeTable/test.cases")
+    assert path.exists(), "TimeTable cases file not found"
     cases = Cases(path)
     _ = cases.case_by_name("base")
     _ = cases.case_by_name("case1")

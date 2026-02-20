@@ -17,8 +17,7 @@ def test_read_system_structure():
         assert s["header"]["BaseStepSize"] == 0.01
         assert len(s["Simulators"]) == 2
         assert (
-            s["Simulators"]["simpleTable"]["source"]
-            == Path(__file__).parent / "data" / "SimpleTable" / "SimpleTable.fmu"
+            s["Simulators"]["simpleTable"]["source"] == Path(__file__).parent / "data" / "TimeTable" / "SimpleTable.fmu"
         )
         assert s["Simulators"]["mobileCrane"]["pedestal.pedestalMass"] == 5000.0
 
