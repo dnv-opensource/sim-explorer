@@ -9,6 +9,7 @@ import numpy as np
 
 from sim_explorer.case import Case, Results
 from sim_explorer.models import AssertionResult, Temporal
+from sim_explorer.utils.codegen import get_callable_function
 from sim_explorer.utils.types import (
     TDataColumn,
     TDataRow,
@@ -272,55 +273,75 @@ class Assertion:
                     _ = self.symbol(key)  # we allow to use the 'short name' if unique
                 _ = self.symbol(f"{inst}_{key}")  # fully qualified name can always be used
 
-    def make_locals(self, loc: dict[str, Any]) -> dict[str, Any]:
-        """Adapt the locals with 'allowed' functions."""
+    def make_locals(self, local_ns: dict[str, Any]) -> dict[str, Any]:
+        """Amend the passed in local namespace with a controlled set of allowed symbols."""
         for modulename, funclist in self._imports.items():
             module = import_module(modulename)
             for func in funclist:
-                loc[func] = getattr(module, func)
-        loc["np"] = import_module("numpy")
-        return loc
+                local_ns[func] = getattr(module, func)
+        local_ns["np"] = import_module("numpy")
+        return local_ns
+
+    _T = TypeVar("_T", bound=(int | float | bool))
 
     def _eval(
-        self, func: Callable[..., int | float | bool], kvargs: dict[str, Any] | list[Any] | tuple[Any, ...]
-    ) -> int | float | bool:
-        """Call a function of multiple arguments and return the single result.
-        All internal vecor arguments are transformed to np.arrays.
-        """
-        if isinstance(kvargs, dict):
-            for k, v in kvargs.items():
-                if isinstance(v, Iterable):
-                    kvargs[k] = np.array(v, float)
-            return func(**kvargs)
-        if isinstance(kvargs, list):
-            for i, v in enumerate(kvargs):
-                if isinstance(v, Iterable):
-                    kvargs[i] = np.array(v, dtype=float)
-            return func(*kvargs)
-        assert isinstance(kvargs, tuple), f"Unknown type of kvargs {kvargs}"
-        _args = []  # make new, because tuple is not mutable
-        for v in kvargs:
-            if isinstance(v, Iterable):
-                _args.append(np.array(v, dtype=float))
-            else:
-                _args.append(v)
-        return func(*_args)
+        self,
+        func: Callable[..., _T],
+        *args: Any,  # noqa: ANN401
+        **kwargs: Any,  # noqa: ANN401
+    ) -> _T:
+        """Call `func` with the given positional and keyword arguments and return the result.
 
-    def eval_single(self, key: str, kvargs: dict[str, Any] | list[Any] | tuple[Any, ...]) -> int | float | bool:
+        Iterable arguments are considered vectors and are transformed to numpy arrays before being passed to `func`.
+
+        Args:
+            func: The function to be called
+            *args: Positional arguments to be passed to `func`
+            **kwargs: Keyword arguments to be passed to `func`
+        Returns:
+            The result of calling `func` with the given arguments
+        """
+        if args:
+            _args = []
+            for v in args:
+                if isinstance(v, Iterable):
+                    _args.append(np.array(v, dtype=float))
+                else:
+                    _args.append(v)
+            args = tuple(_args)
+        if kwargs:
+            for k in list(kwargs.keys()):  # work on copy of keys, as we change the dict during iteration
+                v = kwargs[k]
+                if isinstance(v, Iterable):
+                    kwargs[k] = np.array(v, dtype=float)
+        return func(*args, **kwargs)
+
+    def eval_single(
+        self,
+        key: str,
+        *args: Any,  # noqa: ANN401
+        **kwargs: Any,  # noqa: ANN401
+    ) -> int | float | bool:
         """Perform assertion of 'key' on a single data point.
 
         Args:
-            key (str): The expression identificator to be used
-            kvargs (dict|list|tuple): variable substitution kvargs as dict or args as tuple/list
-                All required variables for the evaluation shall be listed.
-        Results:
+            key (str): The identifier of the expression to be evaluated
+            *args: Positional arguments used in the expression, as a list or tuple.
+            **kwargs: Keyword arguments used in the expression, as a dict.
+
+        Returns
+        -------
             (bool) result of assertion
         """
         assert key in self._compiled, f"Expression {key} not found"
-        loc = self.make_locals(locals())
-        exec(self._compiled[key], loc, loc)  # noqa: S102
-        # print("kvargs", kvargs, self._syms[key], self.expr_get_symbols_functions(key))  # noqa: ERA001
-        return self._eval(locals()[f"_{key}"], kvargs)
+        local_ns = self.make_locals({})
+        func = get_callable_function(
+            compiled=self._compiled[key],
+            function_name=f"_{key}",
+            global_ns=local_ns,
+            local_ns=local_ns,
+        )
+        return self._eval(func, *args, **kwargs)
 
     _VT = TypeVar("_VT", bound=TDataColumn | TValue)
 
@@ -381,10 +402,13 @@ class Assertion:
         argument_names = self._syms[key]
 
         # Execute the compiled expression. This will create a function with name _<key> in the local namespace.
-        _locals = self.make_locals(locals())
-        exec(self._compiled[key], _locals, _locals)  # noqa: S102
-        # Save a reference to the created function in a local variable, for easier access.
-        func = locals()[f"_{key}"]
+        _locals = self.make_locals({})
+        func = get_callable_function(
+            compiled=self._compiled[key],
+            function_name=f"_{key}",
+            global_ns=_locals,
+            local_ns=_locals,
+        )
 
         _temp = self._temporal[key]["type"] if ret is None else Temporal.UNDEFINED
 
