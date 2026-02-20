@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from sim_explorer.utils.codegen import get_callable_function
 from sim_explorer.utils.paths import get_path, relative_path
 
 
@@ -27,6 +28,18 @@ def test_relative_path(simexp: Path):
     assert found == expected, f"Got {found}, expected {expected}"
     found = get_path(rel0, cases0)
     assert found == expected, f"Got {found}, expected {expected}"
+
+
+def test_get_callable_function():
+    compiled = compile("def f(x):\n    return x + 1", "<string>", "exec")
+    f = get_callable_function(compiled=compiled, function_name="f")
+    assert f(2) == 3
+
+
+def test_get_callable_function_not_callable():
+    compiled = compile("f = 7", "<string>", "exec")
+    with pytest.raises(TypeError, match="not callable"):
+        _ = get_callable_function(compiled=compiled, function_name="f")
 
 
 if __name__ == "__main__":
