@@ -20,7 +20,7 @@ jobs:
           enable-cache: true
           cache-dependency-glob: 'uv.lock'
       - name: Install the project
-        run: uv sync -p ${{ matrix.python }} -U --no-dev
+        run: uv sync -p ${{ matrix.python }} -U --no-dev --extra test
       - name: Run pytest
         run: >
           uv run --with pytest --with pytest-cov

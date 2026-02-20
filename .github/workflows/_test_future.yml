@@ -35,7 +35,7 @@ jobs:
               $Content -Replace $RequiresPythonFound, $RequiresPythonReplacement | Set-Content $File -NoNewline
           }
       - name: Install the project
-        run: uv sync -p ${{ matrix.python.uvpy }} -U --no-dev
+        run: uv sync -p ${{ matrix.python.uvpy }} -U --no-dev --extra test
       - name: Run pytest
         run: >
           uv run --with pytest --with pytest-cov
