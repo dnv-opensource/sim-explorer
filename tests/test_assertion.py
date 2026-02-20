@@ -12,6 +12,7 @@ import pytest
 
 from sim_explorer.assertion import Assertion, Temporal
 from sim_explorer.case import Cases, Results
+from sim_explorer.utils.codegen import get_callable_function
 from sim_explorer.utils.types import (
     TDataColumn,
     TValue,
@@ -32,12 +33,13 @@ def test_globals_locals():
     """Test the usage of the globals and locals arguments within exec."""
 
     module = import_module("math")
-    locals()["sin"] = module.sin
+    sin = module.sin
     code = "def f(x):\n    return sin(x)"
     compiled = compile(source=code, filename="<string>", mode="exec")
-    exec(compiled, locals(), locals())  # noqa: S102
-    # print(f"locals:{locals()}")
-    assert abs(locals()["f"](3.0) - sin(3.0)) < 1e-15
+    global_ns = {"__builtins__": {}, "sin": sin}
+    local_ns: dict[str, object] = {}
+    f = get_callable_function(compiled=compiled, function_name="f", global_ns=global_ns, local_ns=local_ns)
+    assert abs(f(3.0) - sin(3.0)) < 1e-15
 
 
 def test_ast(show: bool):
@@ -150,17 +152,17 @@ def test_assertion_single(asserts: Assertion):
     """Test Assertion.eval_single() on symbols and expressions defined in asserts."""
     # sourcery skip: extract-duplicate-method
     # show_data()print("Analyze", analyze( "t>8 & x>0.1"))
-    assert asserts.eval_single(key="1", kvargs={"t": 9.0})
-    assert not asserts.eval_single(key="1", kvargs={"t": 7})
+    assert asserts.eval_single("1", t=9.0)
+    assert not asserts.eval_single("1", t=7.0)
     expected = ["t", "x", "y", "dummy_y", "z", "dummy_z"]
     assert asserts._symbols == expected, f"Found: {asserts._symbols}"
     assert asserts.expr_get_symbols_functions(expr="3") == (["y"], [])
-    assert asserts.eval_single(key="3", kvargs={"y": 4})
-    assert asserts.eval_single(key="4", kvargs={"y": 4})
-    assert asserts.eval_single(key="5", kvargs=(4.1,))
-    assert asserts.eval_single(key="6", kvargs={"t": 123}) == 1.0
-    assert abs(asserts.eval_single(key="7", kvargs={"t": 2}) - sqrt(2.0)) < 1e-15, "Also sqrt works out of the box"
-    assert asserts.eval_single(key="10", kvargs={"t": 1.5})
+    assert asserts.eval_single("3", y=4)
+    assert asserts.eval_single("4", y=4)
+    assert asserts.eval_single("5", 4.1)
+    assert asserts.eval_single("6", t=123) == 1.0
+    assert abs(asserts.eval_single("7", t=2) - sqrt(2.0)) < 1e-15, "Also sqrt works out of the box"
+    assert asserts.eval_single("10", t=1.5)
 
 
 def test_assertion_series(asserts: Assertion, show: bool):
@@ -230,7 +232,7 @@ def test_assertion_spec():
     _ = _c.read_assertion(key="1", expr_descr=["t-1", "Description"])
     assert _c.asserts == ["3", "1"]
     assert _c.cases.assertion.temporal(key="1")["type"] == Temporal.A
-    assert _c.cases.assertion.eval_single(key="1", kvargs=(1,)) == 0
+    assert _c.cases.assertion.eval_single("1", 1) == 0
     with pytest.raises(AssertionError) as err:
         _ = _c.read_assertion(key="2@F", expr_descr="t-1")  # type: ignore[arg-type]
     assert str(err.value).startswith("Assertion spec expected: [expression, description]. Found")
@@ -238,7 +240,7 @@ def test_assertion_spec():
 
     assert _c.cases.assertion.temporal(key="2")["type"] == Temporal.F
     assert _c.cases.assertion.temporal(key="2")["args"] == ()
-    assert _c.cases.assertion.eval_single(key="2", kvargs=(1,)) == 0
+    assert _c.cases.assertion.eval_single("2", 1) == 0
     _ = _c.cases.assertion.symbol("y")
     found = list(_c.cases.assertion._symbols)
     assert found == ["t", "x", "tab_x", "i", "tab_i", "y"], f"Found: {found}"
@@ -260,8 +262,8 @@ def test_vector():
     print("Symbol x", asserts.symbol("x"), type(asserts.symbol("x")))
     _ = asserts.expr(key="1", ex="x.dot(x)")
     assert asserts.expr_get_symbols_functions(expr="1") == (["x"], [])
-    _ = asserts.eval_single(key="1", kvargs=((1, 2, 3),))
-    _ = asserts.eval_single(key="1", kvargs={"x": (1, 2, 3)})
+    _ = asserts.eval_single("1", (1, 2, 3))
+    _ = asserts.eval_single("1", x=(1, 2, 3))
     _ = asserts.symbol("y")  # a vector without explicit components
 
 
@@ -288,7 +290,7 @@ def test_do_assert(show: bool):
     _ = asserts.expr(key="0", ex="x.dot(v)")  # additional expression (not in .cases)
     assert asserts._syms["0"] == ["x", "v"]
     assert asserts.symbol("x") == "x"
-    assert asserts.eval_single(key="0", kvargs=((1, 2, 3), (4, 5, 6))) == 32
+    assert asserts.eval_single("0", (1, 2, 3), (4, 5, 6)) == 32
     assert asserts.expr(key="1") == "g==1.5"
     assert asserts.temporal(key="1")["type"] == Temporal.A
     assert asserts.syms(key="1") == ["g"]
