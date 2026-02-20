@@ -74,7 +74,7 @@ def _oscillator_fmu():
     src = Path(__file__).parent / "data" / "Oscillator" / "oscillator_fmu.py"
     fmu_path = Model.build(
         script=str(src),
-        project_files=[src],
+        project_files=None,
         dest=build_path,
     )
     return fmu_path
@@ -92,7 +92,7 @@ def _driver_fmu():
     src = Path(__file__).parent / "data" / "Oscillator" / "driving_force_fmu.py"
     fmu_path = Model.build(
         script=str(src),
-        project_files=[src],
+        project_files=None,
         dest=build_path,
     )
     print("DRIVER", fmu_path)
@@ -143,7 +143,7 @@ def test_oscillator_force_class(show: bool):
     assert abs(2 * pi / sqrt(osc.k / osc.m) - 2 * pi) < 1e-9, f"Period should be {2 * pi}"
     for _ in range(10000):
         osc.f = func(time=time)
-        _ = osc.do_step(time=time, dt=dt)
+        _ = osc.do_step(current_time=time, step_size=dt)
         times.append(time)
         z.append(osc.x[2])
         v.append(osc.v[2])
