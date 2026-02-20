@@ -212,16 +212,16 @@ def test_case_set_get(simpletable: Cases):
     ], "Hierarchy of caseX not as expected"
     check_value(case=caseX, var="i", val=True)
     check_value(case=caseX, var="stopTime", val=10)
-    assert caseX.act_set[0.0][0] == ("i", "tab", (3,), (True,)), f"Found {caseX.act_set[0.0][0]}"
+    assert caseX.act_set[0.0][0] == ("i", "tab", (0,), (1,)), f"Found {caseX.act_set[0.0][0]}"
     assert caseX.special["stopTime"] == 10, f"Erroneous stopTime {caseX.special['stopTime']}"
     assert list(caseX.act_get.keys()) == [-1, 0.0, 1000000000.0], "Get-action times"
     # print(f"ACT_GET: {caseX.act_get[-1][0]}")
-    assert caseX.act_get[-1][0] == ("x", "tab", (0, 1, 2))
+    assert caseX.act_get[-1][0] == ("x", "tab", (1, 2, 3)), f"Found {caseX.act_get[-1][0]}"
     # print(f"ACT_GET: {caseX.act_get[1e9][0]}")
-    assert caseX.act_get[1e9][0] == ("x", "tab", (0, 1, 2))
-    assert caseX.act_get[-1][0] == ("x", "tab", (0, 1, 2))
-    assert caseX.act_get[0.0][0] == ("i", "tab", (3,))
-    assert caseX.act_get[1000000000][0] == ("x", "tab", (0, 1, 2))
+    assert caseX.act_get[1e9][0] == ("x", "tab", (1, 2, 3)), f"Found {caseX.act_get[1e9][0]}"
+    assert caseX.act_get[-1][0] == ("x", "tab", (1, 2, 3)), f"Found {caseX.act_get[-1][0]}"
+    assert caseX.act_get[0.0][0] == ("i", "tab", (0,))
+    assert caseX.act_get[1000000000][0] == ("x", "tab", (1, 2, 3))
 
 
 if __name__ == "__main__":

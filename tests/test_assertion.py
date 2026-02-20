@@ -243,7 +243,7 @@ def test_assertion_spec():
     assert _c.cases.assertion.eval_single("2", 1) == 0
     _ = _c.cases.assertion.symbol("y")
     found = list(_c.cases.assertion._symbols)
-    assert found == ["t", "x", "tab_x", "i", "tab_i", "y"], f"Found: {found}"
+    assert found == ["t", "i", "tab_i", "x", "tab_x", "y"], f"Found: {found}"
     _ = _c.read_assertion(key="3@9.85", expr_descr=["x*t", "Test assertion"])
     assert _c.asserts == ["3", "1", "2"], f"Found: {_c.asserts}"
     assert _c.cases.assertion.temporal(key="3")["type"] == Temporal.T

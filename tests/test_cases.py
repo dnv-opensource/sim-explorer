@@ -10,8 +10,9 @@ def test_cases_management():
     assert isinstance(cases.base.act_get, dict)
     assert len(cases.base.act_get) > 0
 
-    assert cases.simulator.comp_model_var(0, 1) == ("tab", "SimpleTable", ["outs[1]"])
-    assert cases.simulator.comp_model_var(0, 1) == ("tab", "SimpleTable", ["outs[1]"])
+    assert cases.simulator.comp_model_var(0, 0) == ("tab", "TimeTableFMU", ["interpolate"])
+    assert cases.simulator.comp_model_var(0, 1) == ("tab", "TimeTableFMU", ["outs[0]"])
+    assert cases.simulator.comp_model_var(0, 2) == ("tab", "TimeTableFMU", ["outs[1]"])
     assert cases.simulator.component_name_from_id(0) == "tab"
 
 
