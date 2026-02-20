@@ -31,14 +31,18 @@ def run_in_subprocess(
     else:
         cmd_args = list(args)
 
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+
     result = subprocess.run(
         args=cmd_args,
         shell=False,  # Must be False for debugger attachment
         capture_output=True,
         check=False,
-        encoding="utf-8",
+        # encoding="utf-8",
+        encoding="cp437",  # Use cp437 to avoid decoding errors on Windows with non-UTF-8 locale
         errors="replace",  # Replace undecodable bytes to avoid errors on Windows with non-UTF-8 locale
-        # encoding="cp437",  # Use cp437 to avoid decoding errors on Windows with non-UTF-8 locale
+        env=env,
         **kwargs,
     )
     return result
