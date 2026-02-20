@@ -69,11 +69,10 @@ def oscillator_fmu():
 
 def _oscillator_fmu():
     """Make FMU and return .fmu file with path."""
-    build_path = Path(__file__).parent / "data" / "Oscillator"
+    build_path = Path.cwd()
     build_path.mkdir(exist_ok=True)
-    src = Path(__file__).parent / "data" / "Oscillator" / "oscillator_fmu.py"
     fmu_path = Model.build(
-        script=str(src),
+        script=Path(__file__).parent / "data" / "Oscillator" / "oscillator_fmu.py",
         project_files=None,
         dest=build_path,
     )
@@ -82,16 +81,15 @@ def _oscillator_fmu():
 
 @pytest.fixture(scope="session")
 def driver_fmu():
-    return _oscillator_fmu()
+    return _driver_fmu()
 
 
 def _driver_fmu():
     """Make FMU and return .fmu file with path."""
-    build_path = Path(__file__).parent / "data" / "Oscillator"
+    build_path = Path.cwd()
     build_path.mkdir(exist_ok=True)
-    src = Path(__file__).parent / "data" / "Oscillator" / "driving_force_fmu.py"
     fmu_path = Model.build(
-        script=str(src),
+        script=Path(__file__).parent / "data" / "Oscillator" / "driving_force_fmu.py",
         project_files=None,
         dest=build_path,
     )
