@@ -367,14 +367,18 @@ class SystemInterface:
     ) -> bool:
         """Check whether the action would be allowed according to FMI2 rules, see FMI2.01, p.49.
 
-        * if a tuple of variables is provided, the variables shall have equal properties
-          in addition to the normal allowed rules.
+        Note: If a tuple of variables is provided, the variables shall have equal properties
+        in addition to the normal allowed rules.
 
         Args:
             action (str): Action type, 'set', 'get', including init actions (set at time 0)
             comp (int,str): The instantiated component within the system (as index or name)
-            var (int,str,tuple): The variable(s) (of component) as reference or name
+            var (int,str,Sequence[int], Sequence[str]): The variable(s) (of component) as reference or name
             time (float): The time at which the action will be performed
+
+        Returns
+        -------
+            True if the action is allowed, False otherwise. In case of False, self.message contains the reason.
         """
 
         def _description(
