@@ -78,6 +78,7 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
 * Replaced `SimpleTable.fmu` with `TimeTableFMU.fmu` (in folder `tests/data/TimeTable`)
 * tests/conftest.py:
   * Changed scope of top level fixtures from "package" to "session", because "session" scoped fixtures gets called before "package" scoped fixtures
+  * Changed the additional `pytest` command line option `--show` from an input option (requesting the user to pass a literal value, e.g. write `--show True` or `--show False` ) to a command line _switch_. This eases the usage of this additional command line option. The pytest fixture `show` now gets set to `True` by simply adding the switch `--show` on the commandline. No need anylonger to amend `--show` with an additional string literal `True` or `False`. Passing the switch `--show` sets fixture `show` to `True`; omitting it sets fixture `show` to `False`.
 * Repaired all failing tests
 
 ### Dependencies
