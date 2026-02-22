@@ -231,7 +231,7 @@ def test_run_cases():
 
 
 if __name__ == "__main__":
-    retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
+    retcode = pytest.main(["-rA", "-v", __file__, "--show"])
     assert retcode == 0, f"Non-zero return code {retcode}"
     # import os
     # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")

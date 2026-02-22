@@ -76,9 +76,14 @@ def logger() -> logging.Logger:
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
-    parser.addoption("--show", action="store", default=False)
+    parser.addoption(
+        "--show",
+        action="store_true",
+        default=False,
+        help="Command line switch to show plots during tests, and dump additional results to console. By default, False.",
+    )
 
 
 @pytest.fixture(scope="session")
 def show(request: pytest.FixtureRequest) -> bool:
-    return request.config.getoption("--show") == "True"
+    return request.config.getoption("--show")

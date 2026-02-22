@@ -325,7 +325,7 @@ def test_do_assert(show: bool):
 
 
 if __name__ == "__main__":
-    retcode = pytest.main(args=["-rA", "-v", __file__, "--show", "False"])
+    retcode = pytest.main(args=["-rA", "-v", __file__])
     assert retcode == 0, f"Non-zero return code {retcode}"
     # import os
 

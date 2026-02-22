@@ -305,7 +305,7 @@ def test_run_osp_system_structure(system_structure: Path, show: bool):
 #             res.plot_time_series('osc.x_z', f"Case {c}. z-position")
 
 if __name__ == "__main__":
-    retcode = pytest.main(args=["-rA", "-v", __file__, "--show", "True"])
+    retcode = pytest.main(args=["-rA", "-v", __file__, "--show"])
     assert retcode == 0, f"Non-zero return code {retcode}"
     # import os
     # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")

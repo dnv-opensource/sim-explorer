@@ -61,6 +61,6 @@ def test_run_fmpy(show: bool):
 
 
 if __name__ == "__main__":
-    retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
+    retcode = pytest.main(["-rA", "-v", __file__, "--show"])
     assert retcode == 0, f"Non-zero return code {retcode}"
     # test_run_fmpy(show=True)
