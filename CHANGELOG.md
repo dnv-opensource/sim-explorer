@@ -69,6 +69,8 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
 * .pre-commit-config.yaml: Updated id of ruff to ruff-check
 * .sourcery.yaml: Updated the lowest Python version the project supports to '3.11'
 * ruff.toml: Updated target Python version to "py311"
+* src/sim_explorer/models.py:
+  * Renamed temporal operators `Temporal.FINALLY` to `Temporal.EVENTUALLY`, and adapted a related docstring in src/sim_explorer/assertion.py, to make clearer the meaning of the STL `EVENTUALLY` operator.
 
 ### Tests
 * tests/data/BouncingBall3D: Updated `BouncingBall3D.fmu` and related tests.

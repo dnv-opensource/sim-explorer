@@ -8,7 +8,7 @@ class Temporal(IntEnum):
     A = 1
     ALWAYS = 1
     F = 2
-    FINALLY = 2
+    EVENTUALLY = 2
     T = 3
     TIME = 3
 

@@ -180,7 +180,7 @@ def test_assertion_series(asserts: Assertion, show: bool):
     assert all(results[i] for i in range(81, 100)), "Assertion remains True"
     assert asserts.eval_series(key="1", data=_t, ret=max)[1]
     assert results == asserts.eval_series(key="1", data=_t, ret="bool-list")[1]
-    assert asserts.eval_series(key="1", data=_t, ret="F") == (8.1, True), "Finally True"
+    assert asserts.eval_series(key="1", data=_t, ret="F") == (8.1, True), "Eventually True"
     times, results = asserts.eval_series(key="2", data=tuple(zip(_t, _x, strict=True)), ret="bool")
     assert times == 0.0, f"Wrong from start. Found {times}, {results}. Expr: {asserts.expr(key='2')}"
     times, results = asserts.eval_series(key="2", data=tuple(zip(_t, _x, strict=True)), ret="bool-list")
@@ -218,7 +218,7 @@ def test_assertion_series(asserts: Assertion, show: bool):
     results_tuple = asserts.eval_series(key="10", data=_t, ret="F")
     assert results_tuple == (9.0, False), "Becomes False at time 9.0"
     results_tuple = asserts.eval_series(key="10", data=_t[:89], ret="F")
-    assert results_tuple == (6.9, True), "Finally True from time 6.9"
+    assert results_tuple == (6.9, True), "Eventually True from time 6.9"
 
 
 def test_assertion_spec():

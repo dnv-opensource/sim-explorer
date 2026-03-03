@@ -389,7 +389,7 @@ class Assertion:
                 `bool` : (time, True/False) for first row evaluating to True.
                 `bool-list` : (times, True/False) for all data points in the series
                 `A` : Always true for the whole time-series. Same as 'bool'
-                `F` : is True at end of time series.
+                `F` : Eventually True at some point in the time series.
                 Callable : run the given callable on times, expr(data)
                 None : Use the internal 'temporal(key)' setting
         Results:
@@ -472,7 +472,7 @@ class Assertion:
             _res = all(results)
             evaluation = (times[0] if _res else times[results.index(False)], _res)
 
-        elif (ret is None and _temp == Temporal.F) or (isinstance(ret, str) and ret == "F"):  # Finally True?
+        elif (ret is None and _temp == Temporal.F) or (isinstance(ret, str) and ret == "F"):  # Eventually True?
             r_prev = results[-1]
             t_prev = times[-1]
             for i in range(min(len(times), len(results)) - 1, -1, -1):
