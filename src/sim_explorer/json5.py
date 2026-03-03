@@ -12,11 +12,11 @@ from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 from jsonpath_ng.exceptions import JsonPathParserError
 from jsonpath_ng.ext import parse
-from jsonpath_ng.jsonpath import DatumInContext
 
 if TYPE_CHECKING:
     import os
-    from collections.abc import Sequence
+
+    from jsonpath_ng.jsonpath import DatumInContext
 
 logger = logging.getLogger(__name__)
 
@@ -491,7 +491,7 @@ class Json5:
             compiled = parse(path)
         except JsonPathParserError as e:
             raise ValueError(f"Invalid JsonPath expression: {path}\n{e}") from e
-        data: Sequence[Any] = compiled.find(self.js_py)
+        data: list[DatumInContext] = compiled.find(self.js_py)
         #        print("DATA", data)
         val: Any | list[Any] | None = None
         msg: str = ""
@@ -499,7 +499,7 @@ class Json5:
             msg = f"No match for {path}"
         elif len(data) == 1:  # found a single element
             val = data[0].value
-        elif isinstance(data[0], DatumInContext):
+        else:  # found multiple elements
             val = [x.value for x in data]
 
         if val is not None and typ is not None and not isinstance(val, typ):
