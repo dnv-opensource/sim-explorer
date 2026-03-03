@@ -304,7 +304,7 @@ class Assertion:
         if args:
             _args = []
             for v in args:
-                if isinstance(v, Iterable):
+                if isinstance(v, Iterable) and not isinstance(v, (str, bytes)):
                     _args.append(np.array(v, dtype=float))
                 else:
                     _args.append(v)
@@ -312,7 +312,7 @@ class Assertion:
         if kwargs:
             for k in list(kwargs.keys()):  # work on copy of keys, as we change the dict during iteration
                 v = kwargs[k]
-                if isinstance(v, Iterable):
+                if isinstance(v, Iterable) and not isinstance(v, (str, bytes)):
                     kwargs[k] = np.array(v, dtype=float)
         return func(*args, **kwargs)
 
