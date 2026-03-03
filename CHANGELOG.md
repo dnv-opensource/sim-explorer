@@ -8,7 +8,7 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
 * -/-
 
 
-## [0.3.0] - 2026-02-23
+## [0.2.2] - 2026-03-04
 
 ### Resolved
 * src/sim_explorer/__init__.py: Added `import libcosimpy.CosimLibrary` in `__init__.py` on package root level. This to make sure the libcosimc dll gets loaded only once. This resolves a runtime error observed with libcosimpy. (Although the root bug is likely in libcosimpy; should be reviewed by the libcosimpy team).
@@ -203,8 +203,8 @@ New Assertions release:
 
 
 <!-- Markdown link & img dfn's -->
-[unreleased]: https://github.com/dnv-opensource/sim-explorer/compare/v0.3.0...HEAD
-[0.3.0]: https://github.com/dnv-opensource/sim-explorer/releases/tag/v0.2.1...v0.3.0
+[unreleased]: https://github.com/dnv-opensource/sim-explorer/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/dnv-opensource/sim-explorer/releases/tag/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/dnv-opensource/sim-explorer/releases/tag/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/dnv-opensource/sim-explorer/releases/tag/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/dnv-opensource/sim-explorer/releases/tag/v0.0.1...v0.1.0
