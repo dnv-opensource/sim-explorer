@@ -19,7 +19,7 @@ def run_in_subprocess(
 
     Returns a CompletedProcess object capturing return code as well as stdout and stderr.
 
-    When running under debugpy and the the CLI entry point shall be executed,
+    When running under debugpy and the CLI entry point shall be executed,
     then indirect the call to the Python executable, and let Python run the CLI script
     as a module. This allows the debugger to follow into the subprocess.
     """
