@@ -56,6 +56,8 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
     users can at least find a solution manually to resolve the conflict, e.g. by pinning your package to the last version compatible with the environment they install it in.
     That way, we ensure it remains _possible_ for users to find a solution, instead of rendering it impossible forever.
   * Added scipy>=1.16 to optional dependency group 'test', as TimeTableFMU.fmu requires scipy to be installed in the calling environment.
+  * Added default directories to the 'exclude' list for pyright, in section [tool.pyright]
+    (Ref note in pyright [docs](https://github.com/microsoft/pylance-release/blob/main/docs/settings/python_analysis_exclude.md#default-behavior)).
 * Sphinx Documentation:
   * Sphinx conf.py: Removed ruff rule exception on file level
   * Sphinx conf.py: Updated year in copyright statement to 2026
