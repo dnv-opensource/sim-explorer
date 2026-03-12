@@ -3,12 +3,12 @@
 import codecs
 import logging
 import re
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 import pyjson5 as json5
-from jsonpath_ng.ext import parse  # type: ignore
-from jsonpath_ng.jsonpath import DatumInContext  # type: ignore
+from jsonpath_ng.ext import parse
 from pyjson5 import Json5Exception, Json5IllegalCharacter
 
 logger = logging.getLogger(__name__)
@@ -29,7 +29,13 @@ def json5_check(js5: dict[str, Any]) -> bool:
     return json5.encode_noop(js5)
 
 
-def json5_write(js5: dict, file: Path | str, *, indent: int = 3, compact: bool = True):
+def json5_write(  # noqa: C901, PLR0915
+    js5: dict[str, Any],
+    file: Path | str,
+    *,
+    indent: int = 3,
+    compact: bool = True,
+) -> None:
     """Use pyjson5 to print the json5 code to file, optionally using indenting the code to make it human-readable.
 
     Args:
@@ -38,7 +44,7 @@ def json5_write(js5: dict, file: Path | str, *, indent: int = 3, compact: bool =
         compact (bool) = True: compact file writing, i.e. try to keep keys unquoted and avoid escapes
     """
 
-    def _unescape(chars: str):
+    def _unescape(chars: str) -> str:
         """Try to unescape chars. If that results in a valid Json5 value we keep the unescaped version."""
         if len(chars) and chars[0] in ("[", "{"):
             pre = chars[0]
@@ -59,7 +65,7 @@ def json5_write(js5: dict, file: Path | str, *, indent: int = 3, compact: bool =
         else:  # unescaped this is still valid Json5
             return pre + unescaped + post
 
-    def _pretty_print(chars: str):
+    def _pretty_print(chars: str) -> None:  # noqa: C901
         nonlocal fp, level, indent, _list, _collect
 
         # first all actions with explicit fp.write
@@ -72,8 +78,8 @@ def json5_write(js5: dict, file: Path | str, *, indent: int = 3, compact: bool =
                 except Json5Exception:
                     _collect += ": "
                 else:
-                    _collect = no_quote + ": "
-                fp.write(_collect)
+                    _collect = f"{no_quote}: "
+                _ = fp.write(_collect)
                 _collect = ""
         elif chars == "{":
             level += 1
@@ -90,37 +96,36 @@ def json5_write(js5: dict, file: Path | str, *, indent: int = 3, compact: bool =
         elif chars == "]":
             _list -= 1
         # write to file and reset _collect
-        if chars in ("{", "}", "[", "]", ","):
-            fp.write(_unescape(_collect))
+        if chars in {"{", "}", "[", "]", ","}:
+            _ = fp.write(_unescape(_collect))
             _collect = ""
 
     assert json5.encode_noop(js5), f"Python object {js5} is not serializable as Json5"
     if indent == -1:  # just dump it no pretty print, Json5 features, ...
         txt = json5.encode(js5, quotationmark="'")
         with Path.open(Path(file), "w") as fp:
-            fp.write(txt)
+            _ = fp.write(txt)
 
     elif indent >= 0:  # pretty-print and other features are taken into account
         level: int = 0
         _list: int = 0
         _collect: str = ""
         with Path.open(Path(file), "w") as fp:
-            json5.encode_callback(js5, _pretty_print, supply_bytes=False, quotationmark="'")
+            _ = json5.encode_callback(js5, _pretty_print, supply_bytes=False, quotationmark="'")
 
 
-def json5_find_identifier_start(txt: str, pos: int):
+def json5_find_identifier_start(txt: str, pos: int) -> int:
     """Find the position of the start of the identifier in txt going backwards from pos."""
     p: int = pos - 1
     while True:
         if p < 0:
             return 0
-        elif txt[p] in (",", "{", "}", "[", "]", ":"):
+        if txt[p] in (",", "{", "}", "[", "]", ":"):
             return p + 1
-        else:
-            p -= 1
+        p -= 1
 
 
-def json5_try_correct(txt: str, pos: int):
+def json5_try_correct(txt: str, pos: int) -> tuple[bool, str]:
     """Try to repair the json5 illegal character found at pos in txt.
 
     1. Check whether pos points to a key and set the key in quotation marks.
@@ -145,7 +150,7 @@ def json5_try_correct(txt: str, pos: int):
     return (success, txt)
 
 
-def json5_read(file: Path | str, *, save: int = 0) -> dict:
+def json5_read(file: Path | str, *, save: int = 0) -> dict[str, Any]:  # noqa: C901, PLR0912
     """Read the Json5 file.
     If key or comment errors are encountered they are tried fixed 'en route'.
     save: 0: do not save, 1: save if changed, 2: save in any case. Overwrite file when saving.
@@ -161,8 +166,7 @@ def json5_read(file: Path | str, *, save: int = 0) -> dict:
             _p = txt.find("\n", _p) + 1
             if _p > pos or _p <= 0:
                 return line + 1
-            else:
-                line += 1
+            line += 1
 
     with Path.open(Path(file), "r") as fp:
         txt = fp.read()
@@ -177,7 +181,7 @@ def json5_read(file: Path | str, *, save: int = 0) -> dict:
                 _line = get_line(txt, pos)
                 if err.args[0].startswith("Expected b'comma'"):
                     raise ValueError(f"Missing comma? in {file}, line {_line} at {txt[pos : pos + 20]}") from err
-                elif err.args[0].startswith("Expected b'IdentifierStart'"):
+                if err.args[0].startswith("Expected b'IdentifierStart'"):
                     success, txt = json5_try_correct(txt, pos)
                     if not success:
                         raise ValueError(
@@ -197,13 +201,17 @@ def json5_read(file: Path | str, *, save: int = 0) -> dict:
             break
     if save == 0 and num_warn > 0:
         logger.warning(f"Decoding the file {file}, {num_warn} illegal characters were detected. Not saved.")
-    elif (save == 1 and num_warn > 0) or save == 2:
+    elif (save == 1 and num_warn > 0) or save == 2:  # noqa: PLR2004
         logger.warning(f"Decoding the file {file}, {num_warn} illegal characters were detected. File re-saved.")
         json5_write(js5, file, indent=3, compact=True)
     return js5
 
 
-def json5_path(js5: dict[str, Any], path: str, typ: type | None = None) -> Any:
+def json5_path(
+    js5: dict[str, Any],
+    path: str,
+    typ: type | None = None,
+) -> Any:  # noqa: ANN401
     """Evaluate a JsonPath expression on the Json5 code and return the result.
 
     Syntax see `RFC9535 <https://datatracker.ietf.org/doc/html/rfc9535>`_
@@ -231,26 +239,23 @@ def json5_path(js5: dict[str, Any], path: str, typ: type | None = None) -> Any:
     """
     compiled = parse(path)
     data = compiled.find(js5)
-    #        print("DATA", data)
     val = None
-    if not len(data):  # not found
+    if not data:  # not found
         return None
-    elif len(data) == 1:  # found a single element
-        val = data[0].value
-    else:  # multiple elements
-        if isinstance(data[0], DatumInContext):
-            val = [x.value for x in data]
-
-    if val is not None and typ is not None:  # check also the type
-        if not isinstance(val, typ):
-            try:  # try to convert
-                val = typ(val)
-            except ValueError:
-                raise ValueError(f"{path} matches, but type {typ} does not match {type(val)} in {js5}.") from None
+    val = data[0].value if len(data) == 1 else [x.value for x in data]
+    if val is not None and typ is not None and not isinstance(val, typ):
+        try:  # try to convert
+            val = typ(val)
+        except ValueError:
+            raise ValueError(f"{path} matches, but type {typ} does not match {type(val)} in {js5}.") from None
     return val
 
 
-def json5_update(js5: dict[str, Any], keys: Sequence[str], data: Any):
+def json5_update(
+    js5: dict[str, Any],
+    keys: Sequence[str],
+    data: Any,  # noqa: ANN401
+) -> None:
     """Append data to the js_py dict at the path pointed to by keys.
     So far this is a minimum implementation for adding data.
 
@@ -259,20 +264,19 @@ def json5_update(js5: dict[str, Any], keys: Sequence[str], data: Any):
         keys (Sequence): Sequence of keys. All keys down to the place where to update the dict shall be included
         data (Any): the data to be added/updated. Dicts are updated, lists are appended
     """
+    value: Any = None
     for i, k in enumerate(keys):
         if k not in js5:
             for j in range(len(keys) - 1, i - 1, -1):
                 data = {keys[j]: data}
             break
-        else:
-            parent = js5
-            js5 = js5[k]  # type: ignore [assignment]
-    # print(f"UPDATE path:{path}, parent:{parent}, k:{k}: {data}")
-    if isinstance(js5, list):
-        js5.append(data)
-    elif isinstance(js5, dict):
-        js5.update(data)
+        parent = js5
+        value = js5[k]
+    if isinstance(value, list):
+        value.append(data)
+    elif isinstance(value, dict):
+        value.update(data)
     elif isinstance(parent, dict):  # update the parent dict (replace a value)
-        js5.update({k: data})
+        parent.update({k: data})
     else:
-        raise ValueError(f"Unknown type of path: {js5}")
+        raise TypeError(f"Unknown type of path: {js5}")

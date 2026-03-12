@@ -152,7 +152,7 @@ def test_case_range(timetable: Cases):
     case_x = timetable.case_by_name("caseX")
     assert case_x is not None, "Case with name 'caseX' does not exist."
     with pytest.raises(ValueError) as err:
-        assert case_x.cases.disect_variable("x[99]")
+        _ = case_x.cases.disect_variable("x[99]")
     assert err.value.args[0] == "Index 99 of variable x out of range"
     assert case_x.cases.disect_variable("x[1]")[2] == [1]
     var_info = case_x.cases.disect_variable("i")[1]

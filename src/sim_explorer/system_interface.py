@@ -87,7 +87,7 @@ class SystemInterface:
         -------
             The system structure as (json) dict as if the structure was read through osp_system_structure_from_js5
         """
-        system_structure: dict[str, Any] | Json5
+        system_structure: dict[str, Any]
         assert file.exists(), f"System structure {file} not found"
         if file.suffix == ".xml":  # assume the standard OspSystemStructure.xml file
             system_structure = read_system_structure_xml(file)

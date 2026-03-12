@@ -34,10 +34,12 @@ def test_cases():
         "modelFile not as expected"
     )
     for c in ("base", "restitution", "restitutionAndGravity", "gravity"):
-        assert c in cases.js_py.js_py, f"The case '{c}' is expected to be defined in {list(cases.js_py.js_py.keys())}"
-    assert cases.js_py.jspath("$.header.variables.g[0]") == "bb"
-    assert cases.js_py.jspath("$.header.variables.g[1]") == "g", f"Found {cases.js_py.jspath('$.variables.g[1]')}"
-    assert cases.js_py.jspath("$.header.variables.g[2]") == "Gravity acting on the ball"
+        assert c in cases.js_py, f"The case '{c}' is expected to be defined in {list(cases.js_py.keys())}"
+    assert json5_path(cases.js_py, "$.header.variables.g[0]") == "bb"
+    assert json5_path(cases.js_py, "$.header.variables.g[1]") == "g", (
+        f"Found {json5_path(cases.js_py, '$.variables.g[1]')}"
+    )
+    assert json5_path(cases.js_py, "$.header.variables.g[2]") == "Gravity acting on the ball"
     # find_by_name
     for c in cases.base.list_cases(as_name=False, flat=True):
         assert isinstance(c, Case)

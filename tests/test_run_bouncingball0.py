@@ -131,7 +131,7 @@ def test_run_cases():  # noqa: PLR0915
     }
     """
     # key results data for base case
-    h0 = res.jspath("$.['0'].bb.h")
+    h0 = json5_path(res, "$.['0'].bb.h")
     assert h0 is not None
     t0 = sqrt(2 * h0 / 9.81)  # half-period time with full restitution
     v_max = sqrt(2 * h0 * 9.81)  # speed when hitting bottom

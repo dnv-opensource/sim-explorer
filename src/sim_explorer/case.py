@@ -33,7 +33,7 @@ from sim_explorer.exceptions import CaseInitError
 from sim_explorer.models import Temporal
 from sim_explorer.system_interface import SystemInterface
 from sim_explorer.system_interface_osp import SystemInterfaceOSP
-from sim_explorer.utils.json5 import json5_check
+from sim_explorer.utils.json5 import json5_check, json5_path, json5_read, json5_update, json5_write
 from sim_explorer.utils.misc import from_xml
 from sim_explorer.utils.paths import relative_path
 from sim_explorer.utils.types import (
@@ -749,7 +749,7 @@ class Cases:
         """
 
         if not isinstance(self.js_py.get("base"), dict) or json5_path(self.js_py, "$.base.spec", dict) is None:
-            raise CaseInitError(f"Main section 'base' is needed. Found {list(self.js_py.js_py.keys())}") from None
+            raise CaseInitError(f"Main section 'base' is needed. Found {list(self.js_py.keys())}") from None
 
         # we need to peek into the base case where startTime and stopTime should be defined
         start_time: float = json5_path(self.js_py, "$.base.spec.startTime", float) or 0.0
@@ -830,8 +830,6 @@ class Cases:
                         raise ValueError(f"Unhandled index {p}[{i}] for variable {pre}") from e
                     if not 0 <= idx < cvar_len:
                         raise ValueError(f"Index {idx} of variable {pre} out of range") from None
-                    if not isinstance(rng, list):
-                        raise ValueError(f"A list was expected as range here. Found {rng}") from None
                     rng.append(idx)
                 else:
                     assert len(parts_ellipses) == 2, f"RangeError: Exactly two indices expected in {p} of {pre}"  # noqa: PLR2004
@@ -939,7 +937,7 @@ class Results:
     ) -> None:
         self.file: Path | None  # None denotes that results are not automatically saved
         self.case: Case | None = None
-        self.res: Json5
+        self.res: dict[str, Any] = {}
         if (case is None or isinstance(case, str | Path)) and file is not None:
             self._init_from_existing(file)  # instantiating from existing results file (work with data)
         elif isinstance(case, Case):  # instantiating from cases file (for data collection)
@@ -962,7 +960,7 @@ class Results:
             raise CaseInitError(f"Cases {Path(_cases)} instantiation error") from ValueError
         case_name: str | None = header.get("case")
         assert case_name is not None, f"Case name not found in results file {file}"
-        self.case: Case | None = cases.case_by_name(case_name)
+        self.case = cases.case_by_name(case_name)
         assert self.case is not None, f"Case {case_name} not found."
         assert isinstance(self.case.cases, Cases), "Cases object not defined."
         self.case.add_results_object(res=self)  # make Results object known to self.case

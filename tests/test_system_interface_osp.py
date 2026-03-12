@@ -61,7 +61,7 @@ def test_default_initial():
         caus: str,
         expected: str,
     ):
-        res = SystemInterfaceOSP.valid_initial(causality=caus, variability=var, only_default=only_default)[0]
+        res = SystemInterfaceOSP.valid_initial(causality=caus, variability=var)[0]
         assert res == expected, f"valid_initial({var}, {caus}): Found {res} but expected {expected}"
 
     di(var="constant", caus="parameter", expected="ERROR_a")

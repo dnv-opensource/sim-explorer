@@ -1,6 +1,7 @@
 import logging
 import time
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -67,7 +68,7 @@ def repair_all_json5(folder: Path, do_change: int):
     for f2 in ("data/BouncingBall3D/test_case", "data/BouncingBall3D/test_results"):
         f = Path(__file__).parent / f2
         js5 = json5_read(f, save=0)  # we do not change these as the comments will vanish
-        json5_check(js5)
+        _ = json5_check(js5)
         logger.info(f"File {f} ok")
 
 
@@ -76,7 +77,7 @@ def do_change() -> int:
     return 0
 
 
-def test_all_json5(do_change):
+def test_all_json5(do_change: int) -> None:
     repair_all_json5(Path(__file__).parent, do_change=do_change)
 
 
@@ -93,7 +94,7 @@ def test_all_json5(do_change):
 
 
 def test_write():
-    js5: dict[str, str|int|float|list|dict] = {
+    js5: dict[str, str | int | float | list[Any] | dict[str, Any]] = {
         "Hello": "World",
         "t@his": ["is", "a", "simple", "test"],
         "h[0]w": "this dict",
@@ -106,8 +107,7 @@ def test_write():
     }
     # print("AS STRING", json5.dumps(js5, quotationmark="'", quote_keys=False))
     json5_write(js5, "test_write.js5", indent=3)
-    with open("test_write.js5", "r") as fp:
-        txt = fp.read()
+    txt = Path("test_write.js5").read_text()
     expected = """
 {
    Hello: 'World',
@@ -121,7 +121,7 @@ def test_write():
    notANumber: 'NaN'}"""
     assert txt != expected, f"EXPECTED:\n{expected}\nFOUND:\n{txt}"
     # print(txt)
-    json5_read("test_write.js5")
+    _ = json5_read("test_write.js5")
 
 
 if __name__ == "__main__":
