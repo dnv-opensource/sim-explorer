@@ -25,7 +25,7 @@ def test_relative_path(simexp: Path):
 
     expected = simexp / "tests" / "data" / "BouncingBall3D" / "BouncingBall3D.cases"
     found = get_path("BouncingBall3D.cases", res.parent)
-    assert found == expected, f"Got {found}, expected {expected}"
+    assert found == expected, f"Parent:\n{res.parent}. Got \n{found}, expected \n{expected}"
     found = get_path(rel0, cases0)
     assert found == expected, f"Got {found}, expected {expected}"
 

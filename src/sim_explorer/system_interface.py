@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, SupportsFloat, cast
 
 import numpy as np
 
-from sim_explorer.json5 import Json5
+from sim_explorer.utils.json5 import json5_read
 from sim_explorer.utils.misc import from_xml, match_with_wildcard
 from sim_explorer.utils.osp import read_system_structure_xml
 from sim_explorer.utils.types import TActionArgs, TGetActionArgs, TSetActionArgs, TValue
@@ -92,7 +92,7 @@ class SystemInterface:
         if file.suffix == ".xml":  # assume the standard OspSystemStructure.xml file
             system_structure = read_system_structure_xml(file)
         elif file.suffix in (".js5", ".json"):  # assume the js5 variant of the OspSystemStructure
-            system_structure = Json5(file).js_py
+            system_structure = json5_read(file)
         elif file.suffix == ".ssp":
             # see https://ssp-standard.org/publications/SSP10/SystemStructureAndParameterization10.pdf
             raise NotImplementedError("The SSP file variant is not yet implemented") from None
@@ -313,15 +313,14 @@ class SystemInterface:
         return typ(val)
 
     @staticmethod
-    def default_initial(
+    def valid_initial(
         causality: str,
         variability: str,
-        *,
-        only_default: bool = True,
-    ) -> str | int | tuple[int] | tuple[str, ...]:
-        """Return default initial setting as str. See p.50 FMI2.
-        With only_default, the single allowed value, or '' is returned.
-        Otherwise a tuple of possible values is returned where the default value is always listed first.
+    ) -> tuple[str, ...]:
+        """Return valid initial setting as tuple of str. See p.50 FMI2.
+        The default value is always listed first in the tuple.
+        The empty string denotes 'no initial setting'.
+        'ERROR' denotes that the combination causality/variability is invalid.
         """
         col: int = {
             "parameter": 0,
@@ -347,16 +346,20 @@ class SystemInterface:
             (-2, -2, 5, 8, 13, -3),
             (-2, -2, 6, 9, 14, 15),
         )[row][col]
-
+        res: tuple[str, ...]
         if init < 0:  # "Unallowed combination {variability}, {causality}. See '{chr(96-init)}' in FMI standard"
-            return init if only_default else (init,)
-        if init in {1, 2, 7, 10}:
-            return "exact" if only_default else ("exact",)
-        if init in {3, 4, 11, 12}:
-            return "calculated" if only_default else ("calculated", "approx")
-        if init in {8, 9, 13, 14}:
-            return "calculated" if only_default else ("calculated", "exact", "approx")
-        return init if only_default else (init,)
+            res = (f"ERROR_{chr(96 - init)}",)
+        elif init in (1, 2, 7, 10):
+            res = ("exact",)
+        elif init in (3, 4, 11, 12):
+            res = ("calculated", "approx")
+        elif init in (8, 9, 13, 14):
+            res = ("calculated", "exact", "approx")
+        elif init in (5, 6, 15):  # combination valid, but initial shall not be provided
+            res = ("",)
+        else:
+            raise ValueError(f"Unknown init index {init}") from None
+        return res
 
     def allowed_action(  # noqa: C901
         self,
@@ -397,15 +400,20 @@ class SystemInterface:
                 return False
             return True
 
-        _type, _causality, _variability = ("", "", "")  # unknown
+        _type, _causality, _variability, _initial = ("", "", "", "")  # unknown
 
         variables = self.variables(comp)
         for name, var_info in self.variable_iter(variables=variables, flt=var):
+            assert isinstance(name, str), "str expected. Found {name}"
+            assert isinstance(var_info, dict), f"Dict expected as var_info. Found {var_info}"
             if _type == "" or _causality == "" or _variability == "":  # define the properties and check whether allowed
                 _type = var_info["type"]
                 _causality = var_info["causality"]
                 _variability = var_info["variability"]
-                _initial = var_info.get("initial", SystemInterface.default_initial(_causality, _variability))
+                _initial = var_info.get("initial", SystemInterface.valid_initial(_causality, _variability)[0])
+                assert not _initial.startswith("ERROR"), (
+                    f"Invalid combination of causality {_causality}-variability {_variability}: {_initial}"
+                )
                 if action in {"get", "step"}:  # no restrictions on get
                     pass
                 elif action == "set" and (
@@ -434,7 +442,7 @@ class SystemInterface:
                     return False
                     # additional rule for ModelExchange, not listed here
             else:  # check whether the properties are equal
-                _initial = var_info.get("initial", SystemInterface.default_initial(_causality, _variability))
+                _initial = var_info.get("initial", SystemInterface.valid_initial(_causality, _variability))
                 if not _check(
                     cond=_type == var_info["type"],
                     msg=f"{_description(name=name, info=var_info, initial=_initial)} != type {_type}",

@@ -51,9 +51,9 @@ def test_interface():
     assert sys.match_variables("timeTable", "interpolate") == (("interpolate", 0),)
     assert sys.variable_name_from_ref("timeTable", 2) == "outs[1]"
     assert sys.variable_name_from_ref("timeTable", 100) == "", "Not existent"
-    default = SystemInterface.default_initial("output", "fixed")
-    assert default == -5, f"Found:{default}"
-    assert SystemInterface.default_initial("parameter", "fixed") == "exact"
+    default = SystemInterface.valid_initial("output", "fixed")[0]
+    assert default.startswith("ERROR"), f"Found:{default}"
+    assert SystemInterface.valid_initial("parameter", "fixed")[0] == "exact"
     assert sys.allowed_action("Set", "timeTable", "interpolate", 0)
     assert sys.allowed_action("Get", "timeTable", "outs", 0)
     # assert sys.message, "Variable outs of component timeTable was not found"

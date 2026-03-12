@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from sim_explorer.case import Cases, Results
+from sim_explorer.utils.json5 import json5_path
 
 
 def test_init():
@@ -12,23 +13,23 @@ def test_init():
     file = Path(__file__).parent / "data" / "BouncingBall3D" / "test_results"
     print("FILE", file)
     res = Results(file=file)
-    # assert res.res.jspath("$.header.file", Path, True).exists()
-    _date_time = res.res.jspath(path="$.header.dateTime", typ=datetime, error_msg=True)
+    # assert json5_path(res.res, "$.header.file", Path).exists()
+    _date_time = json5_path(res.res, "$.header.dateTime", typ=datetime)
     assert _date_time is not None
     print("DATE", _date_time.isoformat())
     assert _date_time.isoformat() == "1924-01-14T00:00:00"
-    _cases_date = res.res.jspath(path="$.header.casesDate", typ=datetime, error_msg=True)
+    _cases_date = json5_path(res.res, "$.header.casesDate", typ=datetime)
     assert _cases_date is not None
     assert _cases_date.isoformat() == "1924-01-13T00:00:00"
     # init making a new file
     cases = Cases(Path(__file__).parent / "data" / "BouncingBall3D" / "BouncingBall3D.cases")
     case = cases.case_by_name("base")
     res = Results(case=case)
-    # assert res.res.jspath("$.header.file", Path, True).exists()
-    _date_time = res.res.jspath(path="$.header.dateTime", typ=datetime, error_msg=True)
+    # assert json5_path(res.res, "$.header.file", Path, True).exists()
+    _date_time = json5_path(res.res, "$.header.dateTime", typ=datetime)
     assert _date_time is not None
     assert isinstance(_date_time.isoformat(), str)
-    _cases_date = res.res.jspath(path="$.header.casesDate", typ=datetime, error_msg=True)
+    _cases_date = json5_path(res.res, "$.header.casesDate", typ=datetime)
     assert _cases_date is not None
     assert isinstance(_cases_date.isoformat(), str)
 
@@ -37,10 +38,9 @@ def test_add():
     cases = Cases(Path(__file__).parent / "data" / "BouncingBall3D" / "BouncingBall3D.cases")
     case = cases.case_by_name("base")
     res = Results(case=case)
-    res._header_transform(to_string=True)  # pyright: ignore[reportPrivateUsage]
     res.add(time=0.0, comp="bb", cvar="g", values=(9.81,))
     # print( res.res.write( pretty_print=True))
-    assert res.res.jspath("$['0.0'].bb.g") == 9.81
+    assert json5_path(res.res, "$['0.0'].bb.g") == 9.81
 
 
 def test_plot_time_series(show: bool) -> None:

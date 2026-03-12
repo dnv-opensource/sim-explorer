@@ -7,8 +7,8 @@ from typing import Any
 import pytest
 
 from sim_explorer.case import Case, Cases
-from sim_explorer.json5 import Json5
 from sim_explorer.system_interface import SystemInterface
+from sim_explorer.utils.json5 import json5_path, json5_write
 from sim_explorer.utils.types import TValue
 
 
@@ -54,7 +54,7 @@ def _make_cases():
     ET.indent(tree, space="   ", level=0)
     tree.write("data/OspSystemStructure.xml", encoding="utf-8")
 
-    json5 = {
+    js5 = {
         "name": "Testing",
         "description": "Simple sim explorer for testing purposes",
         "timeUnit": "second",
@@ -83,8 +83,7 @@ def _make_cases():
             "spec": {"stopTime": 10},
         },
     }
-    js = Json5(json5)
-    _ = js.write("data/test.cases")
+    json5_write(js5, "data/test.cases")
     _ = SystemInterface("data/OspSystemStructure.xml")
     _ = Cases("data/test.cases")
 
@@ -152,7 +151,9 @@ def test_case_range(timetable: Cases):
     do_case_range(txt="x[1.3]", casename="caseX", expected="Unhandled index", timetable=timetable)
     case_x = timetable.case_by_name("caseX")
     assert case_x is not None, "Case with name 'caseX' does not exist."
-    assert case_x.cases.disect_variable("x[99]", err_level=0) == ("", None, list(range(0)))
+    with pytest.raises(ValueError) as err:
+        assert case_x.cases.disect_variable("x[99]")
+    assert err.value.args[0] == "Index 99 of variable x out of range"
     assert case_x.cases.disect_variable("x[1]")[2] == [1]
     var_info = case_x.cases.disect_variable("i")[1]
     assert var_info is not None
@@ -179,7 +180,7 @@ def do_case_range(
 
 
 def check_value(case: Case, var: str, val: TValue):
-    found = case.js.jspath(f"$.spec.{var}")
+    found = json5_path(case.js_py, f"$.spec.{var}")
     if found is not None:
         assert found == val, f"Wrong value {found} for variable {var}. Expected: {val}"
     else:  # not explicitly defined for this case. Shall be defined in the hierarchy!

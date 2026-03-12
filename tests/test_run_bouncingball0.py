@@ -1,22 +1,23 @@
 import contextlib
 from math import sqrt
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
 
 from sim_explorer.case import Case, Cases
-from sim_explorer.json5 import Json5
 from sim_explorer.system_interface_osp import SystemInterfaceOSP
+from sim_explorer.utils.json5 import json5_path
 
 
-def expect_bounce_at(results: Json5, time: float, eps: float = 0.02):
+def expect_bounce_at(results: dict[str, Any], time: float, eps: float = 0.02):
     previous = None
     falling = True
-    for t in results.js_py:
+    for t in results:
         with contextlib.suppress(ValueError):
             _t = float(t)
-            bb_h: float | None = results.jspath(path=f"$.['{t}'].bb.h")
+            bb_h: float | None = json5_path(results, f"$.['{t}'].bb.h")
             assert bb_h is not None, f"No data 'bb.h' found for time {t}"
             if previous is not None:
                 print(bb_h, previous[0])
@@ -110,8 +111,8 @@ def test_run_cases():  # noqa: PLR0915
     case.run("base")
     _case = cases.case_by_name("base")
     assert _case is not None
-    assert _case.res is not None
-    res = _case.res.res
+    assert _case.results is not None
+    res = _case.results.res
     """
         Cannot be tested in CI as order of variables and models are not guaranteed in different OSs
         inspect = cases.case_by_name("base").res.inspect()
@@ -144,8 +145,8 @@ def test_run_cases():  # noqa: PLR0915
     cases.run_case(name="restitution", dump="results_restitution")
     _case = cases.case_by_name("restitution")
     assert _case is not None
-    assert _case.res is not None
-    res = _case.res.res
+    assert _case.results is not None
+    res = _case.results.res
     assert expect_bounce_at(results=res, time=sqrt(2 * h0 / 9.81), eps=0.02), f"No bounce at {sqrt(2 * h0 / 9.81)}"
     # restitution is a factor on speed at bounce
     assert expect_bounce_at(results=res, time=sqrt(2 * h0 / 9.81) + 0.5 * v_max / 9.81, eps=0.02)

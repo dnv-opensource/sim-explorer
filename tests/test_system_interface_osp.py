@@ -59,35 +59,34 @@ def test_default_initial():
     def di(
         var: str,
         caus: str,
-        expected: str | int | tuple[str, ...],
-        *,
-        only_default: bool = True,
+        expected: str,
     ):
-        res = SystemInterfaceOSP.default_initial(causality=caus, variability=var, only_default=only_default)
-        assert res == expected, f"default_initial({var}, {caus}): Found {res} but expected {expected}"
+        res = SystemInterfaceOSP.valid_initial(causality=caus, variability=var, only_default=only_default)[0]
+        assert res == expected, f"valid_initial({var}, {caus}): Found {res} but expected {expected}"
 
-    di(var="constant", caus="parameter", expected=-1)
-    di(var="constant", caus="calculated_parameter", expected=-1)
-    di(var="constant", caus="input", expected=-1)
+    di(var="constant", caus="parameter", expected="ERROR_a")
+    di(var="constant", caus="calculated_parameter", expected="ERROR_a")
+    di(var="constant", caus="input", expected="ERROR_a")
     di(var="constant", caus="output", expected="exact")
     di(var="constant", caus="local", expected="exact")
-    di(var="constant", caus="independent", expected=-3)
+    di(var="constant", caus="independent", expected="ERROR_c")
     di(var="fixed", caus="parameter", expected="exact")
     di(var="fixed", caus="calculated_parameter", expected="calculated")
     di(var="fixed", caus="local", expected="calculated")
-    di(var="fixed", caus="input", expected=-4)
+    di(var="fixed", caus="input", expected="ERROR_d")
     di(var="tunable", caus="parameter", expected="exact")
     di(var="tunable", caus="calculated_parameter", expected="calculated")
-    di(var="tunable", caus="output", expected=-5)
+    di(var="tunable", caus="output", expected="ERROR_e")
     di(var="tunable", caus="local", expected="calculated")
-    di(var="tunable", caus="input", expected=-4)
-    di(var="discrete", caus="calculated_parameter", expected=-2)
-    di(var="discrete", caus="input", expected=5)
+    di(var="tunable", caus="input", expected="ERROR_d")
+    di(var="discrete", caus="calculated_parameter", expected="ERROR_b")
+    di(var="discrete", caus="input", expected="")
     di(var="discrete", caus="output", expected="calculated")
     di(var="discrete", caus="local", expected="calculated")
-    di(var="continuous", caus="calculated_parameter", expected=-2)
-    di(var="continuous", caus="independent", expected=15)
-    di(var="discrete", caus="output", expected=("calculated", "exact", "approx"), only_default=False)
+    di(var="continuous", caus="calculated_parameter", expected="ERROR_b")
+    di(var="continuous", caus="independent", expected="")
+    found = SystemInterfaceOSP.valid_initial("output", "discrete")
+    assert found == ("calculated", "exact", "approx")
 
 
 def test_simulator_from_system_structure():

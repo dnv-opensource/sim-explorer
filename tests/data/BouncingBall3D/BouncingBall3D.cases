@@ -1,53 +1,45 @@
-{header : {
-   name        : 'BouncingBall3D',
-   description : 'Simple sim explorer with the 3D BouncingBall FMU (3D position and speed',
-   modelFile : "OspSystemStructure.xml",
-   simulator : "OSP"
-   logLevel : 'fatal', # possible levels: trace, debug, info, warning, error, fatal
-   timeUnit  : "second",
-   variables : {
-      g : ['bb', 'g', "Gravity acting on the ball"],
-      e : ['bb', 'e', "Coefficient of restitution"],
-      x : ['bb', 'pos', "3D Position of the ball in meters"],
-      v : ['bb', 'speed', "3D speed of ball in meters/second"],
-      x_b : ['bb', 'p_bounce', "Expected 3D Position where the next bounce will occur (in meters)"],
-      }},
-base : {
-   description : "Ball dropping from height 1 m. Results should be the same as the basic BouncingBall",
-   spec: {
-      stepSize : 0.01,
-      stopTime : 3,
-      g : 9.81,
-      e : 1.0,
-      x[2] : 39.37007874015748, # this is in inch => 1m!
-      x@step : 'result',
-      v@step : 'result',
-      x_b@step : 'res',
-   }},
-restitution : {
-   description : "Smaller coefficient of restitution e",
-   spec: {
-      e : 0.5,
-   }},
-restitutionAndGravity : {
-   description : "Based restitution (e change), change also the gravity g",
-   parent : 'restitution',
-   spec : {
-      g : 1.5
-   },
-   assert: {
-      1@A : ['g==1.5', 'Check setting of gravity (about 1/7 of earth)'],
-      2@ALWAYS : ['e==0.5', 'Check setting of restitution'],
-      3@F : ['x[2] < 3.0', 'For long times the z-position of the ball remains small (loss of energy)'],
-      4@T1.1547 : ['abs(x[2]) < 0.4', 'Close to bouncing time the ball should be close to the floor'],
-   }
-},
-gravity : {
-   description : "Gravity like on the moon",
-   spec : {
-      g : 1.5
-   },
-   assert: {
-      6@ALWAYS: ['g==9.81', 'Check wrong gravity.']
-   }
-}}
+{
+   header: {
+      name: 'BouncingBall3D',
+      description: 'Simple sim explorer with the 3D BouncingBall FMU (3D position and speed)',
+      modelFile: 'OspSystemStructure.xml',
+      simulator: 'OSP',
+      logLevel: 'fatal',
+      timeUnit: 'second',
+      variables: {
+         g: ['bb','g','Gravity acting on the ball'],
+         e: ['bb','e','Coefficient of restitution'],
+         x: ['bb','pos','3D Position of the ball in meters'],
+         v: ['bb','speed','3D speed of ball in meters/second'],
+         x_b: ['bb','p_bounce','Expected 3D Position where the next bounce will occur (in meters)']}},
+   base: {
+      description: 'Ball dropping from height 1 m. Results should be the same as the basic BouncingBall',
+      spec: {
+         stepSize: 0.01,
+         stopTime: 3,
+         g: 9.81,
+         e: 1.0,
+         'x[2]': 39.37007874015748,
+         'x@step': 'result',
+         'v@step': 'result',
+         'x_b@step': 'res'}},
+   restitution: {
+      description: 'Smaller coefficient of restitution e',
+      spec: {
+         e: 0.5}},
+   restitutionAndGravity: {
+      description: 'Based restitution (e change), change also the gravity g',
+      parent: 'restitution',
+      spec: {
+         g: 1.5},
+      assert: {
+         '1@A': ['g==1.5','Check setting of gravity (about 1/7 of earth)'],
+         '2@ALWAYS': ['e==0.5','Check setting of restitution'],
+         '3@F': ['x[2] < 3.0','For long times the z-position of the ball remains small (loss of energy)'],
+         '4@T1.1547': ['abs(x[2]) < 0.4','Close to bouncing time the ball should be close to the floor']}},
+   gravity: {
+      description: 'Gravity like on the moon',
+      spec: {
+         g: 1.5},
+      assert: {
+         '6@ALWAYS': ['g==9.81','Check wrong gravity.']}}}

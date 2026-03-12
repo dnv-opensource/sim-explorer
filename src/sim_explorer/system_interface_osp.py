@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Callable
 from functools import partial
 from pathlib import Path
@@ -10,6 +11,8 @@ from libcosimpy.CosimObserver import CosimObserver
 
 from sim_explorer.system_interface import SystemInterface
 from sim_explorer.utils.types import TActionArgs
+
+logger = logging.getLogger(__name__)
 
 
 class SystemInterfaceOSP(SystemInterface):

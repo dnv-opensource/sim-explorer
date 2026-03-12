@@ -10,8 +10,8 @@ from libcosimpy.CosimObserver import CosimObserver
 from libcosimpy.CosimSlave import CosimLocalSlave
 
 from sim_explorer.case import Case, Cases
-from sim_explorer.json5 import Json5
 from sim_explorer.system_interface_osp import SystemInterfaceOSP
+from sim_explorer.utils.json5 import json5_path, json5_read
 
 
 @pytest.fixture(scope="session")
@@ -41,13 +41,12 @@ def is_nearly_equal(x: float | list[float], expected: float | list[float], eps: 
 def test_read_cases():
     path = Path(Path(__file__).parent / "data" / "MobileCrane" / "MobileCrane.cases")
     assert path.exists(), "System structure file not found"
-    json5 = Json5(path)
-    assert "# lift 1m / 0.1sec" in list(json5.comments.values())
+    js5 = json5_read(path)
     # for e in json5.js_py:
     #   print(f"{e}: {json5.js_py[e]}")
-    assert json5.jspath(path="$.base.spec.df_dt", typ=list) == [0.0, 0.0, 0.0]
+    assert json5_path(js5, "$.base.spec.df_dt", typ=list) == [0.0, 0.0, 0.0]
     # json5_write( json5.js_py, "MobileCrane.js5")
-    assert json5.jspath(path="$.dynamic.spec.db_dt", typ=float) == 0.785498
+    assert json5_path(js5, "$.dynamic.spec.db_dt", typ=float) == 0.785498
 
 
 # @pytest.mark.skip("Alternative step-by step, only using libcosimpy")
@@ -156,17 +155,16 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
 
     path = Path(Path(__file__).parent, "data/MobileCrane/MobileCrane.cases")
     assert path.exists(), "Cases file not found"
-    js = Json5(path)
-    print("CASES", js.write(file=None, pretty_print=True))
+    js5 = json5_read(path)
     expected_results = ["T@step", "x_pedestal@step", "x_boom@step", "x_load@step"]
-    assert js.jspath(path="$.base.results") == expected_results, f"Results found: {js.jspath(path='$.base.results')}"
-    assert list(js.js_py.keys()) == [
+    assert json5_path(js5, "$.base.results") == expected_results, f"Results found: {json5_path(js5, '$.base.results')}"
+    assert list(js5.keys()) == [
         "header",
         "base",
         "static",
         "dynamic",
     ]
-    assert list((js.jspath(path="$.header", typ=dict) or {}).keys()) == [
+    assert list(json5_path(js5, "$.header", dict).keys()) == [
         "name",
         "description",
         "modelFile",
@@ -174,12 +172,12 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
         "logLevel",
         "timeUnit",
         "variables",
-    ], f"Found: {list((js.jspath(path='$.header', typ=dict) or {}).keys())}"
+    ], f"Found: {list(json5_path(js5, '$.header', dict).keys())}"
     cases = Cases(path)
     print("INFO", cases.info())
     static = cases.case_by_name("static")
-    assert static is not None
-    assert static.js.jspath(path="$.spec", typ=dict) == {
+    assert isinstance(static, Case)
+    assert json5_path(static.js_py, "$.spec", dict) == {
         "p[2]": 1.570796,
         "b[1]": 45,
         "r[0]": 7.657,
@@ -310,10 +308,10 @@ def test_run_cases():
     case = cases.case_by_name("base")
     assert case is not None
     case.run(dump="results_base")
-    assert case.res is not None
-    res = case.res.res
+    assert case.results is not None
+    res = case.results.res
     # TODO @EisDNV: expected Torque?
-    assert is_nearly_equal(res.jspath(path="$['1.0'].mobileCrane.x_pedestal", typ=list) or [], expected=[0.0, 0.0, 3.0])
+    assert is_nearly_equal(json5_path(res, "$['1.0'].mobileCrane.x_pedestal", typ=list) or [], expected=[0.0, 0.0, 3.0])
     # assert is_nearly_equal(res[1.0]["mobileCrane"]["x_boom"], [8, 0.0, 3], 1e-5)
     # assert is_nearly_equal(res[1.0]["mobileCrane"]["x_load"], [8, 0, 3.0 - 1e-6], 1e-5)
 
@@ -321,11 +319,11 @@ def test_run_cases():
     cases.run_case("static", dump="results_static")
     case = cases.case_by_name("static")
     assert case is not None
-    assert case.res is not None
-    res = case.res.res
-    print("RES(1.0)", res.jspath("$['1.0'].mobileCrane"))
-    assert is_nearly_equal(res.jspath(path="$['1.0'].mobileCrane.x_pedestal") or [], expected=[0.0, 0.0, 3.0])
-    x_load = res.jspath("$['1.0'].mobileCrane.x_load")
+    assert case.results is not None
+    res = case.results.res
+    print("RES(1.0)", json5_path(res, "$['1.0'].mobileCrane"))
+    assert is_nearly_equal(json5_path(res, "$['1.0'].mobileCrane.x_pedestal") or [], expected=[0.0, 0.0, 3.0])
+    x_load = json5_path(res, "$['1.0'].mobileCrane.x_load")
     print(f"x_load: {x_load} <-> {[0, 8 / sqrt(2), 0]}")
 
 

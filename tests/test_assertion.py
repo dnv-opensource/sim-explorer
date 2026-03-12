@@ -273,7 +273,7 @@ def test_do_assert(show: bool):
     assert case is not None
     case.run()
     # res = Results(file=Path(__file__).parent / "data" / "BouncingBall3D" / "restitutionAndGravity.js5")
-    res = case.res
+    res = case.results
     assert isinstance(res, Results)
     # cases = res.case.cases
     assert res.case is not None

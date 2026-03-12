@@ -73,6 +73,7 @@ dependencies = [
     "plotly>=6.5",
     "pydantic>=2.12",
     "rich>=13.9.4",
+    "pyjson5>=1.6.8",
 ]
 
 [project.optional-dependencies]
@@ -82,9 +83,6 @@ test = [
 ]
 rest = [
     "docutils>=0.22.4",
-]
-editor = [
-    "thonny>=4.1",
 ]
 
 [project.urls]

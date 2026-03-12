@@ -5,7 +5,7 @@ from typing import Any
 
 from component_model.utils.xml import read_xml
 
-from sim_explorer.json5 import Json5
+from sim_explorer.utils.json5 import json5_path, json5_read
 
 
 # ==========================================
@@ -271,22 +271,22 @@ def osp_system_structure_from_js5(file: Path, dest: Path | None = None) -> Path:
     """
     assert file.exists(), f"File {file} not found"
     assert file.name.endswith(".js5"), f"Json5 file expected. Found {file.name}"
-    js = Json5(file)
+    js = json5_read(file)
 
     ss = make_osp_system_structure(
         name=file.name[:-4],
-        version=js.jspath("$.header.version", str) or "0.1",
-        start=js.jspath("$.header.StartTime", float) or 0.0,
-        base_step=js.jspath("$.header.BaseStepSize", float) or 0.01,
-        algorithm=js.jspath("$.header.algorithm", str) or "fixedStep",
-        simulators=js.jspath("$.Simulators", dict) or {},
-        functions_linear=js.jspath("$.FunctionsLinear", dict) or {},
-        functions_sum=js.jspath("$.FunctionsSum", dict) or {},
-        functions_vectorsum=js.jspath("$.FunctionsVectorSum", dict) or {},
-        connections_variable=js.jspath(path="$.ConnectionsVariable", typ=list),
-        connections_signal=js.jspath(path="$.ConnectionsSignal", typ=list),
-        connections_group=js.jspath(path="$.ConnectionsGroup", typ=list),
-        connections_signalgroup=js.jspath(path="$.ConnectionsSignalGroup", typ=list),
+        version=json5_path(js, "$.header.version", str) or "0.1",
+        start=json5_path(js, "$.header.StartTime", float) or 0.0,
+        base_step=json5_path(js, "$.header.BaseStepSize", float) or 0.01,
+        algorithm=json5_path(js, "$.header.algorithm", str) or "fixedStep",
+        simulators=json5_path(js, "$.Simulators", dict) or {},
+        functions_linear=json5_path(js, "$.FunctionsLinear", dict) or {},
+        functions_sum=json5_path(js, "$.FunctionsSum", dict) or {},
+        functions_vectorsum=json5_path(js, "$.FunctionsVectorSum", dict) or {},
+        connections_variable=json5_path(js, "$.ConnectionsVariable", list),
+        connections_signal=json5_path(js, "$.ConnectionsSignal", list),
+        connections_group=json5_path(js, "$.ConnectionsGroup", list),
+        connections_signalgroup=json5_path(js, "$.ConnectionsSignalGroup", list),
         path=dest or Path(file).parent,
     )
 
