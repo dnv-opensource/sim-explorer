@@ -1,37 +1,26 @@
 {
-header : {
-   name : 'Testing',
-   description : 'Simple sim explorer for testing purposes',
-   logLevel : 'info',
-   simulator : 'OSP'
-   timeUnit : 'second',
-   variables : {
-         i : ['tab','interpolate','Interpolation setting'],
-         x : ['tab','outs','Outputs (3-dim)'],
-         },
-   },
-
-base : {
-      description : 'Mandatory base settings. No interpolation',
-      spec : {
-            stepSize : 0.1,
-            stopTime : 1,
-            i : False,
-             },
-      results : ['x@step',
-                 'x[0]@1.0',
-                 'i@0']
-      },
-case1 : {
-      description : 'Interpolation ON',
-      spec : {
-            i : 1}},
-
-caseX : {
-      description : 'Based case1 longer simulation',
-      parent : 'case1',
-      spec : {
-            stopTime : 10,
-            },
-    },
-}
+   header: {
+      name: 'Testing',
+      description: 'Simple sim explorer for testing purposes',
+      logLevel: 'info',
+      simulator: 'OSP',
+      timeUnit: 'second',
+      variables: {
+         x: ['tab','outs','Outputs (3-dim)'],
+         i: ['tab','interpolate','Interpolation setting']}},
+   base: {
+      description: 'Mandatory base settings. No interpolation',
+      spec: {
+         stepSize: 0.1,
+         stopTime: 1,
+         i: false},
+      results: ['x@step','x[0]@1.0','i@0']},
+   case1: {
+      description: 'Interpolation ON',
+      spec: {
+         i: true}},
+   caseX: {
+      description: 'Based case1 longer simulation',
+      parent: 'case1',
+      spec: {
+         stopTime: 10}}}
