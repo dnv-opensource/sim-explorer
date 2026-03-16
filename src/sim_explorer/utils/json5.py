@@ -5,11 +5,15 @@ import logging
 import re
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any, TypeVar, overload
 
 import pyjson5 as json5
+from jsonpath_ng.exceptions import JsonPathParserError
 from jsonpath_ng.ext import parse
 from pyjson5 import Json5Exception, Json5IllegalCharacter
+
+if TYPE_CHECKING:
+    from jsonpath_ng.jsonpath import DatumInContext
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
@@ -39,7 +43,7 @@ def json5_write(  # noqa: C901, PLR0915
     """Use pyjson5 to print the json5 code to file, optionally using indenting the code to make it human-readable.
 
     Args:
-        file (Path): Path (file) object. Is overwritten if it exists.
+        file (Path | str): The file name (as string or Path object). The file is overwritten if it exists.
         indent (int) = 3: indentation length. Raw dump if set to -1
         compact (bool) = True: compact file writing, i.e. try to keep keys unquoted and avoid escapes
     """
@@ -103,15 +107,20 @@ def json5_write(  # noqa: C901, PLR0915
     assert json5.encode_noop(js5), f"Python object {js5} is not serializable as Json5"
     if indent == -1:  # just dump it no pretty print, Json5 features, ...
         txt = json5.encode(js5, quotationmark="'")
-        with Path.open(Path(file), "w") as fp:
+        with Path(file).open(mode="w") as fp:
             _ = fp.write(txt)
 
     elif indent >= 0:  # pretty-print and other features are taken into account
         level: int = 0
         _list: int = 0
         _collect: str = ""
-        with Path.open(Path(file), "w") as fp:
-            _ = json5.encode_callback(js5, _pretty_print, supply_bytes=False, quotationmark="'")
+        with Path(file).open(mode="w") as fp:
+            _ = json5.encode_callback(
+                data=js5,
+                cb=_pretty_print,
+                supply_bytes=False,
+                quotationmark="'",
+            )
 
 
 def json5_find_identifier_start(txt: str, pos: int) -> int:
@@ -150,7 +159,11 @@ def json5_try_correct(txt: str, pos: int) -> tuple[bool, str]:
     return (success, txt)
 
 
-def json5_read(file: Path | str, *, save: int = 0) -> dict[str, Any]:  # noqa: C901, PLR0912
+def json5_read(  # noqa: C901, PLR0912
+    file: Path | str,
+    *,
+    save: int = 0,
+) -> dict[str, Any]:
     """Read the Json5 file.
     If key or comment errors are encountered they are tried fixed 'en route'.
     save: 0: do not save, 1: save if changed, 2: save in any case. Overwrite file when saving.
@@ -168,7 +181,7 @@ def json5_read(file: Path | str, *, save: int = 0) -> dict[str, Any]:  # noqa: C
                 return line + 1
             line += 1
 
-    with Path.open(Path(file), "r") as fp:
+    with Path(file).open(mode="r") as fp:
         txt = fp.read()
     num_warn = 0
     while True:
@@ -207,11 +220,50 @@ def json5_read(file: Path | str, *, save: int = 0) -> dict[str, Any]:  # noqa: C
     return js5
 
 
+def _spath_to_keys(spath: str) -> list[str]:
+    """Extract the keys from path.
+    So far this is a minimum implementation for adding data. Probably this could be done using jsonpath-ng.
+    """
+    keys: list[str] = []
+    spath = spath.lstrip("$.")
+    if spath.startswith("$["):
+        spath = spath[1:]
+    c: re.Pattern[str] = re.compile(r"\[(.*?)\]")
+    while m := c.search(spath):
+        if m.start() > 0:
+            keys.extend(spath[: m.start()].split("."))
+        keys.append(spath[m.start() + 1 : m.end() - 1])
+        spath = spath[m.end() :]
+    if len(spath.strip()):
+        keys.extend(spath.split("."))
+    return keys
+
+
+_VT = TypeVar("_VT", bound=Any)
+
+
+@overload
 def json5_path(
     js5: dict[str, Any],
     path: str,
-    typ: type | None = None,
-) -> Any:  # noqa: ANN401
+    typ: type[_VT],
+) -> _VT | None: ...
+
+
+@overload
+def json5_path(
+    js5: dict[str, Any],
+    path: str,
+    typ: None = None,
+) -> Any | None:  # noqa: ANN401
+    ...
+
+
+def json5_path(
+    js5: dict[str, Any],
+    path: str,
+    typ: type[_VT] | None = None,
+) -> _VT | Any | None:
     """Evaluate a JsonPath expression on the Json5 code and return the result.
 
     Syntax see `RFC9535 <https://datatracker.ietf.org/doc/html/rfc9535>`_
@@ -237,46 +289,87 @@ def json5_path(
         path (str): path expression as string.
         typ (type)=None: optional specification of the expected type to find
     """
-    compiled = parse(path)
-    data = compiled.find(js5)
-    val = None
-    if not data:  # not found
-        return None
-    val = data[0].value if len(data) == 1 else [x.value for x in data]
+    try:
+        compiled = parse(path)
+    except JsonPathParserError as e:
+        raise ValueError(f"Invalid JsonPath expression: {path}\n{e}") from e
+    data: list[DatumInContext] = compiled.find(js5)
+    val: Any | list[Any] | None = None
+    if not len(data):  # not found
+        logger.info(f"No match for {path}. Returning None.")
+    elif len(data) == 1:  # found a single element
+        val = data[0].value
+    else:  # found multiple elements
+        val = [x.value for x in data]
+
     if val is not None and typ is not None and not isinstance(val, typ):
         try:  # try to convert
             val = typ(val)
-        except ValueError:
-            raise ValueError(f"{path} matches, but type {typ} does not match {type(val)} in {js5}.") from None
+        except Exception as e:
+            raise ValueError(f"{path} matches, but type {typ} does not match {type(val)}.") from e
     return val
+
+
+@overload
+def json5_update(
+    js5: dict[str, Any],
+    *,
+    spath: str,
+    data: dict[str, Any] | list[Any] | Any,  # noqa: ANN401
+) -> None: ...
+
+
+@overload
+def json5_update(
+    js5: dict[str, Any],
+    *,
+    keys: Sequence[str],
+    data: dict[str, Any] | list[Any] | Any,  # noqa: ANN401
+) -> None: ...
 
 
 def json5_update(
     js5: dict[str, Any],
-    keys: Sequence[str],
-    data: Any,  # noqa: ANN401
+    *,
+    spath: str | None = None,
+    keys: Sequence[str] | None = None,
+    data: dict[str, Any]
+    | list[Any]
+    | Any
+    | None = None,  # 'None' necessary here only for type checking (due to the overloads). At runtime `data` must not be None.
 ) -> None:
-    """Append data to the js_py dict at the path pointed to by keys.
+    """Append data to the js5 dict at the path pointed to by keys.
     So far this is a minimum implementation for adding data.
 
     Args:
-        js5 (dict): A Json5 conformant dict
-        keys (Sequence): Sequence of keys. All keys down to the place where to update the dict shall be included
-        data (Any): the data to be added/updated. Dicts are updated, lists are appended
+        js5 (dict[str, Any]): A Json5 conformant dict
+        spath (str): A JsonPath expression as string. If provided, the keys are extracted from the spath and used to update the dict. If not provided, the keys argument is used.
+        keys (Sequence[str]): Sequence of keys. All keys down to the place where to update the dict shall be included
+        data (dict[str, Any] | list[Any] | Any): the data to be added/updated. Dicts are updated, lists are appended
     """
-    value: Any = None
+    if spath is not None:
+        keys = _spath_to_keys(spath)
+    if keys is None:
+        raise ValueError("Either 'spath' or 'keys' must be provided")
+    assert data is not None, "Data to update must be provided"
+    path: dict[str, Any] | list[Any] | Any = js5
+    parent: dict[str, Any] | list[Any] | Any = js5
     for i, k in enumerate(keys):
-        if k not in js5:
+        if k not in path:
             for j in range(len(keys) - 1, i - 1, -1):
                 data = {keys[j]: data}
             break
-        parent = js5
-        value = js5[k]
-    if isinstance(value, list):
-        value.append(data)
-    elif isinstance(value, dict):
-        value.update(data)
+        # NOTE: `assert` is necessary as `path[k]` will be an invalid get operation if `path` is not a dict.
+        # TODO @EisDNV: Check and possibly improve code to allow accessing also indexed elements in lists.
+        #      ClaasRostock, 2025-01-26.
+        assert isinstance(path, dict)
+        parent = path
+        path = path[k]
+    if isinstance(path, list):
+        path.append(data)
+    elif isinstance(path, dict):
+        path.update(data)
     elif isinstance(parent, dict):  # update the parent dict (replace a value)
         parent.update({k: data})
     else:
-        raise TypeError(f"Unknown type of path: {js5}")
+        raise TypeError(f"Unknown type of path: {path}")
