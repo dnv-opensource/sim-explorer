@@ -2,7 +2,7 @@
    header: {
       name: 'ForcedOscillator',
       description: 'Test forced oscillator in various conditions',
-      modelFile: 'ForcedOscillator.xml',
+      modelFile: 'OspSystemStructure.xml',
       simulator: 'OSP',
       logLevel: 'fatal',
       timeUnit: 'second',
