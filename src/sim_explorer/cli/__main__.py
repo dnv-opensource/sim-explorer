@@ -133,13 +133,13 @@ def main() -> None:
 
     logger.info(f"ARGS: {args}")
 
+    log_msg_stub: str = f"Start sim-explorer.py with following arguments:\n\t cases: \t{args.cases}\n"
+
     try:
         cases = Cases(args.cases)
     except Exception:
         logger.exception(f"Instantiation of {args.cases} not successfull")
         return
-
-    log_msg_stub: str = f"Start sim-explorer.py with following arguments:\n\t cases: \t{cases}\n"
 
     case: Case | None = None
 
