@@ -119,7 +119,7 @@ def test_run():
     case = "gravity"
     path = Path(__file__).parent / "data" / "BouncingBall3D"
     cases = path / "BouncingBall3D.cases"
-    res = path / f"{case}.js5"
+    res = Path(f"{case}.js5")
     log = Path("test.log")
     if res.exists():
         res.unlink()
@@ -141,8 +141,8 @@ def test_Run():
     case = "restitution"
     path = Path(__file__).parent / "data" / "BouncingBall3D"
     cases = path / "BouncingBall3D.cases"
-    res = path / f"{case}.js5"
-    res2 = path / "restitutionAndGravity.js5"
+    res = Path(f"{case}.js5")
+    res2 = Path("restitutionAndGravity.js5")
     if res.exists():
         res.unlink()
     if res2.exists():

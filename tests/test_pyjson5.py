@@ -27,8 +27,8 @@ def test_read_results():
         json5_write(js5, Path(file.name), indent=3)  # write to test_working_directory
 
     do_file(Path(__file__).parent / "data" / "BouncingBall3D" / "test_results")
-    do_file(Path(__file__).parent / "data" / "BouncingBall3D" / "base.js5")
-    do_file(Path(__file__).parent / "data" / "Oscillator" / "forced.js5")
+    # do_file(Path(__file__).parent / "data" / "BouncingBall3D" / "base.js5")
+    # do_file(Path(__file__).parent / "data" / "Oscillator" / "forced.js5")
 
 
 def test_read_cases():

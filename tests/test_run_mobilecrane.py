@@ -42,10 +42,10 @@ def test_read_cases():
     path = Path(Path(__file__).parent / "data" / "MobileCrane" / "MobileCrane.cases")
     assert path.exists(), "System structure file not found"
     js5 = json5_read(path)
-    # for e in json5.js_py:
-    #   print(f"{e}: {json5.js_py[e]}")
+    # for e in js5:
+    #   print(f"{e}: {js5[e]}")
     assert json5_path(js5, "$.base.spec.df_dt", typ=list) == [0.0, 0.0, 0.0]
-    # json5_write( json5.js_py, "MobileCrane.js5")
+    # json5_write(js5, "MobileCrane.js5")
     assert json5_path(js5, "$.dynamic.spec.db_dt", typ=float) == 0.785498
 
 
@@ -164,7 +164,9 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
         "static",
         "dynamic",
     ]
-    assert list(json5_path(js5, "$.header", dict).keys()) == [
+    header = json5_path(js5=js5, path="$.header", typ=dict)
+    assert header is not None, "Header not found in js5"
+    assert list(header.keys()) == [
         "name",
         "description",
         "modelFile",
@@ -172,7 +174,7 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
         "logLevel",
         "timeUnit",
         "variables",
-    ], f"Found: {list(json5_path(js5, '$.header', dict).keys())}"
+    ], f"Found: {list(header.keys())}"
     cases = Cases(path)
     print("INFO", cases.info())
     static = cases.case_by_name("static")

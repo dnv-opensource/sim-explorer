@@ -62,7 +62,7 @@ def force(t: float, ampl: float = 1.0, omega: float = 0.1):
     return np.array((0, 0, ampl * sin(omega * t)), dtype=float)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def oscillator_fmu():
     return _oscillator_fmu()
 
@@ -79,7 +79,7 @@ def _oscillator_fmu():
     return fmu_path
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def driver_fmu():
     return _driver_fmu()
 
@@ -97,7 +97,7 @@ def _driver_fmu():
     return fmu_path
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture
 def system_structure():
     return _system_structure()
 
@@ -105,7 +105,7 @@ def system_structure():
 def _system_structure():
     """Make a OSP structure file and return the path"""
     path = make_osp_system_structure(
-        name="ForcedOscillator",
+        name="OspSystemStructure",
         simulators={
             "osc": {"source": "HarmonicOscillator.fmu", "stepSize": 0.01},
             "drv": {"source": "DrivingForce.fmu", "stepSize": 0.01},
@@ -115,7 +115,8 @@ def _system_structure():
         start=0.0,
         base_step=0.01,
         algorithm="fixedStep",
-        path=Path(__file__).parent / "data" / "Oscillator",
+        # path=Path(__file__).parent / "data" / "Oscillator",
+        path=Path.cwd(),
     )
 
     return path
@@ -171,6 +172,7 @@ def test_make_fmus(
     assert not len(val), f"Validation of of {oscillator_fmu.name} was not successful. Errors: {val}"
 
 
+@pytest.mark.usefixtures("oscillator_fmu", "driver_fmu")
 def test_make_system_structure(system_structure: Path):
     assert Path(system_structure).exists(), "System structure not created"
     el = from_xml(Path(system_structure))
@@ -228,6 +230,7 @@ def test_run_osp(oscillator_fmu: Path, driver_fmu: Path):
 
 
 @pytest.mark.skipif(sys.platform.startswith("linux"), reason="HarmonicOsciallator.fmu throws an error on Linux")
+@pytest.mark.usefixtures("oscillator_fmu", "driver_fmu")
 def test_run_osp_system_structure(system_structure: Path, show: bool):
     "Run an OSP simulation in the same way as the SimulatorInterface of case_study is implemented"
     log_output_level(CosimLogLevel.TRACE)

@@ -30,7 +30,7 @@ def test_run_time_table_base_case():
         Path(__file__).parent / "data/TimeTable/OspSystemStructure.xml",
         Path(__file__).parent / "data/BouncingBall0/OspSystemStructure.xml",
         Path(__file__).parent / "data/BouncingBall3D/OspSystemStructure.xml",
-        Path(__file__).parent / "data/Oscillator/ForcedOscillator.xml",
+        Path(__file__).parent / "data/Oscillator/OspSystemStructure.xml",
         Path(__file__).parent / "data/MobileCrane/OspSystemStructure.xml",
     ],
 )

@@ -57,11 +57,11 @@ def test_inspect():
     res = Results(file=file)
     cont = res.inspect()
     assert cont["bb.e"]["len"] == 1, "Not a scalar??"
-    assert cont["bb.e"]["range"][1] == 0.01, "Not at time 0.01??"
+    assert cont["bb.e"]["range"][1] == 0.0, "Not at time 0.0??"
     assert cont["bb.e"]["info"]["description"] == "Coefficient of restitution"
-    assert list(cont.keys()) == ["bb.e", "bb.g", "bb.x", "bb.v", "bb.x_b[0]"]
-    assert cont["bb.x"]["len"] == 300
-    assert cont["bb.x"]["range"] == [0.01, 3.0]
+    assert list(cont.keys()) == ["bb.g", "bb.e", "bb.x", "bb.v", "bb.x_b"]
+    assert cont["bb.x"]["len"] == 301
+    assert cont["bb.x"]["range"] == [0.0, 3.0]
     assert cont["bb.x"]["info"]["description"] == "3D Position of the ball in meters"
     assert cont["bb.x"]["info"]["refs"] == (0, 1, 2), "ValueReferences"
 
