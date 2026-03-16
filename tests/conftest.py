@@ -31,7 +31,12 @@ output_dirs = [
 ]
 output_files = [
     "*test*.pdf",
-    "systemModel.xml",
+    "*.xml",
+    "*.log",
+    "*.js5",
+    "*.cases",
+    "test_results",
+    "*.fmu",
 ]
 
 
