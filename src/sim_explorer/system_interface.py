@@ -349,13 +349,13 @@ class SystemInterface:
         res: tuple[str, ...]
         if init < 0:  # "Unallowed combination {variability}, {causality}. See '{chr(96-init)}' in FMI standard"
             res = (f"ERROR_{chr(96 - init)}",)
-        elif init in (1, 2, 7, 10):
+        elif init in {1, 2, 7, 10}:
             res = ("exact",)
-        elif init in (3, 4, 11, 12):
+        elif init in {3, 4, 11, 12}:
             res = ("calculated", "approx")
-        elif init in (8, 9, 13, 14):
+        elif init in {8, 9, 13, 14}:
             res = ("calculated", "exact", "approx")
-        elif init in (5, 6, 15):  # combination valid, but initial shall not be provided
+        elif init in {5, 6, 15}:  # combination valid, but initial shall not be provided
             res = ("",)
         else:
             raise ValueError(f"Unknown init index {init}") from None
