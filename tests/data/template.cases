@@ -1,24 +1,19 @@
-{header : {
-   name        : '<simulation-exploration-name>',
-   description : 'Simulation-exploration-description>',
-   modelFile : "OspSystemStructure.xml", # this will often be ok
-   simulator : "OSP"
-   logLevel : 'fatal', # possible levels: trace, debug, info, warning, error, fatal
-   timeUnit  : "second", # possible units: ns, us, ms, sec, min, h, d, or extensions of that, like 'second'
-   variables : {
-      <variable-key> : [<model-name>, <variab-name>, <optional-description>],
-      # ...
-      }},
-base : { # mandatory parent-case
-   description : "<optional-description-of-case>",
-   spec: { # any variable setting or result specification
-      # optional special variables: stepSize, stopTime
-      # variable key format: <variable-key>[@<time> | @step[ time] keword 'res' or 'result' instead of value
-   },
-#   assert: { # future results expectation feature
-#      1 : 'abs(g-9.81)<1e-9'
-#   }
-   },
-<case-name> : {
-    <case-specification-as-in-base>
-   }}}
+{
+   header: {
+      name: 'simulation-exploration-name',
+      description: 'Simulation-exploration-description',
+      modelFile: 'OspSystemStructure.xml',
+      simulator: 'OSP',
+      logLevel: 'fatal',
+      timeUnit: 'second',
+      variables: {
+         x: ['component-instance(s)','fmu-variable-name(s)','Optional description']}},
+   base: {
+      description: 'optional-description-of-case',
+      spec: {
+         g: 9.81,
+         'x[2]@step': 'res'},
+      assert: {
+         '1@Always': 'abs(g-9.81) <= 1e-9'}},
+   'case-name': {
+      'new-case-name': 'case-specification-as-in-base'}}

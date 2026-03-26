@@ -1,6 +1,7 @@
 import ast
+import logging
 from collections.abc import Callable, Iterable, Iterator
-from logging import warning
+from importlib import import_module
 from types import CodeType
 from typing import Any, TypeVar, cast, overload
 
@@ -8,6 +9,7 @@ import numpy as np
 
 from sim_explorer.case import Case, Results
 from sim_explorer.models import AssertionResult, Temporal
+from sim_explorer.utils.codegen import get_callable_function
 from sim_explorer.utils.types import (
     TDataColumn,
     TDataRow,
@@ -16,6 +18,8 @@ from sim_explorer.utils.types import (
     TTimeColumn,
     TValue,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class Assertion:
@@ -242,6 +246,7 @@ class Assertion:
     def assertions(
         self,
         key: str,
+        *,
         res: bool | None = None,
         details: str | None = None,
         case_name: str | None = None,
@@ -268,57 +273,75 @@ class Assertion:
                     _ = self.symbol(key)  # we allow to use the 'short name' if unique
                 _ = self.symbol(f"{inst}_{key}")  # fully qualified name can always be used
 
-    def make_locals(self, loc: dict[str, Any]) -> dict[str, Any]:
-        """Adapt the locals with 'allowed' functions."""
-        from importlib import import_module
-
+    def make_locals(self, local_ns: dict[str, Any]) -> dict[str, Any]:
+        """Amend the passed in local namespace with a controlled set of allowed symbols."""
         for modulename, funclist in self._imports.items():
             module = import_module(modulename)
             for func in funclist:
-                loc[func] = getattr(module, func)
-        loc["np"] = import_module("numpy")
-        return loc
+                local_ns[func] = getattr(module, func)
+        local_ns["np"] = import_module("numpy")
+        return local_ns
+
+    _T = TypeVar("_T", bound=(int | float | bool))
 
     def _eval(
-        self, func: Callable[..., int | float | bool], kvargs: dict[str, Any] | list[Any] | tuple[Any, ...]
-    ) -> int | float | bool:
-        """Call a function of multiple arguments and return the single result.
-        All internal vecor arguments are transformed to np.arrays.
-        """
-        if isinstance(kvargs, dict):
-            for k, v in kvargs.items():
-                if isinstance(v, Iterable):
-                    kvargs[k] = np.array(v, float)
-            return func(**kvargs)
-        if isinstance(kvargs, list):
-            for i, v in enumerate(kvargs):
-                if isinstance(v, Iterable):
-                    kvargs[i] = np.array(v, dtype=float)
-            return func(*kvargs)
-        assert isinstance(kvargs, tuple), f"Unknown type of kvargs {kvargs}"
-        _args = []  # make new, because tuple is not mutable
-        for v in kvargs:
-            if isinstance(v, Iterable):
-                _args.append(np.array(v, dtype=float))
-            else:
-                _args.append(v)
-        return func(*_args)
+        self,
+        func: Callable[..., _T],
+        *args: Any,  # noqa: ANN401
+        **kwargs: Any,  # noqa: ANN401
+    ) -> _T:
+        """Call `func` with the given positional and keyword arguments and return the result.
 
-    def eval_single(self, key: str, kvargs: dict[str, Any] | list[Any] | tuple[Any, ...]) -> int | float | bool:
+        Iterable arguments are considered vectors and are transformed to numpy arrays before being passed to `func`.
+
+        Args:
+            func: The function to be called
+            *args: Positional arguments to be passed to `func`
+            **kwargs: Keyword arguments to be passed to `func`
+        Returns:
+            The result of calling `func` with the given arguments
+        """
+        if args:
+            _args = []
+            for v in args:
+                if isinstance(v, Iterable) and not isinstance(v, (str, bytes)):
+                    _args.append(np.array(v, dtype=float))
+                else:
+                    _args.append(v)
+            args = tuple(_args)
+        if kwargs:
+            for k in list(kwargs.keys()):  # work on copy of keys, as we change the dict during iteration
+                v = kwargs[k]
+                if isinstance(v, Iterable) and not isinstance(v, (str, bytes)):
+                    kwargs[k] = np.array(v, dtype=float)
+        return func(*args, **kwargs)
+
+    def eval_single(
+        self,
+        key: str,
+        *args: Any,  # noqa: ANN401
+        **kwargs: Any,  # noqa: ANN401
+    ) -> int | float | bool:
         """Perform assertion of 'key' on a single data point.
 
         Args:
-            key (str): The expression identificator to be used
-            kvargs (dict|list|tuple): variable substitution kvargs as dict or args as tuple/list
-                All required variables for the evaluation shall be listed.
-        Results:
+            key (str): The identifier of the expression to be evaluated
+            *args: Positional arguments used in the expression, as a list or tuple.
+            **kwargs: Keyword arguments used in the expression, as a dict.
+
+        Returns
+        -------
             (bool) result of assertion
         """
         assert key in self._compiled, f"Expression {key} not found"
-        loc = self.make_locals(locals())
-        exec(self._compiled[key], loc, loc)  # noqa: S102
-        # print("kvargs", kvargs, self._syms[key], self.expr_get_symbols_functions(key))  # noqa: ERA001
-        return self._eval(locals()[f"_{key}"], kvargs)
+        local_ns = self.make_locals({})
+        func = get_callable_function(
+            compiled=self._compiled[key],
+            function_name=f"_{key}",
+            global_ns=local_ns,
+            local_ns=local_ns,
+        )
+        return self._eval(func, *args, **kwargs)
 
     _VT = TypeVar("_VT", bound=TDataColumn | TValue)
 
@@ -366,7 +389,7 @@ class Assertion:
                 `bool` : (time, True/False) for first row evaluating to True.
                 `bool-list` : (times, True/False) for all data points in the series
                 `A` : Always true for the whole time-series. Same as 'bool'
-                `F` : is True at end of time series.
+                `F` : Eventually True at some point in the time series.
                 Callable : run the given callable on times, expr(data)
                 None : Use the internal 'temporal(key)' setting
         Results:
@@ -379,10 +402,13 @@ class Assertion:
         argument_names = self._syms[key]
 
         # Execute the compiled expression. This will create a function with name _<key> in the local namespace.
-        _locals = self.make_locals(locals())
-        exec(self._compiled[key], _locals, _locals)  # noqa: S102
-        # Save a reference to the created function in a local variable, for easier access.
-        func = locals()[f"_{key}"]
+        _locals = self.make_locals({})
+        func = get_callable_function(
+            compiled=self._compiled[key],
+            function_name=f"_{key}",
+            global_ns=_locals,
+            local_ns=_locals,
+        )
 
         _temp = self._temporal[key]["type"] if ret is None else Temporal.UNDEFINED
 
@@ -422,9 +448,9 @@ class Assertion:
         if _times:
             assert all(isinstance(t, TNumeric) for t in _times), f"Time data in eval_series is not numeric: {_times}"
             if not all(isinstance(t, type(_times[0])) for t in _times):
-                warning("Time data in eval_series has varying type. All time values will be converted to float.")
+                logger.warning("Time data in eval_series has varying type. All time values will be converted to float.")
                 _times = [float(t) for t in _times]
-            times = cast(TTimeColumn, list(_times))
+            times = cast("TTimeColumn", list(_times))
 
         # Results: Assert that all values in temporary list `_results` are of a valid type and of the same type,
         # then cast the temporary list `_results` into list `results` of invariant type `TDataColumn`.
@@ -433,9 +459,11 @@ class Assertion:
                 f"Result data in eval_series is of an invalid type: {_results}"
             )
             if not all(isinstance(r, type(_results[0])) for r in _results):
-                warning("Result data in eval_series has varying type. All result values will be converted to bool.")
+                logger.warning(
+                    "Result data in eval_series has varying type. All result values will be converted to bool."
+                )
                 _results = [bool(r) for r in _results]
-            results = cast(TDataColumn, list(_results))
+            results = cast("TDataColumn", list(_results))
 
         # Apply an evaluation metric on the result values, specified through parameter `ret`.
         # Depending on the value of `ret`, either temporal logic, interpolation, or a user-defined callable function is applied.
@@ -444,7 +472,7 @@ class Assertion:
             _res = all(results)
             evaluation = (times[0] if _res else times[results.index(False)], _res)
 
-        elif (ret is None and _temp == Temporal.F) or (isinstance(ret, str) and ret == "F"):  # Finally True?
+        elif (ret is None and _temp == Temporal.F) or (isinstance(ret, str) and ret == "F"):  # Eventually True?
             r_prev = results[-1]
             t_prev = times[-1]
             for i in range(min(len(times), len(results)) - 1, -1, -1):
@@ -486,7 +514,6 @@ class Assertion:
         """Perform assert action 'key' on data of 'result' object."""
         assert isinstance(key, str), f"Key should be a string. Found {key}"
         assert key in self._temporal, f"Assertion key {key} not found"
-        from sim_explorer.case import Results
 
         assert isinstance(result, Results), f"Results object expected. Found {result}"
         inst: list[str] = []
@@ -498,7 +525,7 @@ class Assertion:
             assert isinstance(_var, str), f"Variable should be a string. Found {_var}"
             inst.append(_inst)
             var.append(_var)
-        assert len(var), "No variables to retrieve"
+        assert var, "No variables to retrieve"
         if var[0] == "t":  # the independent variable is always the first column in data
             _ = inst.pop(0)
             _ = var.pop(0)
@@ -530,14 +557,20 @@ class Assertion:
         """
 
         def do_report(key: str) -> AssertionResult:
-            time_arg = self._temporal[key].get("args", None)
+            time_arg: list[Any] | None = self._temporal[key].get("args", None)
+            time: int | float | None = (
+                time_arg[0] if time_arg and len(time_arg) > 0 and isinstance(time_arg[0], (int, float)) else None
+            )
+            temporal: Temporal | None = self._temporal[key].get("type", None)
+            if temporal is None:
+                raise ValueError(f"Temporal for assertion {key} is not defined.")
             return AssertionResult(
                 key=key,
                 expression=self._expr[key],
-                time=(time_arg[0] if len(time_arg) > 0 and (isinstance(time_arg[0], int | float)) else None),
+                time=time,
                 result=self._assertions[key].get("passed", False),
                 description=self._description[key],
-                temporal=self._temporal[key].get("type", None),
+                temporal=temporal,
                 case=self._assertions[key].get("case", None),
                 details="No details",
             )

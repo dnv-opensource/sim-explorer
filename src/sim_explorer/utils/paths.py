@@ -15,11 +15,18 @@ def relative_path(p1: Path, p2: Path) -> str:
 
 
 def get_path(p1: str, base: Path | None = None) -> Path:
-    """Get the full path of p1, which could be relative to base."""
+    """Get the full path of p1.
+
+    1. if p1 exists and no base provided or the full path is provided and exists, p1 is returned as Path object
+    2. if base is provided, p1 relative to base is returned
+    3. if base is not provided (None), p1 relative to the current directory (cwd) is returned.
+
+    This is useful for specification files, where absolute paths cannot be used.
+    """
+    if Path(p1).exists() and (p1 == str(Path(p1).resolve()) or base is None):
+        return Path(p1).resolve()
     if base is None:
         base = Path.cwd()
-    if Path(p1).exists():
-        return Path(p1).resolve()
     p = (base / Path(p1)).resolve()
     if p.exists():
         return p

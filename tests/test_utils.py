@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from sim_explorer.utils.codegen import get_callable_function
 from sim_explorer.utils.paths import get_path, relative_path
 
 
@@ -24,13 +25,25 @@ def test_relative_path(simexp: Path):
 
     expected = simexp / "tests" / "data" / "BouncingBall3D" / "BouncingBall3D.cases"
     found = get_path("BouncingBall3D.cases", res.parent)
-    assert found == expected, f"Got {found}, expected {expected}"
+    assert found == expected, f"Parent:\n{res.parent}. Got \n{found}, expected \n{expected}"
     found = get_path(rel0, cases0)
     assert found == expected, f"Got {found}, expected {expected}"
 
 
+def test_get_callable_function():
+    compiled = compile("def f(x):\n    return x + 1", "<string>", "exec")
+    f = get_callable_function(compiled=compiled, function_name="f")
+    assert f(2) == 3
+
+
+def test_get_callable_function_not_callable():
+    compiled = compile("f = 7", "<string>", "exec")
+    with pytest.raises(TypeError, match="not callable"):
+        _ = get_callable_function(compiled=compiled, function_name="f")
+
+
 if __name__ == "__main__":
-    retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
+    retcode = pytest.main(["-rA", "-v", __file__, "--show"])
     assert retcode == 0, f"Non-zero return code {retcode}"
     # import os
     # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")

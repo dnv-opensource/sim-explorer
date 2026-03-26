@@ -7,11 +7,11 @@ Currently only Open Simulation Platform (OSP) is supported.
 from collections.abc import Callable, Generator, Sequence
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, SupportsFloat, cast
 
 import numpy as np
 
-from sim_explorer.json5 import Json5
+from sim_explorer.utils.json5 import json5_read
 from sim_explorer.utils.misc import from_xml, match_with_wildcard
 from sim_explorer.utils.osp import read_system_structure_xml
 from sim_explorer.utils.types import TActionArgs, TGetActionArgs, TSetActionArgs, TValue
@@ -87,12 +87,12 @@ class SystemInterface:
         -------
             The system structure as (json) dict as if the structure was read through osp_system_structure_from_js5
         """
-        system_structure: dict[str, Any] | Json5
+        system_structure: dict[str, Any]
         assert file.exists(), f"System structure {file} not found"
         if file.suffix == ".xml":  # assume the standard OspSystemStructure.xml file
             system_structure = read_system_structure_xml(file)
         elif file.suffix in (".js5", ".json"):  # assume the js5 variant of the OspSystemStructure
-            system_structure = Json5(file).js_py
+            system_structure = json5_read(file)
         elif file.suffix == ".ssp":
             # see https://ssp-standard.org/publications/SSP10/SystemStructureAndParameterization10.pdf
             raise NotImplementedError("The SSP file variant is not yet implemented") from None
@@ -145,7 +145,7 @@ class SystemInterface:
                     if m == model and k not in collect:
                         collect.append(k)
         assert model is not None, f"No model match for {comps}"
-        assert len(collect), f"No component match for {comps}"
+        assert collect, f"No component match for {comps}"
         return (model, tuple(collect))
 
     def _get_variables(self, source: Path) -> dict[str, dict[int | str, Any]]:
@@ -313,15 +313,14 @@ class SystemInterface:
         return typ(val)
 
     @staticmethod
-    def default_initial(
+    def valid_initial(
         causality: str,
         variability: str,
-        *,
-        only_default: bool = True,
-    ) -> str | int | tuple[int] | tuple[str, ...]:
-        """Return default initial setting as str. See p.50 FMI2.
-        With only_default, the single allowed value, or '' is returned.
-        Otherwise a tuple of possible values is returned where the default value is always listed first.
+    ) -> tuple[str, ...]:
+        """Return valid initial setting as tuple of str. See p.50 FMI2.
+        The default value is always listed first in the tuple.
+        The empty string denotes 'no initial setting'.
+        'ERROR' denotes that the combination causality/variability is invalid.
         """
         col: int = {
             "parameter": 0,
@@ -347,16 +346,20 @@ class SystemInterface:
             (-2, -2, 5, 8, 13, -3),
             (-2, -2, 6, 9, 14, 15),
         )[row][col]
-
+        res: tuple[str, ...]
         if init < 0:  # "Unallowed combination {variability}, {causality}. See '{chr(96-init)}' in FMI standard"
-            return init if only_default else (init,)
-        if init in {1, 2, 7, 10}:
-            return "exact" if only_default else ("exact",)
-        if init in {3, 4, 11, 12}:
-            return "calculated" if only_default else ("calculated", "approx")
-        if init in {8, 9, 13, 14}:
-            return "calculated" if only_default else ("calculated", "exact", "approx")
-        return init if only_default else (init,)
+            res = (f"ERROR_{chr(96 - init)}",)
+        elif init in {1, 2, 7, 10}:
+            res = ("exact",)
+        elif init in {3, 4, 11, 12}:
+            res = ("calculated", "approx")
+        elif init in {8, 9, 13, 14}:
+            res = ("calculated", "exact", "approx")
+        elif init in {5, 6, 15}:  # combination valid, but initial shall not be provided
+            res = ("",)
+        else:
+            raise ValueError(f"Unknown init index {init}") from None
+        return res
 
     def allowed_action(  # noqa: C901
         self,
@@ -367,14 +370,18 @@ class SystemInterface:
     ) -> bool:
         """Check whether the action would be allowed according to FMI2 rules, see FMI2.01, p.49.
 
-        * if a tuple of variables is provided, the variables shall have equal properties
-          in addition to the normal allowed rules.
+        Note: If a tuple of variables is provided, the variables shall have equal properties
+        in addition to the normal allowed rules.
 
         Args:
             action (str): Action type, 'set', 'get', including init actions (set at time 0)
             comp (int,str): The instantiated component within the system (as index or name)
-            var (int,str,tuple): The variable(s) (of component) as reference or name
+            var (int,str,Sequence[int], Sequence[str]): The variable(s) (of component) as reference or name
             time (float): The time at which the action will be performed
+
+        Returns
+        -------
+            True if the action is allowed, False otherwise. In case of False, self.message contains the reason.
         """
 
         def _description(
@@ -393,15 +400,20 @@ class SystemInterface:
                 return False
             return True
 
-        _type, _causality, _variability = ("", "", "")  # unknown
+        _type, _causality, _variability, _initial = ("", "", "", "")  # unknown
 
         variables = self.variables(comp)
         for name, var_info in self.variable_iter(variables=variables, flt=var):
+            assert isinstance(name, str), "str expected. Found {name}"
+            assert isinstance(var_info, dict), f"Dict expected as var_info. Found {var_info}"
             if _type == "" or _causality == "" or _variability == "":  # define the properties and check whether allowed
                 _type = var_info["type"]
                 _causality = var_info["causality"]
                 _variability = var_info["variability"]
-                _initial = var_info.get("initial", SystemInterface.default_initial(_causality, _variability))
+                _initial = var_info.get("initial", SystemInterface.valid_initial(_causality, _variability)[0])
+                assert not _initial.startswith("ERROR"), (
+                    f"Invalid combination of causality {_causality}-variability {_variability}: {_initial}"
+                )
                 if action in {"get", "step"}:  # no restrictions on get
                     pass
                 elif action == "set" and (
@@ -430,7 +442,7 @@ class SystemInterface:
                     return False
                     # additional rule for ModelExchange, not listed here
             else:  # check whether the properties are equal
-                _initial = var_info.get("initial", SystemInterface.default_initial(_causality, _variability))
+                _initial = var_info.get("initial", SystemInterface.valid_initial(_causality, _variability))
                 if not _check(
                     cond=_type == var_info["type"],
                     msg=f"{_description(name=name, info=var_info, initial=_initial)} != type {_type}",
@@ -573,9 +585,9 @@ class SystemInterface:
         act_type: str,
         cvar: str,
         cvar_info: dict[str, Any],
-        values: tuple[TValue, ...] | None,
-        at_time: float,
-        stoptime: float,
+        values: Sequence[TValue] | None,
+        at_time: SupportsFloat,
+        stoptime: SupportsFloat,
         rng: tuple[int, ...] | None = None,
     ) -> None:
         """Add specified actions to the provided action dict.
@@ -588,8 +600,8 @@ class SystemInterface:
             cvar_info (dict): dict of variable info: {model, instances, names, refs, type, causality, variability}
                 see Cases.get_case_variables() for details.
             values (TValue) = None: Optional values (mandatory for 'set' actions)
-            at_time (float): time at which actions shall be triggered (may be scaled)
-            stoptime (float): simulation stop time (needed to handle 'step' actions)
+            at_time (SupportsFloat): time at which actions shall be triggered (may be scaled)
+            stoptime (SupportsFloat): simulation stop time (needed to handle 'step' actions)
             rng (Iterable)=None: Optional range specification for compound variables (indices to address)
 
         Returns
@@ -599,7 +611,18 @@ class SystemInterface:
             where value-list and rng are only present for set actions
             at-time=-1 for get actions denote step actions
         """
-        assert isinstance(at_time, float | int), f"Actions require a defined time as float. Found {at_time}"
+        try:
+            at_time = float(at_time)
+        except Exception as e:
+            raise ValueError(
+                f"Parameter `at_time` must be a float. Value {at_time} could not be converted to float."
+            ) from e
+        try:
+            stoptime = float(stoptime)
+        except Exception as e:
+            raise ValueError(
+                f"Parameter `stoptime` must be a float. Value {stoptime} could not be converted to float."
+            ) from e
         if at_time not in actions:
             actions[at_time] = []  # make sure that there is a suitable slot
         for comp in cvar_info["instances"]:
@@ -608,7 +631,7 @@ class SystemInterface:
                     "Get actions must be tuples of (cvar, comp, refs)"
                 )
                 self._add_get(
-                    actions=cast(dict[float, list[TGetActionArgs]], actions),
+                    actions=cast("dict[float, list[TGetActionArgs]]", actions),
                     time=at_time,
                     cvar=cvar,
                     comp=comp,
@@ -619,9 +642,9 @@ class SystemInterface:
                 assert all(len(args) == 3 for t in actions for args in actions[t]), (  # noqa: PLR2004
                     "Get actions must be tuples of (cvar, comp, refs)"
                 )
-                for time in np.arange(start=at_time, stop=stoptime, step=at_time):
+                for time in np.linspace(start=at_time, stop=stoptime, num=int(stoptime / at_time) + 1):
                     self._add_get(
-                        actions=cast(dict[float, list[TGetActionArgs]], actions),
+                        actions=cast("dict[float, list[TGetActionArgs]]", actions),
                         time=time,
                         cvar=cvar,
                         comp=comp,
@@ -635,7 +658,7 @@ class SystemInterface:
                     "Get actions must be tuples of (cvar, comp, refs, values)"
                 )
                 self._add_set(
-                    actions=cast(dict[float, list[TSetActionArgs]], actions),
+                    actions=cast("dict[float, list[TSetActionArgs]]", actions),
                     time=at_time,
                     cvar=cvar,
                     comp=comp,

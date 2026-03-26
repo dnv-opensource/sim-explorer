@@ -1,22 +1,4 @@
-.. image:: https://img.shields.io/pypi/v/sim-explorer.svg?color=blue
-   :target: https://pypi.org/project/sim-explorer
-   :alt: pypi
-
-.. image:: https://img.shields.io/pypi/pyversions/sim-explorer.svg?color=blue
-   :target: https://pypi.org/project/sim-explorer
-   :alt: versions
-
-.. image:: https://img.shields.io/pypi/l/sim-explorer.svg
-   :target: https://github.com/dnv-opensource/sim-explorer/blob/main/LICENSE
-   :alt: license
-
-.. image:: https://img.shields.io/github/actions/workflow/status/dnv-opensource/sim-explorer/.github%2Fworkflows%2Fnightly_build.yml?label=ci
-   :alt: ci
-
-.. image:: https://img.shields.io/github/actions/workflow/status/dnv-opensource/sim-explorer/.github%2Fworkflows%2Fpush_to_release.yml?label=docs
-   :target: https://dnv-opensource.github.io/sim-explorer/README.html
-   :alt: docs
-
+|pypi| |versions| |license| |ci| |docs|
 
 Introduction
 ============
@@ -50,7 +32,9 @@ The package is currently under development. More instructions and documentation 
 Installation
 ------------
 
-``pip install sim-explorer``
+.. code:: sh
+
+   pip install sim-explorer
 
 
 Development Setup
@@ -58,37 +42,47 @@ Development Setup
 
 1. Install uv
 ^^^^^^^^^^^^^
-This project uses `uv` as package manager.
+This project uses ``uv`` as package manager.
 
 If you haven't already, install `uv <https://docs.astral.sh/uv/>`_, preferably using it's `"Standalone installer" <https://docs.astral.sh/uv/getting-started/installation/#__tabbed_1_2/>`_ method:
 
 ..on Windows:
 
-``powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"``
+.. code:: sh
+
+   powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
 ..on MacOS and Linux:
 
-``curl -LsSf https://astral.sh/uv/install.sh | sh``
+.. code:: sh
+
+   curl -LsSf https://astral.sh/uv/install.sh | sh
 
 (see `docs.astral.sh/uv <https://docs.astral.sh/uv/getting-started/installation//>`_ for all / alternative installation methods.)
 
-Once installed, you can update `uv` to its latest version, anytime, by running:
+Once installed, you can update ``uv`` to its latest version, anytime, by running:
 
-``uv self update``
+.. code:: sh
+
+   uv self update
 
 2. Install Python
 ^^^^^^^^^^^^^^^^^
-This project requires Python 3.10 or later.
+This project requires Python 3.11 or later.
 
 If you don't already have a compatible version installed on your machine, the probably most comfortable way to install Python is through ``uv``:
 
-``uv python install``
+.. code:: sh
+
+   uv python install
 
 This will install the latest stable version of Python into the uv Python directory, i.e. as a uv-managed version of Python.
 
 Alternatively, and if you want a standalone version of Python on your machine, you can install Python either via ``winget``:
 
-``winget install --id Python.Python``
+.. code:: sh
+
+   winget install --id Python.Python
 
 or you can download and install Python from the `python.org <https://www.python.org/downloads//>`_ website.
 
@@ -96,23 +90,39 @@ or you can download and install Python from the `python.org <https://www.python.
 ^^^^^^^^^^^^^^^^^^^^^^^
 Clone the sim-explorer repository into your local development directory:
 
-``git clone https://github.com/dnv-opensource/sim-explorer path/to/your/dev/sim-explorer``
+.. code:: sh
+
+   git clone https://github.com/dnv-opensource/sim-explorer path/to/your/dev/sim-explorer
 
 Change into the project directory after cloning:
 
-``cd sim-explorer``
+.. code:: sh
+
+   cd sim-explorer
 
 4. Install dependencies
 ^^^^^^^^^^^^^^^^^^^^^^^
-Run ``uv sync`` to create a virtual environment and install all project dependencies into it:
+Run ``uv sync -U`` to create a virtual environment and install all project dependencies into it:
 
-``uv sync``
+.. code:: sh
 
-Note: Using ``--no-dev`` will omit installing development dependencies.
+   uv sync -U
 
-Note: ``uv`` will create a new virtual environment called ``.venv`` in the project root directory when running
-``uv sync`` the first time. Optionally, you can create your own virtual environment using e.g. ``uv venv``, before running
-``uv sync``.
+..
+
+   **Note**: Using ``--no-dev`` will omit installing development
+   dependencies.
+
+   **Explanation**: The ``-U`` option stands for ``--update``. It forces
+   ``uv`` to fetch and install the latest versions of all dependencies,
+   ensuring that your environment is up-to-date.
+
+..
+
+   **Note**: ``uv`` will create a new virtual environment called
+   ``.venv`` in the project root directory when running ``uv sync -U``
+   the first time. Optionally, you can create your own virtual
+   environment using e.g. ``uv venv``, before running ``uv sync -U``.
 
 
 5. (Optional) Activate the virtual environment
@@ -121,7 +131,9 @@ When using ``uv``, there is in almost all cases no longer a need to manually act
 
 ``uv`` will find the ``.venv`` virtual environment in the working directory or any parent directory, and activate it on the fly whenever you run a command via `uv` inside your project folder structure:
 
-``uv run <command>``
+.. code:: sh
+
+   uv run <command>
 
 However, you still *can* manually activate the virtual environment if needed.
 When developing in an IDE, for instance, this can in some cases be necessary depending on your IDE settings.
@@ -129,52 +141,69 @@ To manually activate the virtual environment, run one of the "known" legacy comm
 
 ..on Windows:
 
-``.venv\Scripts\activate.bat``
+.. code:: sh
+
+   .venv\Scripts\activate.bat
 
 ..on Linux:
 
-``source .venv/bin/activate``
+.. code:: sh
+
+   source .venv/bin/activate
 
 6. Install pre-commit hooks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The ``.pre-commit-config.yaml`` file in the project root directory contains a configuration for pre-commit hooks.
 To install the pre-commit hooks defined therein in your local git repository, run:
 
-``uv run pre-commit install``
+.. code:: sh
+
+   uv run pre-commit install
 
 All pre-commit hooks configured in ``.pre-commit-config.yam`` will now run each time you commit changes.
 
 pre-commit can also manually be invoked, at anytime, using:
 
-``uv run pre-commit run --all-files``
+.. code:: sh
 
-To skip the pre-commit validation on commits (e.g. when intentionally committing broken code), run:
+   uv run pre-commit run --all-files
 
-``uv run git commit -m <MSG> --no-verify``
+To skip the pre-commit validation on commits (e.g. when intentionally
+committing broken code), run:
 
-To update the hooks configured in `.pre-commit-config.yaml` to their newest versions, run:
+.. code:: sh
 
-``uv run pre-commit autoupdate``
+   uv run git commit -m <MSG> --no-verify
+
+To update the hooks configured in ``.pre-commit-config.yaml`` to their
+newest versions, run:
+
+.. code:: sh
+
+   uv run pre-commit autoupdate
 
 7. Test that the installation works
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 To test that the installation works, run pytest in the project root folder:
 
-``uv run pytest``
+.. code:: sh
 
+   uv run pytest
 
 Meta
 ----
-Copyright (c) 2024 `DNV <https://www.dnv.com/>`_ AS. All rights reserved.
+Copyright (c) 2026 `DNV <https://www.dnv.com/>`_ AS. All rights reserved.
 
-Siegfried Eisinger - siegfried.eisinger@dnv.com
+Siegfried Eisinger - `@LinkedIn <https://www.linkedin.com/in/siegfried-eisinger-a337638b>`_ - siegfried.eisinger@dnv.com
+
+Jorge Luis Mendez - `@LinkedIn <https://www.linkedin.com/in/jorgelmh>`_ - jorge.luis.mendez@dnv.com
 
 Distributed under the MIT license. See `LICENSE <LICENSE.md/>`_ for more information.
 
 `https://github.com/dnv-opensource/sim-explorer <https://github.com/dnv-opensource/sim-explorer/>`_
 
-Contribute
-----------
+Contributing
+------------
 Anybody in the OSP community is welcome to contribute to this code, to make it better,
 and especially including other features from model assurance,
 as we firmly believe that trust in our models is needed
@@ -191,4 +220,14 @@ To contribute, follow these steps:
 6. Push to the branch (``git push origin issue-name``)
 7. Create a new Pull Request in GitHub
 
-For your contribution, please make sure you follow the `STYLEGUIDE <STYLEGUIDE.md/>`_ before creating the Pull Request.
+For your contribution, please make sure you follow the `STYLEGUIDE <STYLEGUIDE.md>`_ before creating the Pull Request.
+
+.. |pypi| image:: https://img.shields.io/pypi/v/sim-explorer.svg?color=blue
+   :target: https://pypi.python.org/pypi/sim-explorer
+.. |versions| image:: https://img.shields.io/pypi/pyversions/sim-explorer.svg?color=blue
+   :target: https://pypi.python.org/pypi/sim-explorer
+.. |license| image:: https://img.shields.io/pypi/l/sim-explorer.svg
+   :target: https://github.com/dnv-opensource/sim-explorer/blob/main/LICENSE
+.. |ci| image:: https://img.shields.io/github/actions/workflow/status/dnv-opensource/sim-explorer/.github%2Fworkflows%2Fnightly_build.yml?label=ci
+.. |docs| image:: https://img.shields.io/github/actions/workflow/status/dnv-opensource/sim-explorer/.github%2Fworkflows%2Fpush_to_release.yml?label=docs
+   :target: https://dnv-opensource.github.io/sim-explorer/README.html

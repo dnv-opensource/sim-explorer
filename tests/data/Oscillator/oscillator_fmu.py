@@ -31,16 +31,16 @@ class HarmonicOscillator(Model):
         self.f = np.array( (0,0,0), float)
         self._interface(k, c, m)
 
-    def do_step(self, time: float, dt: float):
+    def do_step(self, current_time: float, step_size: float):
         """Do one simulation step of size dt.
 
         We implement a very simplistic algoritm based on difference calculus.
         """
-        if not super().do_step(time, dt):  # needed for FMU mechanism
+        if not super().do_step(current_time, step_size):  # needed for FMU mechanism
             return False
         a = (self.f - self.k * self.x - self.c * self.v) / self.m
-        self.x += self.v * dt  # + a* dt*dt
-        self.v += a * dt
+        self.x += self.v * step_size  # + a* dt*dt
+        self.v += a * step_size
         # print(f"@{time}: x={self.x}, v={self.v}, f={self.f}, a={a}")
         return True  # very important!
 

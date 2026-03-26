@@ -3,15 +3,17 @@ from pathlib import Path
 import pytest
 
 from sim_explorer.case import Case, Cases
+from sim_explorer.utils.json5 import json5_path
 
 
 def test_cases_management():
-    cases = Cases(Path(__file__).parent / "data" / "SimpleTable" / "test.cases")
+    cases = Cases(Path(__file__).parent / "data" / "TimeTable" / "test.cases")
     assert isinstance(cases.base.act_get, dict)
     assert len(cases.base.act_get) > 0
 
-    assert cases.simulator.comp_model_var(0, 1) == ("tab", "SimpleTable", ["outs[1]"])
-    assert cases.simulator.comp_model_var(0, 1) == ("tab", "SimpleTable", ["outs[1]"])
+    assert cases.simulator.comp_model_var(0, 0) == ("tab", "TimeTableFMU", ["interpolate"])
+    assert cases.simulator.comp_model_var(0, 1) == ("tab", "TimeTableFMU", ["outs[0]"])
+    assert cases.simulator.comp_model_var(0, 2) == ("tab", "TimeTableFMU", ["outs[1]"])
     assert cases.simulator.component_name_from_id(0) == "tab"
 
 
@@ -24,20 +26,20 @@ def test_cases():
     c: str | list[str] | Case | list[Case]
     print(cases.info())
     # cases.spec
-    assert cases.js.jspath(path="$.header.name", typ=str, error_msg=True) == "BouncingBall", (
-        "BouncingBall expected as cases name"
-    )
-    descr = cases.js.jspath(path="$.header.description", typ=str, error_msg=True)
+    assert json5_path(cases.js_py, "$.header.name", typ=str) == "BouncingBall", "BouncingBall expected as cases name"
+    descr = json5_path(cases.js_py, "$.header.description", typ=str)
     assert isinstance(descr, str), f"Error description: {descr}"
     assert descr.startswith("Simple sim explorer with the"), f"Error description: {descr}"
-    assert cases.js.jspath(path="$.header.modelFile", typ=str, error_msg=True) == "OspSystemStructure.xml", (
+    assert json5_path(cases.js_py, "$.header.modelFile", typ=str) == "OspSystemStructure.xml", (
         "modelFile not as expected"
     )
     for c in ("base", "restitution", "restitutionAndGravity", "gravity"):
-        assert c in cases.js.js_py, f"The case '{c}' is expected to be defined in {list(cases.js.js_py.keys())}"
-    assert cases.js.jspath("$.header.variables.g[0]") == "bb"
-    assert cases.js.jspath("$.header.variables.g[1]") == "g", f"Found {cases.js.jspath('$.variables.g[1]')}"
-    assert cases.js.jspath("$.header.variables.g[2]") == "Gravity acting on the ball"
+        assert c in cases.js_py, f"The case '{c}' is expected to be defined in {list(cases.js_py.keys())}"
+    assert json5_path(cases.js_py, "$.header.variables.g[0]") == "bb"
+    assert json5_path(cases.js_py, "$.header.variables.g[1]") == "g", (
+        f"Found {json5_path(cases.js_py, '$.variables.g[1]')}"
+    )
+    assert json5_path(cases.js_py, "$.header.variables.g[2]") == "Gravity acting on the ball"
     # find_by_name
     for c in cases.base.list_cases(as_name=False, flat=True):
         assert isinstance(c, Case)

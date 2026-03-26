@@ -7,6 +7,7 @@ import pytest
 from fmpy import plot_result, simulate_fmu
 
 from sim_explorer.case import Case, Cases
+from sim_explorer.utils.json5 import json5_path
 
 
 def arrays_equal(res: Sequence[Any], expected: Sequence[Any], eps: float = 1e-7):
@@ -64,16 +65,16 @@ def check_case(  # noqa: C901, PLR0913, PLR0915
     tfac = int(1 / dt)
     print(f"Run case {case.name}. g={g}, e={e}, x_z={x_z}, dt={dt}")
     case.run()  # run the case and return results as results object
-    results = case.res  # the results object
+    results = case.results  # the results object
     assert results is not None, "No results found"
     assert results.res is not None, "No results found"
-    assert results.res.jspath(path="$.header.case", typ=str, error_msg=True) == case.name
+    assert json5_path(results.res, "$.header.case", typ=str) == case.name
     # default initial settings, superceeded by base case values
     x = [0, 0, x_z]  # z-value is in inch =! 1m!
     v = [1.0, 0, 0]
     # adjust to case settings:
-    _spec = case.js.jspath(path="$.spec")
-    assert isinstance(_spec, dict), "No spec found in case"
+    _spec = case.js_py.get("spec")
+    assert isinstance(_spec, dict), "No spec found in Case {case.name}"
     for k, val in _spec.items():
         if k in ("stepSize", "stopTime"):
             pass
@@ -91,21 +92,21 @@ def check_case(  # noqa: C901, PLR0913, PLR0915
     v_bounce = g * t_bounce  # speed in z-direction
     x_bounce = v[0] * t_bounce  # x-position where it bounces
     # check outputs after first step:
-    assert results.res.jspath(path="$['0'].bb.e") == e, "??Initial value of e"
-    assert results.res.jspath(path="$['0'].bb.g") == g, "??Initial value of g"
-    assert results.res.jspath(path="$['0'].bb.x[2]") == x[2], "??Initial value of x[2]"
-    # print("0.01", results.res.jspath(path="$['0.01']"))
-    # print( results.res.jspath(path="$['0.01'].bb.x"), (dt, 0, x[2] - 0.5 * g * dt**2 / hf))
+    assert json5_path(results.res, "$['0'].bb.e") == e, "??Initial value of e"
+    assert json5_path(results.res, "$['0'].bb.g") == g, "??Initial value of g"
+    assert json5_path(results.res, "$['0'].bb.x[2]") == x[2], "??Initial value of x[2]"
+    # print("0.01", json5_path( results.res"$['0.01']"))
+    # print( json5_path(results.res, "$['0.01'].bb.x"), (dt, 0, x[2] - 0.5 * g * dt**2 / hf))
 
     arrays_equal(
-        res=results.res.jspath(path="$['0.01'].bb.x") or (),
+        res=json5_path(results.res, "$['0.01'].bb.x") or (),
         expected=(dt, 0, x[2] - 0.5 * g * dt**2 / hf),
     )
     arrays_equal(
-        res=results.res.jspath(path="$['0.01'].bb.v") or (),
+        res=json5_path(results.res, "$['0.01'].bb.v") or (),
         expected=(v[0], 0, -g * dt),
     )
-    x_b = results.res.jspath(path="$.['0.01'].bb.['x_b']")
+    x_b = json5_path(results.res, "$.['0.01'].bb.['x_b']")
     assert isinstance(x_b, Sequence), f"Expected sequence, found {type(x_b)}"
     assert abs(x_b[0] - x_bounce) < 1e-9
     # just before bounce
@@ -114,21 +115,21 @@ def check_case(  # noqa: C901, PLR0913, PLR0915
         t_before -= dt
 
     arrays_equal(
-        res=results.res.jspath(path=f"$['{t_before}'].bb.x") or (),
+        res=json5_path(results.res, f"$['{t_before}'].bb.x") or (),
         expected=(v[0] * t_before, 0, x[2] - 0.5 * g * t_before**2 / hf),
     )
     arrays_equal(
-        res=results.res.jspath(path=f"$['{t_before}'].bb.v") or (),
+        res=json5_path(results.res, f"$['{t_before}'].bb.v") or (),
         expected=(v[0], 0, -g * t_before),
     )
-    x_b = results.res.jspath(path=f"$['{t_before}'].bb.['x_b']")
+    x_b = json5_path(results.res, f"$['{t_before}'].bb.['x_b']")
     assert isinstance(x_b, Sequence), f"Expected sequence, found {type(x_b)}"
     assert abs(x_b[0] - x_bounce) < 1e-9
     # just after bounce
     ddt = t_before + dt - t_bounce  # time from bounce to end of step
     x_bounce2 = x_bounce + 2 * v_bounce * e * 1.0 * e / g
     arrays_equal(
-        res=results.res.jspath(path=f"$['{t_before + dt}'].bb.x") or (),
+        res=json5_path(results.res, f"$['{t_before + dt}'].bb.x") or (),
         expected=(
             t_bounce * v[0] + v[0] * e * ddt,
             0,
@@ -137,10 +138,10 @@ def check_case(  # noqa: C901, PLR0913, PLR0915
     )
 
     arrays_equal(
-        res=results.res.jspath(path=f"$['{t_before + dt}'].bb.v") or (),
+        res=json5_path(results.res, f"$['{t_before + dt}'].bb.v") or (),
         expected=(e * v[0], 0, (v_bounce * e - g * ddt)),
     )
-    x_b = results.res.jspath(path=f"$['{t_before + dt}'].bb.['x_b']")
+    x_b = json5_path(results.res, f"$['{t_before + dt}'].bb.['x_b']")
     assert isinstance(x_b, Sequence), f"Expected sequence, found {type(x_b)}"
     assert abs(x_b[0] - x_bounce2) < 1e-9
     # from bounce to bounce
@@ -159,19 +160,19 @@ def check_case(  # noqa: C901, PLR0913, PLR0915
         t_b += delta_t
         x_b += v_x * delta_t
         _tb = int(t_b * tfac) / tfac
-        if results.res.jspath(path=f"$['{_tb + dt}']") is None:
+        if json5_path(results.res, f"$['{_tb + dt}']") is None:
             break
-        bb_x = results.res.jspath(path=f"$['{_tb}'].bb.x")
+        bb_x = json5_path(results.res, f"$['{_tb}'].bb.x")
         assert isinstance(bb_x, Sequence), f"Expected sequence, found {type(bb_x)}"
         _z = bb_x[2]
-        # bb_x = results.res.jspath(path=f"$['{_tb + dt}'].bb.x")
+        # bb_x = json5_path(results.res, f"$['{_tb + dt}'].bb.x")
         # assert isinstance(bb_x, Sequence), f"Expected sequence, found {type(bb_x)}"
         # z_ = bb_x[2]
-        bb_v = results.res.jspath(path=f"$['{_tb}'].bb.v")
+        bb_v = json5_path(results.res, f"$['{_tb}'].bb.v")
         assert isinstance(bb_v, Sequence), f"Expected sequence, found {type(bb_v)}"
         _vx = bb_v[0]
         _vz = bb_v[2]
-        bb_v = results.res.jspath(path=f"$['{_tb + dt}'].bb.v")
+        bb_v = json5_path(results.res, f"$['{_tb + dt}'].bb.v")
         assert isinstance(bb_v, Sequence), f"Expected sequence, found {type(bb_v)}"
         # sourcery skip: move-assign
         vx_ = bb_v[0]
@@ -227,10 +228,11 @@ def test_run_cases():
         x_z=1 / 0.0254,
         hf=0.0254,
     )
+    cases.run_case(name="base", dump="results")
 
 
 if __name__ == "__main__":
-    retcode = pytest.main(["-rA", "-v", __file__, "--show", "True"])
+    retcode = pytest.main(["-rA", "-v", __file__, "--show"])
     assert retcode == 0, f"Non-zero return code {retcode}"
     # import os
     # os.chdir(Path(__file__).parent.absolute() / "test_working_directory")

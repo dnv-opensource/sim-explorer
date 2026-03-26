@@ -4,10 +4,9 @@ run-name: Nightly Build (by @${{ github.actor }})
 on:
   schedule:
     - cron: '30 5 * * *'
+  workflow_dispatch: # Allow manual trigger
 
 jobs:
-  code_quality:
-    uses: ./.github/workflows/_code_quality.yml
   test:
     uses: ./.github/workflows/_test.yml
   test_future:

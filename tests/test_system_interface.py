@@ -17,8 +17,7 @@ def test_read_system_structure():
         assert s["header"]["BaseStepSize"] == 0.01
         assert len(s["Simulators"]) == 2
         assert (
-            s["Simulators"]["simpleTable"]["source"]
-            == Path(__file__).parent / "data" / "SimpleTable" / "SimpleTable.fmu"
+            s["Simulators"]["timeTable"]["source"] == Path(__file__).parent / "data" / "TimeTable" / "TimeTableFMU.fmu"
         )
         assert s["Simulators"]["mobileCrane"]["pedestal.pedestalMass"] == 5000.0
 
@@ -33,31 +32,31 @@ def test_pytype():
 
 def test_interface():
     sys = SystemInterface(Path(__file__).parent / "data" / "MobileCrane" / "crane_table.js5")
-    # manually adding another SimpleTable to the system
-    sys._models["SimpleTable"]["components"].append("simpleTable2")  # pyright: ignore[reportPrivateUsage]
-    sys.components.update({"simpleTable2": "SimpleTable"})
+    # manually adding another TimeTable to the system
+    sys._models["TimeTableFMU"]["components"].append("timeTable2")  # pyright: ignore[reportPrivateUsage]
+    sys.components.update({"timeTable2": "TimeTableFMU"})
     assert isinstance(sys, SystemInterface)
-    assert list(sys.components.keys()) == ["simpleTable", "mobileCrane", "simpleTable2"]
+    assert list(sys.components.keys()) == ["timeTable", "mobileCrane", "timeTable2"]
     assert len(sys.models) == 2
-    assert tuple(sys.models.keys()) == ("SimpleTable", "MobileCrane"), f"Found:{sys.models}"
-    m = sys.match_components("simple*")
-    assert m[0] == "SimpleTable", f"Found {m[0]}"
-    assert m[1] == ("simpleTable", "simpleTable2")
+    assert tuple(sys.models.keys()) == ("TimeTableFMU", "MobileCrane"), f"Found:{sys.models}"
+    m = sys.match_components("time*")
+    assert m[0] == "TimeTableFMU", f"Found {m[0]}"
+    assert m[1] == ("timeTable", "timeTable2")
     for k in sys.components:
         assert sys.component_name_from_id(sys.component_id_from_name(k)) == k
-    variables = sys.variables("simpleTable")
+    variables = sys.variables("timeTable")
     assert variables["interpolate"]["causality"] == "parameter"
-    assert variables["interpolate"]["type"] is bool, f"Found {variables['interpolate']['type']}"
-    assert sys.match_variables("simpleTable", "outs") == (("outs[0]", 0), ("outs[1]", 1), ("outs[2]", 2))
-    assert sys.match_variables("simpleTable", "interpolate") == (("interpolate", 3),)
-    assert sys.variable_name_from_ref("simpleTable", 2) == "outs[2]"
-    assert sys.variable_name_from_ref("simpleTable", 100) == "", "Not existent"
-    default = SystemInterface.default_initial("output", "fixed")
-    assert default == -5, f"Found:{default}"
-    assert SystemInterface.default_initial("parameter", "fixed") == "exact"
-    assert sys.allowed_action("Set", "simpleTable", "interpolate", 0)
-    assert sys.allowed_action("Get", "simpleTable", "outs", 0)
-    # assert sys.message, "Variable outs of component simpleTable was not found"
+    assert variables["interpolate"]["type"] is int, f"Found {variables['interpolate']['type']}"
+    assert sys.match_variables("timeTable", "outs") == (("outs[0]", 1), ("outs[1]", 2), ("outs[2]", 3))
+    assert sys.match_variables("timeTable", "interpolate") == (("interpolate", 0),)
+    assert sys.variable_name_from_ref("timeTable", 2) == "outs[1]"
+    assert sys.variable_name_from_ref("timeTable", 100) == "", "Not existent"
+    default = SystemInterface.valid_initial("output", "fixed")[0]
+    assert default.startswith("ERROR"), f"Found:{default}"
+    assert SystemInterface.valid_initial("parameter", "fixed")[0] == "exact"
+    assert sys.allowed_action("Set", "timeTable", "interpolate", 0)
+    assert sys.allowed_action("Get", "timeTable", "outs", 0)
+    # assert sys.message, "Variable outs of component timeTable was not found"
 
     with pytest.raises(NotImplementedError) as err:
         _ = sys.do_action(time=0.0, act_info=(0, 1), typ=float)  # type: ignore[arg-type]

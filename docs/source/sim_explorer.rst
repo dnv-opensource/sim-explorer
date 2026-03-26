@@ -20,6 +20,10 @@ Modules
    :template: custom-module.rst
    :recursive:
 
-   sim_explorer.json5
-   sim_explorer.system_interface
+   sim_explorer.assertion
    sim_explorer.case
+   sim_explorer.exceptions
+   sim_explorer.json5
+   sim_explorer.models
+   sim_explorer.system_interface
+   sim_explorer.system_interface_osp
