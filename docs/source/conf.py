@@ -1,4 +1,3 @@
-# ruff: noqa
 # mypy: ignore-errors
 
 # Configuration file for the Sphinx documentation builder.
@@ -22,11 +21,11 @@ sys.path.insert(0, str(Path("../../src").absolute()))
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "sim-explorer"
-copyright = "2024, DNV AS. All rights reserved."
-author = "Siegfried Eisinger, DNV Simulation Technology Team, SEACo project team"
+copyright = "2026, DNV AS. All rights reserved."
+author = "Siegfried Eisinger, Jorge Luis Mendez, SEACo project team"
 
 # The full version, including alpha/beta/rc tags
-release = "0.2.1"
+release = "0.2.2"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

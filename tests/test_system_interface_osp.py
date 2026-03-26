@@ -59,35 +59,34 @@ def test_default_initial():
     def di(
         var: str,
         caus: str,
-        expected: str | int | tuple[str, ...],
-        *,
-        only_default: bool = True,
+        expected: str,
     ):
-        res = SystemInterfaceOSP.default_initial(causality=caus, variability=var, only_default=only_default)
-        assert res == expected, f"default_initial({var}, {caus}): Found {res} but expected {expected}"
+        res = SystemInterfaceOSP.valid_initial(causality=caus, variability=var)[0]
+        assert res == expected, f"valid_initial({var}, {caus}): Found {res} but expected {expected}"
 
-    di(var="constant", caus="parameter", expected=-1)
-    di(var="constant", caus="calculated_parameter", expected=-1)
-    di(var="constant", caus="input", expected=-1)
+    di(var="constant", caus="parameter", expected="ERROR_a")
+    di(var="constant", caus="calculated_parameter", expected="ERROR_a")
+    di(var="constant", caus="input", expected="ERROR_a")
     di(var="constant", caus="output", expected="exact")
     di(var="constant", caus="local", expected="exact")
-    di(var="constant", caus="independent", expected=-3)
+    di(var="constant", caus="independent", expected="ERROR_c")
     di(var="fixed", caus="parameter", expected="exact")
     di(var="fixed", caus="calculated_parameter", expected="calculated")
     di(var="fixed", caus="local", expected="calculated")
-    di(var="fixed", caus="input", expected=-4)
+    di(var="fixed", caus="input", expected="ERROR_d")
     di(var="tunable", caus="parameter", expected="exact")
     di(var="tunable", caus="calculated_parameter", expected="calculated")
-    di(var="tunable", caus="output", expected=-5)
+    di(var="tunable", caus="output", expected="ERROR_e")
     di(var="tunable", caus="local", expected="calculated")
-    di(var="tunable", caus="input", expected=-4)
-    di(var="discrete", caus="calculated_parameter", expected=-2)
-    di(var="discrete", caus="input", expected=5)
+    di(var="tunable", caus="input", expected="ERROR_d")
+    di(var="discrete", caus="calculated_parameter", expected="ERROR_b")
+    di(var="discrete", caus="input", expected="")
     di(var="discrete", caus="output", expected="calculated")
     di(var="discrete", caus="local", expected="calculated")
-    di(var="continuous", caus="calculated_parameter", expected=-2)
-    di(var="continuous", caus="independent", expected=15)
-    di(var="discrete", caus="output", expected=("calculated", "exact", "approx"), only_default=False)
+    di(var="continuous", caus="calculated_parameter", expected="ERROR_b")
+    di(var="continuous", caus="independent", expected="")
+    found = SystemInterfaceOSP.valid_initial("output", "discrete")
+    assert found == ("calculated", "exact", "approx")
 
 
 def test_simulator_from_system_structure():
@@ -137,19 +136,19 @@ def test_simulator_reset():
     h0, g0 = (9.9, -4.81)
     system.simulator.real_initial_value(slave_index=0, variable_reference=1, value=h0)  # initial height h
     system.simulator.real_initial_value(slave_index=0, variable_reference=5, value=g0)  # g
-    assert system.observer.last_real_values(slave_index=0, variable_references=(1, 5)) == [
+    assert system.observer.last_real_values(slave_index=0, variable_references=[1, 5]) == [
         0.0,
         0.0,
     ], "Values only when the simulation starts!"
     _ = system.simulator.simulate_until(target_time=1e9)
     assert system.simulator.status().current_time == 1e9
-    values = system.observer.last_real_values(slave_index=0, variable_references=(1, 5))
+    values = system.observer.last_real_values(slave_index=0, variable_references=[1, 5])
     assert values[1] == g0, "Initial values set now"
     assert abs(values[0] - (h0 + 0.5 * g0 * 1.0 * 1.0)) < 1e-2, "Height calculated (not very accurate!)"
-    system.manipulator.slave_real_values(slave_index=0, variable_references=(5,), values=(0.0,))  # zero gravity
+    system.manipulator.slave_real_values(slave_index=0, variable_references=[5], values=(0.0,))  # zero gravity
     _ = system.simulator.simulate_until(target_time=2e9)
     assert system.simulator.status().current_time == 2e9
-    values = system.observer.last_real_values(slave_index=0, variable_references=(1, 5))
+    values = system.observer.last_real_values(slave_index=0, variable_references=[1, 5])
     assert values[1] == 0.0
     assert abs(values[0] - (h0 + 3 / 2 * g0 * 1.0 * 1.0)) < 1e-2, "No acceleration in second step"
     # reset and start simulator with new values
@@ -158,13 +157,13 @@ def test_simulator_reset():
     h0, g0 = (19.9, -2.81)
     system.simulator.real_initial_value(slave_index=0, variable_reference=1, value=h0)  # initial height h
     system.simulator.real_initial_value(slave_index=0, variable_reference=5, value=g0)  # g
-    assert system.observer.last_real_values(slave_index=0, variable_references=(1, 5)) == [
+    assert system.observer.last_real_values(slave_index=0, variable_references=[1, 5]) == [
         0.0,
         0.0,
     ], "Values only when the simulation starts!"
     _ = system.simulator.simulate_until(target_time=1e9)
     assert system.simulator.status().current_time == 1e9
-    values = system.observer.last_real_values(slave_index=0, variable_references=(1, 5))
+    values = system.observer.last_real_values(slave_index=0, variable_references=[1, 5])
     assert values[1] == g0, "Initial values set now"
     assert abs(values[0] - (h0 + 0.5 * g0 * 1.0 * 1.0)) < 1e-2, "Height calculated (not very accurate!)"
 
@@ -191,11 +190,11 @@ def test_simulator_instantiated():
     h0, g0 = (9.9, -4.81)
     system.simulator.real_initial_value(slave_index=0, variable_reference=1, value=h0)  # initial height h
     system.simulator.real_initial_value(slave_index=0, variable_reference=5, value=g0)  # g
-    assert system.observer.last_real_values(slave_index=0, variable_references=(1, 5)) == [0.0, 0.0]
+    assert system.observer.last_real_values(slave_index=0, variable_references=[1, 5]) == [0.0, 0.0]
     _ = system.run_until(time=1e9)
     assert system.simulator.status().current_time == int(1e9), f"STATUS: {system.simulator.status()}"
-    values = system.observer.last_real_values(slave_index=0, variable_references=(1, 5))
-    values = system.observer.last_real_values(slave_index=0, variable_references=(1, 5))
+    values = system.observer.last_real_values(slave_index=0, variable_references=[1, 5])
+    values = system.observer.last_real_values(slave_index=0, variable_references=[1, 5])
     assert values[1] == g0, "Initial values set now"
     assert abs(values[0] - (h0 + 0.5 * g0 * 1.0 * 1.0)) < 1e-2, "Height calculated (not very accurate!)"
 

@@ -32,10 +32,10 @@ def test_osp_structure():
         name="systemModel",
         version="0.1",
         simulators={
-            "simpleTable": {"source": "SimpleTable.fmu", "interpolate": True},
+            "timeTable": {"source": "TimeTableFMU.fmu", "interpolate": True},
             "mobileCrane": {"source": "MobileCrane.fmu", "pedestal.pedestalMass": 5000.0, "boom.boom[0]": 20.0},
         },
-        connections_variable=[("simpleTable", "outputs[0]", "mobileCrane", "pedestal.angularVelocity")],
+        connections_variable=[("timeTable", "outputs[0]", "mobileCrane", "pedestal.angularVelocity")],
         path=Path.cwd(),
     )
 

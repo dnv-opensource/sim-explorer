@@ -10,8 +10,8 @@ from libcosimpy.CosimObserver import CosimObserver
 from libcosimpy.CosimSlave import CosimLocalSlave
 
 from sim_explorer.case import Case, Cases
-from sim_explorer.json5 import Json5
 from sim_explorer.system_interface_osp import SystemInterfaceOSP
+from sim_explorer.utils.json5 import json5_path, json5_read
 
 
 @pytest.fixture(scope="session")
@@ -41,13 +41,12 @@ def is_nearly_equal(x: float | list[float], expected: float | list[float], eps: 
 def test_read_cases():
     path = Path(Path(__file__).parent / "data" / "MobileCrane" / "MobileCrane.cases")
     assert path.exists(), "System structure file not found"
-    json5 = Json5(path)
-    assert "# lift 1m / 0.1sec" in list(json5.comments.values())
-    # for e in json5.js_py:
-    #   print(f"{e}: {json5.js_py[e]}")
-    assert json5.jspath(path="$.base.spec.df_dt", typ=list) == [0.0, 0.0]
-    # json5_write( json5.js_py, "MobileCrane.js5")
-    assert json5.jspath(path="$.dynamic.spec.db_dt", typ=float) == 0.785498
+    js5 = json5_read(path)
+    # for e in js5:
+    #   print(f"{e}: {js5[e]}")
+    assert json5_path(js5, "$.base.spec.df_dt", typ=list) == [0.0, 0.0, 0.0]
+    # json5_write(js5, "MobileCrane.js5")
+    assert json5_path(js5, "$.dynamic.spec.db_dt", typ=float) == 0.785498
 
 
 # @pytest.mark.skip("Alternative step-by step, only using libcosimpy")
@@ -77,10 +76,10 @@ def test_step_by_step_cosim(mobile_crane_fmu: Path):  # noqa: C901
     assert slave == 0, f"Slave index should be '0', found {slave}"
 
     expected_names = (
-        "boom_angularVelocity[0]",
-        "pedestal_boom[0]",
-        "boom_boom[1]",
-        "rope_boom[2]",
+        "der(pedestal.boom[2])",
+        "pedestal.boom[0]",
+        "boom.boom[1]",
+        "wire.boom[2]",
     )
     found_expected = [False] * len(expected_names)
     for i in range(len(sim.slave_variables(slave))):
@@ -92,10 +91,10 @@ def test_step_by_step_cosim(mobile_crane_fmu: Path):  # noqa: C901
     assert False not in found_expected, (
         f"Not all expected names were found: {expected_names[found_expected.index(False)]}"
     )
-    assert set_initial(name="pedestal_boom[0]", value=3.0)
-    assert set_initial(name="boom_boom[0]", value=8.0)
-    assert set_initial(name="boom_boom[1]", value=0.7854)
-    assert set_initial(name="rope_boom[0]", value=1e-6)
+    assert set_initial(name="pedestal.boom[0]", value=3.0)
+    assert set_initial(name="boom.boom[0]", value=8.0)
+    assert set_initial(name="boom.boom[1]", value=0.7854)
+    assert set_initial(name="wire.boom[0]", value=1e-6)
     #    for idx in range( sim.num_slave_variables(slave)):
     #        print(f"{sim.slave_variables(slave)[idx].name.decode()}: {observer.last_real_values(slave, [idx])}")
     step_count = 0
@@ -103,7 +102,7 @@ def test_step_by_step_cosim(mobile_crane_fmu: Path):  # noqa: C901
         step_count += 1
         status = sim.status()
         print(f"STATUS:{status}, {status.state}={CosimExecutionState.ERROR}")
-        if status.current_time > 1e9:
+        if status.current_time > 10e9:
             break
         if status.state == CosimExecutionState.ERROR.value:
             raise AssertionError(f"Error state at time {status.current_time}") from None
@@ -136,13 +135,13 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
         assert isinstance(cases.simulator, SystemInterfaceOSP)
         cases.simulator.manipulator.slave_real_values(
             slave_index=0,
-            variable_references=(
-                get_ref("pedestal_boom[0]"),
-                get_ref("boom_boom[0]"),
-                get_ref("boom_boom[1]"),
-                get_ref("rope_boom[0]"),
-                get_ref("dLoad"),
-            ),
+            variable_references=[
+                get_ref("pedestal.boom[0]"),
+                get_ref("boom.boom[0]"),
+                get_ref("boom.boom[1]"),
+                get_ref("wire.boom[0]"),
+                get_ref("wire.mass"),
+            ],
             values=(3.0, 8.0, 0.7854, 1e-6, 50.0),
         )
 
@@ -156,17 +155,18 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
 
     path = Path(Path(__file__).parent, "data/MobileCrane/MobileCrane.cases")
     assert path.exists(), "Cases file not found"
-    js = Json5(path)
-    print("CASES", js.write(file=None, pretty_print=True))
+    js5 = json5_read(path)
     expected_results = ["T@step", "x_pedestal@step", "x_boom@step", "x_load@step"]
-    assert js.jspath(path="$.base.results") == expected_results, f"Results found: {js.jspath(path='$.base.results')}"
-    assert list(js.js_py.keys()) == [
+    assert json5_path(js5, "$.base.results") == expected_results, f"Results found: {json5_path(js5, '$.base.results')}"
+    assert list(js5.keys()) == [
         "header",
         "base",
         "static",
         "dynamic",
     ]
-    assert list((js.jspath(path="$.header", typ=dict) or {}).keys()) == [
+    header = json5_path(js5=js5, path="$.header", typ=dict)
+    assert header is not None, "Header not found in js5"
+    assert list(header.keys()) == [
         "name",
         "description",
         "modelFile",
@@ -174,21 +174,21 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
         "logLevel",
         "timeUnit",
         "variables",
-    ], f"Found: {list((js.jspath(path='$.header', typ=dict) or {}).keys())}"
+    ], f"Found: {list(header.keys())}"
     cases = Cases(path)
     print("INFO", cases.info())
     static = cases.case_by_name("static")
-    assert static is not None
-    assert static.js.jspath(path="$.spec", typ=dict) == {
+    assert isinstance(static, Case)
+    assert json5_path(static.js_py, "$.spec", dict) == {
         "p[2]": 1.570796,
         "b[1]": 45,
         "r[0]": 7.657,
         "load": 1000,
     }
     print("ACT", static.act_get[-1][0])
-    assert static.act_get[-1][0] == ("T", "mobileCrane", (10, 11, 12))
+    assert static.act_get[-1][0] == ("T", "mobileCrane", (18, 19, 20))
     _ = sim.init_simulator()
-    assert sim.observer.last_real_values(slave_index=0, variable_references=(10, 11, 12)) == [
+    assert sim.observer.last_real_values(slave_index=0, variable_references=[18, 19, 20]) == [
         0.0,
         0.0,
         0.0,
@@ -200,23 +200,23 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
     print(f"Special: {static.special}")
     assert static.act_set == {
         0: [
-            ("p", "mobileCrane", (18, 20), (3.0, 1.570796)),
-            ("b", "mobileCrane", (34, 35), (8.0, 45.0)),
-            ("r", "mobileCrane", (50,), (7.657,)),
-            ("df_dt", "mobileCrane", (7, 8), (0.0, 0.0)),
-            ("dp_dt", "mobileCrane", (25,), (0.0,)),
-            ("db_dt", "mobileCrane", (40,), (0.0,)),
-            ("dr_dt", "mobileCrane", (58,), (0.0,)),
-            ("v", "mobileCrane", (7, 8), (0.0, 0.0)),
-            ("load", "mobileCrane", (16,), (1000.0,)),
+            ("p", "mobileCrane", (22, 24), (3.0, 1.570796)),
+            ("b", "mobileCrane", (35, 36), (8.0, 45.0)),
+            ("r", "mobileCrane", (48,), (7.657,)),
+            ("df_dt", "mobileCrane", (9, 10, 11), (0.0, 0.0, 0.0)),
+            ("dp_dt", "mobileCrane", (30,), (0.0,)),
+            ("db_dt", "mobileCrane", (42,), (0.0,)),
+            ("dr_dt", "mobileCrane", (54,), (0.0,)),
+            ("v", "mobileCrane", (0, 1, 2), (0.0, 0.0, 0.0)),
+            ("load", "mobileCrane", (47,), (1000.0,)),
         ]
     }
     assert static.act_get == {
         -1: [
-            ("T", "mobileCrane", (10, 11, 12)),
-            ("x_pedestal", "mobileCrane", (21, 22, 23)),
-            ("x_boom", "mobileCrane", (37, 38, 39)),
-            ("x_load", "mobileCrane", (53, 54, 55)),
+            ("T", "mobileCrane", (18, 19, 20)),
+            ("x_pedestal", "mobileCrane", (25, 26, 27)),
+            ("x_boom", "mobileCrane", (38, 39, 40)),
+            ("x_load", "mobileCrane", (51, 52, 53)),
         ]
     }
 
@@ -227,11 +227,11 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
     assert slave == 0, f"Slave index should be '0', found {slave}"
 
     expected_names = (
-        "boom_angularVelocity[0]",
-        "pedestal_boom[0]",
-        "boom_boom[1]",
-        "rope_boom[2]",
-        "dLoad",
+        "der(boom.boom[1])",
+        "pedestal.boom[0]",
+        "boom.boom[1]",
+        "wire.boom[2]",
+        "wire.mass",
     )
     found_expected = [-1] * len(expected_names)
     for i in range(len(cosim.slave_variables(slave))):
@@ -255,7 +255,7 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
     while True:
         step_count += 1
         status = cosim.status()
-        if status.current_time > 1e9:
+        if status.current_time > 10e9:
             break
         if status.state == CosimExecutionState.ERROR.value:
             raise AssertionError(f"Error state at time {status.current_time}") from None
@@ -282,7 +282,7 @@ def test_step_by_step_cases(mobile_crane_fmu: Path):  # noqa: C901, PLR0915
 
 # @pytest.mark.skip("Alternative only using SystemInterfaceOSP")
 def test_run_basic():
-    path = Path(Path(__file__).parent / "data" / "MobileCrane" / "OspSystemStructure.xml")
+    path = Path(__file__).parent / "data" / "MobileCrane" / "OspSystemStructure.xml"
     assert path.exists(), "System structure file not found"
     sim = SystemInterfaceOSP(path)
     _ = sim.init_simulator()
@@ -290,8 +290,8 @@ def test_run_basic():
 
 
 def test_run_cases():
-    path = Path(Path(__file__).parent / "data" / "MobileCrane" / "MobileCrane.cases")
-    # system_structure = Path(Path(__file__).parent, "data/MobileCrane/OspSystemStructure.xml")
+    path = Path(__file__).parent / "data" / "MobileCrane" / "MobileCrane.cases"
+    # system_structure = Path(__file__).parent / "data" / "MobileCrane" / "OspSystemStructure.xml"
     assert path.exists(), "MobileCrane cases file not found"
     cases = Cases(spec=path)
     case: Case | None
@@ -300,20 +300,20 @@ def test_run_cases():
     static = cases.case_by_name("static")
     assert static is not None
     assert static.act_get[-1] == [
-        ("T", "mobileCrane", (10, 11, 12)),
-        ("x_pedestal", "mobileCrane", (21, 22, 23)),
-        ("x_boom", "mobileCrane", (37, 38, 39)),
-        ("x_load", "mobileCrane", (53, 54, 55)),
+        ("T", "mobileCrane", (18, 19, 20)),
+        ("x_pedestal", "mobileCrane", (25, 26, 27)),
+        ("x_boom", "mobileCrane", (38, 39, 40)),
+        ("x_load", "mobileCrane", (51, 52, 53)),
     ]
 
     print("Running case 'base'...")
     case = cases.case_by_name("base")
     assert case is not None
     case.run(dump="results_base")
-    assert case.res is not None
-    res = case.res.res
+    assert case.results is not None
+    res = case.results.res
     # TODO @EisDNV: expected Torque?
-    assert is_nearly_equal(res.jspath(path="$['1.0'].mobileCrane.x_pedestal", typ=list) or [], expected=[0.0, 0.0, 3.0])
+    assert is_nearly_equal(json5_path(res, "$['1.0'].mobileCrane.x_pedestal", typ=list) or [], expected=[0.0, 0.0, 3.0])
     # assert is_nearly_equal(res[1.0]["mobileCrane"]["x_boom"], [8, 0.0, 3], 1e-5)
     # assert is_nearly_equal(res[1.0]["mobileCrane"]["x_load"], [8, 0, 3.0 - 1e-6], 1e-5)
 
@@ -321,11 +321,11 @@ def test_run_cases():
     cases.run_case("static", dump="results_static")
     case = cases.case_by_name("static")
     assert case is not None
-    assert case.res is not None
-    res = case.res.res
-    print("RES(1.0)", res.jspath("$['1.0'].mobileCrane"))
-    assert is_nearly_equal(res.jspath(path="$['1.0'].mobileCrane.x_pedestal") or [], expected=[0.0, 0.0, 3.0])
-    x_load = res.jspath("$['1.0'].mobileCrane.x_load")
+    assert case.results is not None
+    res = case.results.res
+    print("RES(1.0)", json5_path(res, "$['1.0'].mobileCrane"))
+    assert is_nearly_equal(json5_path(res, "$['1.0'].mobileCrane.x_pedestal") or [], expected=[0.0, 0.0, 3.0])
+    x_load = json5_path(res, "$['1.0'].mobileCrane.x_load")
     print(f"x_load: {x_load} <-> {[0, 8 / sqrt(2), 0]}")
 
 

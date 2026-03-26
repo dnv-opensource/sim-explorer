@@ -1,0 +1,27 @@
+Variable,Value
+PackageNameDashed,sim-explorer
+PackageNameCapitalized,SimExplorer
+GitHubOrganisation,dnv-opensource
+SubPackage1Name,
+Module1Name,
+SubPackage2Name,
+Module2Name,
+Author1Name,Siegfried Eisinger
+Author1Email,siegfried.eisinger@dnv.com
+Author1LinkedIn,https://www.linkedin.com/in/siegfried-eisinger-a337638b
+Author2Name,Jorge Luis Mendez
+Author2Email,jorge.luis.mendez@dnv.com
+Author2LinkedIn,https://www.linkedin.com/in/jorgelmh
+Author3Name,
+Author3Email,
+Author3LinkedIn,
+Maintainer1Name,Claas Rostock
+Maintainer1Email,claas.rostock@dnv.com
+Maintainer1LinkedIn,https://www.linkedin.com/in/claasrostock/?locale=en_US
+Maintainer2Name,
+Maintainer2Email,
+Maintainer2LinkedIn,
+Keyword1,simulation
+Keyword2,model
+Keyword3,FMI
+Keyword4,OSP

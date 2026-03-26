@@ -1,3 +1,4 @@
+import logging
 from collections.abc import Callable
 from functools import partial
 from pathlib import Path
@@ -11,19 +12,21 @@ from libcosimpy.CosimObserver import CosimObserver
 from sim_explorer.system_interface import SystemInterface
 from sim_explorer.utils.types import TActionArgs
 
+logger = logging.getLogger(__name__)
+
 
 class SystemInterfaceOSP(SystemInterface):
     """Implements the SystemInterface as a OSP.
 
     Args:
-       structure_file (Path): Path to system model definition file
-       name (str)="System": Possibility to provide an explicit system name (if not provided by system file)
-       description (str)="": Optional possibility to provide a system description
-       log_level (str) = 'fatal': Per default the level is set to 'fatal',
-          but it can be set to 'trace', 'debug', 'info', 'warning', 'error' or 'fatal' (e.g. for debugging purposes)
+        structure_file (Path): Path to system model definition file
+        name (str)="System": Possibility to provide an explicit system name (if not provided by system file)
+        description (str)="": Optional possibility to provide a system description
+        log_level (str) = 'fatal': Per default the level is set to 'fatal',
+            but it can be set to 'trace', 'debug', 'info', 'warning', 'error' or 'fatal' (e.g. for debugging purposes)
         **kwargs: Optional possibility to supply additional keyword arguments:
 
-            * full_simulator_available=True to overwrite the oposite when called from a superclass
+    Note: This class sets full_simulator_available=True , in contrast to the superclass where it is by default value set to False.
     """
 
     def __init__(
@@ -91,7 +94,7 @@ class SystemInterfaceOSP(SystemInterface):
     def do_action(self, time: int | float, act_info: TActionArgs, typ: type) -> bool:
         """Do the action described by the tuple using OSP functions."""
         if len(act_info) == 4:  # set action  # noqa: PLR2004
-            cvar, comp, refs, values = act_info
+            _cvar, comp, refs, values = act_info
             _comp = self.component_id_from_name(comp)
             if time <= 0:  # initial setting
                 func = self._action_func(0, typ)
@@ -99,7 +102,7 @@ class SystemInterfaceOSP(SystemInterface):
 
             return self._action_func(1, typ)(_comp, refs, values)
         # get action
-        cvar, comp, refs = act_info
+        _cvar, comp, refs = act_info
         _comp = self.component_id_from_name(comp)
         assert time >= 0, "Get actions for all communication points shall be pre-compiled"
         return self._action_func(2, typ)(_comp, refs)
@@ -109,7 +112,7 @@ class SystemInterfaceOSP(SystemInterface):
         so that it can be called at communication points.
         """
         assert len(act_info) == 3, f"Exactly 3 arguments expected. Found {act_info}"  # noqa: PLR2004
-        cvar, comp, refs = act_info
+        _cvar, comp, refs = act_info
         _comp = self.component_id_from_name(comp)
         return partial(self._action_func(act_type=2, var_type=typ), _comp, refs)
 

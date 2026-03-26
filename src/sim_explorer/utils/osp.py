@@ -5,7 +5,7 @@ from typing import Any
 
 from component_model.utils.xml import read_xml
 
-from sim_explorer.json5 import Json5
+from sim_explorer.utils.json5 import json5_path, json5_read
 
 
 # ==========================================
@@ -16,7 +16,7 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
     version: str = "0.1",
     start: float = 0.0,
     base_step: float = 0.01,
-    algorithm: str = "fixedStep",  # noqa: ARG001
+    algorithm: str = "fixedStep",
     simulators: dict[str, Any] | None = None,
     functions_linear: dict[str, Any] | None = None,
     functions_sum: dict[str, Any] | None = None,
@@ -79,7 +79,7 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
 
         def make_initial_value(
             var: str,
-            val: int | float | bool | str,
+            val: int | float | bool | str,  # noqa: FBT001
         ) -> ET.Element:
             """Make a <InitialValue> element from the provided var dict."""
             typ: str = {int: "Integer", float: "Real", bool: "Boolean", str: "String"}[type(val)]
@@ -254,11 +254,12 @@ def make_osp_system_structure(  # noqa: C901, PLR0913, PLR0915
     )
     osp.append(element_text(tag="StartTime", text=str(start)))
     osp.append(element_text(tag="BaseStepSize", text=str(base_step)))
+    osp.append(element_text(tag="Algorithm", text=algorithm))
     osp.append(make_simulators(simulators))
     osp.append(make_functions(functions_linear, functions_sum, functions_vectorsum))
     osp.append(make_connections(connections_variable, connections_signal, connections_group, connections_signalgroup))
     tree = ET.ElementTree(osp)
-    ET.indent(tree, space="   ", level=0)
+    ET.indent(tree, space="    ", level=0)
     file: Path = Path(path).absolute() / f"{name}.xml"
     tree.write(file, encoding="utf-8")
     return file
@@ -270,22 +271,22 @@ def osp_system_structure_from_js5(file: Path, dest: Path | None = None) -> Path:
     """
     assert file.exists(), f"File {file} not found"
     assert file.name.endswith(".js5"), f"Json5 file expected. Found {file.name}"
-    js = Json5(file)
+    js = json5_read(file)
 
     ss = make_osp_system_structure(
         name=file.name[:-4],
-        version=js.jspath("$.header.version", str) or "0.1",
-        start=js.jspath("$.header.StartTime", float) or 0.0,
-        base_step=js.jspath("$.header.BaseStepSize", float) or 0.01,
-        algorithm=js.jspath("$.header.algorithm", str) or "fixedStep",
-        simulators=js.jspath("$.Simulators", dict) or {},
-        functions_linear=js.jspath("$.FunctionsLinear", dict) or {},
-        functions_sum=js.jspath("$.FunctionsSum", dict) or {},
-        functions_vectorsum=js.jspath("$.FunctionsVectorSum", dict) or {},
-        connections_variable=js.jspath(path="$.ConnectionsVariable", typ=list),
-        connections_signal=js.jspath(path="$.ConnectionsSignal", typ=list),
-        connections_group=js.jspath(path="$.ConnectionsGroup", typ=list),
-        connections_signalgroup=js.jspath(path="$.ConnectionsSignalGroup", typ=list),
+        version=json5_path(js, "$.header.version", str) or "0.1",
+        start=json5_path(js, "$.header.StartTime", float) or 0.0,
+        base_step=json5_path(js, "$.header.BaseStepSize", float) or 0.01,
+        algorithm=json5_path(js, "$.header.algorithm", str) or "fixedStep",
+        simulators=json5_path(js, "$.Simulators", dict) or {},
+        functions_linear=json5_path(js, "$.FunctionsLinear", dict) or {},
+        functions_sum=json5_path(js, "$.FunctionsSum", dict) or {},
+        functions_vectorsum=json5_path(js, "$.FunctionsVectorSum", dict) or {},
+        connections_variable=json5_path(js, "$.ConnectionsVariable", list),
+        connections_signal=json5_path(js, "$.ConnectionsSignal", list),
+        connections_group=json5_path(js, "$.ConnectionsGroup", list),
+        connections_signalgroup=json5_path(js, "$.ConnectionsSignalGroup", list),
         path=dest or Path(file).parent,
     )
 
@@ -332,9 +333,9 @@ def read_system_structure_xml(file: Path) -> dict[str, Any]:
         for con in el.findall(".//{*}" + c + "Connection"):
             assert len(con) == 2, f"Two sub-elements expected. Found {len(con)}"  # noqa: PLR2004
             cons.append([p for i in range(2) for p in con[i].attrib.values()])
-        if len(cons):
+        if cons:
             connections[f"Connections{c}"] = cons
-    if len(connections):
+    if connections:
         structure.update(connections)
 
     return structure

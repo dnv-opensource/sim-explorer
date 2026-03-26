@@ -4,7 +4,7 @@
     <BaseStepSize>0.01</BaseStepSize>
     <Algorithm>fixedStep</Algorithm>
     <Simulators>
-        <Simulator name="bb" source="BouncingBall3D.fmu" stepSize="0.01" />
+        <Simulator name="tab" source="TimeTableFMU.fmu" stepSize="0.1" />
     </Simulators>
     <Functions />
     <Connections />

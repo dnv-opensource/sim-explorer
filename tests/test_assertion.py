@@ -2,6 +2,7 @@
 
 import ast
 from collections.abc import Sequence
+from importlib import import_module
 from math import cos, sin, sqrt
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -11,6 +12,7 @@ import pytest
 
 from sim_explorer.assertion import Assertion, Temporal
 from sim_explorer.case import Cases, Results
+from sim_explorer.utils.codegen import get_callable_function
 from sim_explorer.utils.types import (
     TDataColumn,
     TValue,
@@ -29,15 +31,15 @@ _y = [1.0 * cos(t) for t in _t]
 
 def test_globals_locals():
     """Test the usage of the globals and locals arguments within exec."""
-    from importlib import import_module
 
     module = import_module("math")
-    locals()["sin"] = module.sin
+    sin = module.sin
     code = "def f(x):\n    return sin(x)"
     compiled = compile(source=code, filename="<string>", mode="exec")
-    exec(compiled, locals(), locals())  # noqa: S102
-    # print(f"locals:{locals()}")
-    assert abs(locals()["f"](3.0) - sin(3.0)) < 1e-15
+    global_ns = {"__builtins__": {}, "sin": sin}
+    local_ns: dict[str, object] = {}
+    f = get_callable_function(compiled=compiled, function_name="f", global_ns=global_ns, local_ns=local_ns)
+    assert abs(f(3.0) - sin(3.0)) < 1e-15
 
 
 def test_ast(show: bool):
@@ -95,7 +97,7 @@ def test_ast(show: bool):
 
 def show_data(signals: Sequence[TValue | TDataColumn] | None = None):
     signals = signals or [_x, _y]
-    fig, ax = plt.subplots()
+    _fig, ax = plt.subplots()
     if len(signals) == 2:
         _ = ax.plot(signals[0], signals[1])
         _ = plt.title("x-y", loc="left")
@@ -150,17 +152,17 @@ def test_assertion_single(asserts: Assertion):
     """Test Assertion.eval_single() on symbols and expressions defined in asserts."""
     # sourcery skip: extract-duplicate-method
     # show_data()print("Analyze", analyze( "t>8 & x>0.1"))
-    assert asserts.eval_single(key="1", kvargs={"t": 9.0})
-    assert not asserts.eval_single(key="1", kvargs={"t": 7})
+    assert asserts.eval_single("1", t=9.0)
+    assert not asserts.eval_single("1", t=7.0)
     expected = ["t", "x", "y", "dummy_y", "z", "dummy_z"]
     assert asserts._symbols == expected, f"Found: {asserts._symbols}"
     assert asserts.expr_get_symbols_functions(expr="3") == (["y"], [])
-    assert asserts.eval_single(key="3", kvargs={"y": 4})
-    assert asserts.eval_single(key="4", kvargs={"y": 4})
-    assert asserts.eval_single(key="5", kvargs=(4.1,))
-    assert asserts.eval_single(key="6", kvargs={"t": 123}) == 1.0
-    assert abs(asserts.eval_single(key="7", kvargs={"t": 2}) - sqrt(2.0)) < 1e-15, "Also sqrt works out of the box"
-    assert asserts.eval_single(key="10", kvargs={"t": 1.5})
+    assert asserts.eval_single("3", y=4)
+    assert asserts.eval_single("4", y=4)
+    assert asserts.eval_single("5", 4.1)
+    assert asserts.eval_single("6", t=123) == 1.0
+    assert abs(asserts.eval_single("7", t=2) - sqrt(2.0)) < 1e-15, "Also sqrt works out of the box"
+    assert asserts.eval_single("10", t=1.5)
 
 
 def test_assertion_series(asserts: Assertion, show: bool):
@@ -178,7 +180,7 @@ def test_assertion_series(asserts: Assertion, show: bool):
     assert all(results[i] for i in range(81, 100)), "Assertion remains True"
     assert asserts.eval_series(key="1", data=_t, ret=max)[1]
     assert results == asserts.eval_series(key="1", data=_t, ret="bool-list")[1]
-    assert asserts.eval_series(key="1", data=_t, ret="F") == (8.1, True), "Finally True"
+    assert asserts.eval_series(key="1", data=_t, ret="F") == (8.1, True), "Eventually True"
     times, results = asserts.eval_series(key="2", data=tuple(zip(_t, _x, strict=True)), ret="bool")
     assert times == 0.0, f"Wrong from start. Found {times}, {results}. Expr: {asserts.expr(key='2')}"
     times, results = asserts.eval_series(key="2", data=tuple(zip(_t, _x, strict=True)), ret="bool-list")
@@ -216,11 +218,11 @@ def test_assertion_series(asserts: Assertion, show: bool):
     results_tuple = asserts.eval_series(key="10", data=_t, ret="F")
     assert results_tuple == (9.0, False), "Becomes False at time 9.0"
     results_tuple = asserts.eval_series(key="10", data=_t[:89], ret="F")
-    assert results_tuple == (6.9, True), "Finally True from time 6.9"
+    assert results_tuple == (6.9, True), "Eventually True from time 6.9"
 
 
 def test_assertion_spec():
-    cases = Cases(spec=Path(__file__).parent / "data" / "SimpleTable" / "test.cases")
+    cases = Cases(spec=Path(__file__).parent / "data" / "TimeTable" / "test.cases")
     _c = cases.case_by_name("case1")
     assert _c is not None
     _ = _c.read_assertion(key="3@9.85", expr_descr=["x*t", "Description"])
@@ -230,7 +232,7 @@ def test_assertion_spec():
     _ = _c.read_assertion(key="1", expr_descr=["t-1", "Description"])
     assert _c.asserts == ["3", "1"]
     assert _c.cases.assertion.temporal(key="1")["type"] == Temporal.A
-    assert _c.cases.assertion.eval_single(key="1", kvargs=(1,)) == 0
+    assert _c.cases.assertion.eval_single("1", 1) == 0
     with pytest.raises(AssertionError) as err:
         _ = _c.read_assertion(key="2@F", expr_descr="t-1")  # type: ignore[arg-type]
     assert str(err.value).startswith("Assertion spec expected: [expression, description]. Found")
@@ -238,10 +240,10 @@ def test_assertion_spec():
 
     assert _c.cases.assertion.temporal(key="2")["type"] == Temporal.F
     assert _c.cases.assertion.temporal(key="2")["args"] == ()
-    assert _c.cases.assertion.eval_single(key="2", kvargs=(1,)) == 0
+    assert _c.cases.assertion.eval_single("2", 1) == 0
     _ = _c.cases.assertion.symbol("y")
     found = list(_c.cases.assertion._symbols)
-    assert found == ["t", "x", "tab_x", "i", "tab_i", "y"], f"Found: {found}"
+    assert found == ["t", "i", "tab_i", "x", "tab_x", "y"], f"Found: {found}"
     _ = _c.read_assertion(key="3@9.85", expr_descr=["x*t", "Test assertion"])
     assert _c.asserts == ["3", "1", "2"], f"Found: {_c.asserts}"
     assert _c.cases.assertion.temporal(key="3")["type"] == Temporal.T
@@ -260,8 +262,8 @@ def test_vector():
     print("Symbol x", asserts.symbol("x"), type(asserts.symbol("x")))
     _ = asserts.expr(key="1", ex="x.dot(x)")
     assert asserts.expr_get_symbols_functions(expr="1") == (["x"], [])
-    _ = asserts.eval_single(key="1", kvargs=((1, 2, 3),))
-    _ = asserts.eval_single(key="1", kvargs={"x": (1, 2, 3)})
+    _ = asserts.eval_single("1", (1, 2, 3))
+    _ = asserts.eval_single("1", x=(1, 2, 3))
     _ = asserts.symbol("y")  # a vector without explicit components
 
 
@@ -271,7 +273,7 @@ def test_do_assert(show: bool):
     assert case is not None
     case.run()
     # res = Results(file=Path(__file__).parent / "data" / "BouncingBall3D" / "restitutionAndGravity.js5")
-    res = case.res
+    res = case.results
     assert isinstance(res, Results)
     # cases = res.case.cases
     assert res.case is not None
@@ -288,7 +290,7 @@ def test_do_assert(show: bool):
     _ = asserts.expr(key="0", ex="x.dot(v)")  # additional expression (not in .cases)
     assert asserts._syms["0"] == ["x", "v"]
     assert asserts.symbol("x") == "x"
-    assert asserts.eval_single(key="0", kvargs=((1, 2, 3), (4, 5, 6))) == 32
+    assert asserts.eval_single("0", (1, 2, 3), (4, 5, 6)) == 32
     assert asserts.expr(key="1") == "g==1.5"
     assert asserts.temporal(key="1")["type"] == Temporal.A
     assert asserts.syms(key="1") == ["g"]
@@ -323,7 +325,7 @@ def test_do_assert(show: bool):
 
 
 if __name__ == "__main__":
-    retcode = pytest.main(args=["-rA", "-v", __file__, "--show", "False"])
+    retcode = pytest.main(args=["-rA", "-v", __file__])
     assert retcode == 0, f"Non-zero return code {retcode}"
     # import os
 

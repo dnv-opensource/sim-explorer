@@ -1,9 +1,11 @@
-from crane_fmu.crane import Crane  # , Animation
+from typing import Any
+
+from py_crane.crane_fmu import CraneFMU
 
 
-class MobileCrane(Crane):
+class MobileCrane(CraneFMU):
     """Simple mobile crane for FMU testing purposes.
-    The crane has a short pedestal, one variable-length stiff boom and a rope.
+    The crane has a short pedestal, one variable-length stiff boom and a wire.
     The size and weight of the various parts can be configured.
 
     Args:
@@ -21,56 +23,55 @@ class MobileCrane(Crane):
     def __init__(
         self,
         name: str = "mobile_crane",
-        description: str = "Simple mobile crane (for FMU testing) with short pedestal, one variable-length elevation boom and a rope",
+        description: str = "Simple mobile crane (for FMU testing) with short pedestal, one variable-length elevation boom and a wire",
         author: str = "DNV, SEACo project",
-        version: str = "0.2",
+        version: str = "0.3",
+        degrees: bool = True,
         pedestalMass: str = "10000.0 kg",
+        pedestalCoM: tuple[float, float, float] = (0.5, -1.0, 0.8),
         pedestalHeight: str = "3.0 m",
         boomMass: str = "1000.0 kg",
         boomLength0: str = "8 m",
         boomLength1: str = "50 m",
-        rope_mass_range: tuple = ("50kg", "2000 kg"),
-        **kwargs,
+        boomAngle: str = "90deg",
+        wire_mass_range: tuple[str, str] = ("50kg", "2000 kg"),
+        wire_mass: str | None = None,
+        wire_length: float = 0.1,
+        **kwargs: Any,
     ):
-        super().__init__(
-            name=name, description=description, author=author, version=version, **kwargs
-        )
-        _ = self.add_boom(
-            name="pedestal",
+        super().__init__(name=name, description=description, author=author, version=version, degrees=degrees, **kwargs)
+        _pedestal = self.add_boom(
+            "pedestal",
             description="The crane base, on one side fixed to the vessel and on the other side the first crane boom is fixed to it. The mass should include all additional items fixed to it, like the operator's cab",
             mass=pedestalMass,
-            massCenter=(0.5, -1.0, 0.8),
+            mass_center=pedestalCoM,
             boom=(pedestalHeight, "0deg", "0deg"),
-            boom_rng=(None, None, ("0deg", "360deg")),
+            boom_rng=(None, None, ()),
         )
-        _ = self.add_boom(
-            name="boom",
+        _boom = self.add_boom(
+            "boom",
             description="The boom. Can be lifted and length can change within the given range",
             mass=boomMass,
-            massCenter=(0.5, 0, 0),
-            boom=(boomLength0, "90deg", "0deg"),
-            boom_rng=((boomLength0, boomLength1), (0, "90deg"), None),
+            mass_center=(0.5, 0, 0),
+            boom=(boomLength0, boomAngle, "0deg"),
+            boom_rng=((boomLength0, boomLength1), (), None),
         )
         _ = self.add_boom(
-            name="rope",
-            description="The rope fixed to the last boom. Flexible connection",
-            mass="50.0 kg",  # so far basically the hook
-            massCenter=0.95,
-            mass_rng=rope_mass_range,
-            boom=("1e-6 m", "180deg", "0 deg"),
-            boom_rng=(
-                ("1e-6 m", boomLength1),
-                ("90deg", "270deg"),
-                ("-180deg", "180deg"),
-            ),
-            damping=50.0,
-            animationLW=2,
+            "wire",
+            description="The wire fixed to the last boom. Flexible connection",
+            mass=wire_mass_range[0] if wire_mass is None else wire_mass,
+            mass_center=0.99,
+            mass_rng=wire_mass_range,
+            boom=(f"{wire_length}m", "90deg", "0 deg"),
+            boom_rng=((f"{wire_length}m", boomLength1), (), ()),
+            q_factor=50.0,
+            additional_checks=True,
         )
+
         # make sure that _comSub is calculated for all booms:
         self.calc_statics_dynamics(None)
 
-    def do_step(self, currentTime, stepSize):
-        status = super().do_step(currentTime, stepSize)
-        # print(f"Time {currentTime}, {self.rope_tip}")
-        # print(f"MobileCrane.do_step. Status {status}")
+    def do_step(self, current_time: float, step_size: float):
+        status = super().do_step(current_time, step_size)
+        # print(f"Time {current_time}, {self.force}, {self.torque}, {self.booms('wire').end}")
         return status
