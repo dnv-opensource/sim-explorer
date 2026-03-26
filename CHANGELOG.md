@@ -8,11 +8,7 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
 * -/-
 
 
-### Dependencies
-* Updated to scipy>=1.17.0
-
-
-## [0.2.2] - 2026-03-04
+## [0.2.2] - 2026-03-26
 
 ### Resolved
 * src/sim_explorer/__init__.py: Added `import libcosimpy.CosimLibrary` in `__init__.py` on package root level. This to make sure the libcosimc dll gets loaded only once. This resolves a runtime error observed with libcosimpy. (Although the root bug is likely in libcosimpy; should be reviewed by the libcosimpy team).
@@ -104,6 +100,7 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
 * Updated to pytest-cov>=7.0
 * Updated to pytest>=9.0
 * Updated to ruff>=0.15.1
+* Updated to scipy>=1.17.0
 * Updated to sourcery>=1.43.0
 * Updated to sphinx>=9.0
 * Updated to sphinx-argparse-cli>=1.20.1
