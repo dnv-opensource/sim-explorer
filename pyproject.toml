@@ -79,7 +79,7 @@ dependencies = [
 [project.optional-dependencies]
 test = [
     "fmpy>=0.3.21",
-    "scipy>=1.16",
+    "scipy>=1.17.0",
 ]
 rest = [
     "docutils>=0.22.4",
