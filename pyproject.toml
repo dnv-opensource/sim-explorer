@@ -73,7 +73,7 @@ dependencies = [
     "plotly>=6.5",
     "pydantic>=2.12",
     "rich>=13.9.4",
-    "pyjson5>=1.6.8",
+    "pyjson5>=2.0",
 ]
 
 [project.optional-dependencies]
