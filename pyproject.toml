@@ -62,24 +62,24 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "numpy>=2.3",
+    "numpy>=2.4",
     "matplotlib>=3.10",
-    "pint>=0.24",
+    "pint>=0.25.3",
     "sympy>=1.14.0",
-    "jsonpath-ng>=1.7.0",
+    "jsonpath-ng>=1.8.0",
     "libcosimpy>=0.0.5",
-    "fmpy>=0.3.21",
+    "fmpy>=0.3.29",
     "component-model>=0.4.0",
-    "plotly>=6.5",
+    "plotly>=6.6",
     "pydantic>=2.12",
-    "rich>=13.9.4",
-    "pyjson5>=1.6.8",
+    "rich>=14.3",
+    "pyjson5>=2.0",
 ]
 
 [project.optional-dependencies]
 test = [
-    "fmpy>=0.3.21",
-    "scipy>=1.17.0",
+    "fmpy>=0.3.29",
+    "scipy>=1.17.1",
 ]
 rest = [
     "docutils>=0.22.4",
@@ -96,14 +96,14 @@ Changelog = "https://github.com/dnv-opensource/sim-explorer/blob/main/CHANGELOG.
 [dependency-groups]
 dev = [
     "pytest>=9.0",
-    "pytest-cov>=7.0",
-    "ruff>=0.15.1",
+    "pytest-cov>=7.1",
+    "ruff>=0.15.9",
     "pyright>=1.1.408",
     "mypy>=1.19.1",
     "sourcery>=1.43.0",
     "pre-commit>=4.5",
     "Sphinx>=9.0",
-    "sphinx-argparse-cli>=1.20.1",
+    "sphinx-argparse-cli>=1.21.3",
     "sphinx-autodoc-typehints>=3.6",
     "sphinxcontrib-mermaid>=2.0",
     "myst-parser>=5.0",

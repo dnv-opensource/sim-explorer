@@ -8,6 +8,21 @@ The changelog format is based on [Keep a Changelog](https://keepachangelog.com/e
 * -/-
 
 
+### Dependencies
+* .pre-commit-config.yaml: Updated rev of ruff-pre-commit to v0.15.9
+* Updated to fmpy>=0.3.29
+* Updated to jsonpath-ng>=1.8.0
+* Updated to numpy>=2.4
+* Updated to pint>=0.25.3
+* Updated to plotly>=6.6
+* Updated to pyjson5>=2.0
+* Updated to pytest-cov>=7.1
+* Updated to rich>=14.3
+* Updated to ruff>=0.15.9
+* Updated to scipy>=1.17.1
+* Updated to sphinx-argparse-cli>=1.21.3
+
+
 ## [0.2.2] - 2026-03-26
 
 ### Resolved
