@@ -68,7 +68,7 @@ dependencies = [
     "sympy>=1.14.0",
     "jsonpath-ng>=1.7.0",
     "libcosimpy>=0.0.5",
-    "fmpy>=0.3.21",
+    "fmpy>=0.3.29",
     "component-model>=0.4.0",
     "plotly>=6.5",
     "pydantic>=2.12",
@@ -78,7 +78,7 @@ dependencies = [
 
 [project.optional-dependencies]
 test = [
-    "fmpy>=0.3.21",
+    "fmpy>=0.3.29",
     "scipy>=1.17.0",
 ]
 rest = [
