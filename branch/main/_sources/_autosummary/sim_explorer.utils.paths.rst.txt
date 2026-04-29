@@ -1,0 +1,14 @@
+sim\_explorer.utils.paths
+=========================
+
+.. automodule:: sim_explorer.utils.paths
+   :members:
+
+
+   
+   .. rubric:: Functions
+   .. autosummary::
+   
+      get_path
+      relative_path
+   

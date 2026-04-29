@@ -1,0 +1,39 @@
+Assertion
+=========
+
+.. currentmodule:: sim_explorer.assertion
+
+.. autoclass:: Assertion
+   :members:
+   :show-inheritance:
+
+
+   
+   .. automethod:: __init__
+   
+   .. rubric:: Methods
+   .. autosummary::
+   
+      ~Assertion.__init__
+      ~Assertion.assertions
+      ~Assertion.description
+      ~Assertion.do_assert
+      ~Assertion.do_assert_case
+      ~Assertion.eval_series
+      ~Assertion.eval_single
+      ~Assertion.expr
+      ~Assertion.expr_get_symbols_functions
+      ~Assertion.info
+      ~Assertion.make_locals
+      ~Assertion.register_vars
+      ~Assertion.report
+      ~Assertion.symbol
+      ~Assertion.syms
+      ~Assertion.temporal
+   
+   
+
+
+   
+   
+   

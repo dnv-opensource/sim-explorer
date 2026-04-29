@@ -1,0 +1,14 @@
+﻿sim\_explorer.exceptions
+========================
+
+.. automodule:: sim_explorer.exceptions
+   :members:
+
+
+   
+   .. rubric:: Exceptions
+   .. autosummary::
+   
+      CaseInitError
+      CaseUseError
+   

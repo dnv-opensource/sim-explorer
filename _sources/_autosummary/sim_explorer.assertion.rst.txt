@@ -1,0 +1,17 @@
+﻿sim\_explorer.assertion
+=======================
+
+.. automodule:: sim_explorer.assertion
+   :members:
+   :exclude-members: Assertion,
+   
+
+
+   
+   .. rubric:: Classes
+   .. autosummary::
+      :toctree:
+      :template: custom-class.rst
+   
+      Assertion
+   
