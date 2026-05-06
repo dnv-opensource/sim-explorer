@@ -1,0 +1,14 @@
+sim\_explorer.utils.misc
+========================
+
+.. automodule:: sim_explorer.utils.misc
+   :members:
+
+
+   
+   .. rubric:: Functions
+   .. autosummary::
+   
+      from_xml
+      match_with_wildcard
+   

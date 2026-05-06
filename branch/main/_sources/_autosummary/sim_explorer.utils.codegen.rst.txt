@@ -1,0 +1,13 @@
+sim\_explorer.utils.codegen
+===========================
+
+.. automodule:: sim_explorer.utils.codegen
+   :members:
+
+
+   
+   .. rubric:: Functions
+   .. autosummary::
+   
+      get_callable_function
+   

@@ -1,0 +1,20 @@
+sim\_explorer.utils.json5
+=========================
+
+.. automodule:: sim_explorer.utils.json5
+   :members:
+
+
+   
+   .. rubric:: Functions
+   .. autosummary::
+   
+      get_pos
+      json5_check
+      json5_find_identifier_start
+      json5_path
+      json5_read
+      json5_try_correct
+      json5_update
+      json5_write
+   
