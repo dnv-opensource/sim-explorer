@@ -1,0 +1,64 @@
+AssertionResult
+===============
+
+.. currentmodule:: sim_explorer.models
+
+.. autoclass:: AssertionResult
+   :members:
+   :show-inheritance:
+
+
+   
+   .. automethod:: __init__
+   
+   .. rubric:: Methods
+   .. autosummary::
+   
+      ~AssertionResult.__init__
+      ~AssertionResult.construct
+      ~AssertionResult.copy
+      ~AssertionResult.dict
+      ~AssertionResult.from_orm
+      ~AssertionResult.json
+      ~AssertionResult.model_construct
+      ~AssertionResult.model_copy
+      ~AssertionResult.model_dump
+      ~AssertionResult.model_dump_json
+      ~AssertionResult.model_json_schema
+      ~AssertionResult.model_parametrized_name
+      ~AssertionResult.model_post_init
+      ~AssertionResult.model_rebuild
+      ~AssertionResult.model_validate
+      ~AssertionResult.model_validate_json
+      ~AssertionResult.model_validate_strings
+      ~AssertionResult.parse_file
+      ~AssertionResult.parse_obj
+      ~AssertionResult.parse_raw
+      ~AssertionResult.schema
+      ~AssertionResult.schema_json
+      ~AssertionResult.update_forward_refs
+      ~AssertionResult.validate
+   
+   
+
+
+   
+   
+   .. rubric:: Attributes
+   .. autosummary::
+   
+      ~AssertionResult.model_computed_fields
+      ~AssertionResult.model_config
+      ~AssertionResult.model_extra
+      ~AssertionResult.model_fields
+      ~AssertionResult.model_fields_set
+      ~AssertionResult.key
+      ~AssertionResult.expression
+      ~AssertionResult.result
+      ~AssertionResult.temporal
+      ~AssertionResult.time
+      ~AssertionResult.description
+      ~AssertionResult.case
+      ~AssertionResult.details
+   
+   

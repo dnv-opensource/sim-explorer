@@ -1,0 +1,18 @@
+﻿sim\_explorer.models
+====================
+
+.. automodule:: sim_explorer.models
+   :members:
+   :exclude-members: AssertionResult,Temporal,
+   
+
+
+   
+   .. rubric:: Classes
+   .. autosummary::
+      :toctree:
+      :template: custom-class.rst
+   
+      AssertionResult
+      Temporal
+   

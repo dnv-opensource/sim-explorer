@@ -1,0 +1,46 @@
+Temporal
+========
+
+.. currentmodule:: sim_explorer.models
+
+.. autoclass:: Temporal
+   :members:
+   :show-inheritance:
+
+
+   
+   .. automethod:: __init__
+   
+   .. rubric:: Methods
+   .. autosummary::
+   
+      ~Temporal.conjugate
+      ~Temporal.bit_length
+      ~Temporal.bit_count
+      ~Temporal.to_bytes
+      ~Temporal.from_bytes
+      ~Temporal.as_integer_ratio
+      ~Temporal.is_integer
+      ~Temporal.__init__
+   
+   
+
+
+   
+   
+   .. rubric:: Attributes
+   .. autosummary::
+   
+      ~Temporal.real
+      ~Temporal.imag
+      ~Temporal.numerator
+      ~Temporal.denominator
+      ~Temporal.UNDEFINED
+      ~Temporal.A
+      ~Temporal.ALWAYS
+      ~Temporal.F
+      ~Temporal.EVENTUALLY
+      ~Temporal.T
+      ~Temporal.TIME
+   
+   

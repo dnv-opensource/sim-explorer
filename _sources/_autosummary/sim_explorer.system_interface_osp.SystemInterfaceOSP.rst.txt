@@ -1,0 +1,49 @@
+SystemInterfaceOSP
+==================
+
+.. currentmodule:: sim_explorer.system_interface_osp
+
+.. autoclass:: SystemInterfaceOSP
+   :members:
+   :show-inheritance:
+
+
+   
+   .. automethod:: __init__
+   
+   .. rubric:: Methods
+   .. autosummary::
+   
+      ~SystemInterfaceOSP.__init__
+      ~SystemInterfaceOSP.action_step
+      ~SystemInterfaceOSP.add_actions
+      ~SystemInterfaceOSP.allowed_action
+      ~SystemInterfaceOSP.comp_model_var
+      ~SystemInterfaceOSP.component_id_from_name
+      ~SystemInterfaceOSP.component_name_from_id
+      ~SystemInterfaceOSP.do_action
+      ~SystemInterfaceOSP.init_simulator
+      ~SystemInterfaceOSP.match_components
+      ~SystemInterfaceOSP.match_variables
+      ~SystemInterfaceOSP.model_from_component
+      ~SystemInterfaceOSP.pytype
+      ~SystemInterfaceOSP.read_system_structure
+      ~SystemInterfaceOSP.run_until
+      ~SystemInterfaceOSP.update_refs_values
+      ~SystemInterfaceOSP.valid_initial
+      ~SystemInterfaceOSP.variable_iter
+      ~SystemInterfaceOSP.variable_name_from_ref
+      ~SystemInterfaceOSP.variables
+   
+   
+
+
+   
+   
+   .. rubric:: Attributes
+   .. autosummary::
+   
+      ~SystemInterfaceOSP.models
+      ~SystemInterfaceOSP.path
+   
+   

@@ -1,0 +1,17 @@
+﻿sim\_explorer.system\_interface
+===============================
+
+.. automodule:: sim_explorer.system_interface
+   :members:
+   :exclude-members: SystemInterface,
+   
+
+
+   
+   .. rubric:: Classes
+   .. autosummary::
+      :toctree:
+      :template: custom-class.rst
+   
+      SystemInterface
+   
